@@ -68,6 +68,9 @@ public final class Chronicle {
 		Lineage lineage = Lineages.get(player);
 		if (lineage != null) {
 			book.set(DataComponents.WRITTEN_BOOK_CONTENT, build(lineage));
+			// The client opens its own copy of the book, so send the new pages before the open-book packet.
+			// Otherwise the inventory sync only arrives next tick and the book shows the previous pages.
+			player.containerMenu.broadcastChanges();
 		}
 	}
 
