@@ -2,7 +2,9 @@ package io.github.fersyvanderzee.bloodline;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.github.fersyvanderzee.bloodline.data.BloodlineState;
 import io.github.fersyvanderzee.bloodline.data.Lineage;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.UUIDUtil;
@@ -54,22 +56,34 @@ public final class Heirlooms {
 	);
 
 	/** {@code sworn} marks the Oathblade, which is an heirloom from the moment it is sworn upon. */
-	record Data(UUID owner, String house, List<Integer> generations, List<String> bearers, Optional<String> name, boolean sworn) {
+	/**
+	 * {@code owner} is the player who first carried it; the heirloom belongs to whichever house that
+	 * player is in. {@code carriers} lists "player:generation" for each family member who carried it,
+	 * so characters from different branches of a house count as different bearers.
+	 */
+	record Data(UUID owner, String house, List<Integer> generations, List<String> bearers, Optional<String> name, boolean sworn,
+				List<String> carriers) {
 		static final Codec<Data> CODEC = RecordCodecBuilder.create(i -> i.group(
 			UUIDUtil.STRING_CODEC.fieldOf("owner").forGetter(Data::owner),
 			Codec.STRING.fieldOf("house").forGetter(Data::house),
 			Codec.INT.listOf().fieldOf("generations").forGetter(Data::generations),
 			Codec.STRING.listOf().fieldOf("bearers").forGetter(Data::bearers),
 			Codec.STRING.optionalFieldOf("name").forGetter(Data::name),
-			Codec.BOOL.optionalFieldOf("sworn", false).forGetter(Data::sworn)
+			Codec.BOOL.optionalFieldOf("sworn", false).forGetter(Data::sworn),
+			Codec.STRING.listOf().optionalFieldOf("carriers", List.of()).forGetter(Data::carriers)
 		).apply(i, Data::new));
 
+		/** Carrier keys; items from before shared houses only recorded the owner's generations. */
+		List<String> keys() {
+			return carriers.isEmpty() ? generations.stream().map(g -> owner + ":" + g).toList() : carriers;
+		}
+
 		boolean isHeirloom() {
-			return sworn || generations.size() >= 2;
+			return sworn || keys().size() >= 2;
 		}
 
 		int rank() {
-			return Math.min(generations.size() - 1, MAX_RANK);
+			return Math.max(0, Math.min(keys().size() - 1, MAX_RANK));
 		}
 	}
 
@@ -89,7 +103,7 @@ public final class Heirlooms {
 
 	public static boolean keptOnDeath(Player player, ItemStack stack) {
 		if (Chronicle.isChronicle(stack)) return true;
-		return read(stack).filter(d -> d.isHeirloom() && d.owner().equals(player.getUUID())).isPresent();
+		return read(stack).filter(d -> d.isHeirloom() && belongs(player, d)).isPresent();
 	}
 
 	/** Moves heirlooms that were kept back on death over to the respawned heir. */
@@ -121,16 +135,20 @@ public final class Heirlooms {
 		int generation = lineage.current.generation();
 		Optional<Data> existing = read(stack);
 		if (existing.isEmpty()) {
-			write(stack, new Data(player.getUUID(), lineage.house, List.of(generation), List.of(lineage.current.name()), Optional.empty(), false));
+			write(stack, new Data(player.getUUID(), lineage.house.name, List.of(generation), List.of(lineage.current.name()), Optional.empty(), false,
+				List.of(carrierKey(player, lineage))));
 			return;
 		}
 		Data data = existing.get();
-		if (!data.owner().equals(player.getUUID()) || data.generations().contains(generation)) return;
+		String key = carrierKey(player, lineage);
+		if (!belongs(player, data) || data.keys().contains(key)) return;
 
 		boolean wasHeirloom = data.isHeirloom();
 		String previousName = data.name().orElse("");
 		List<Integer> generations = new ArrayList<>(data.generations());
 		generations.add(generation);
+		List<String> carriers = new ArrayList<>(data.keys());
+		carriers.add(key);
 		List<String> bearers = new ArrayList<>(data.bearers());
 		bearers.add(lineage.current.name());
 		String previousBearer = data.bearers().getLast();
@@ -138,7 +156,7 @@ public final class Heirlooms {
 		if (!wasHeirloom) {
 			name = Optional.of(NAMES.get(player.getRandom().nextInt(NAMES.size())));
 		}
-		Data updated = new Data(data.owner(), data.house(), generations, bearers, name, data.sworn());
+		Data updated = new Data(data.owner(), data.house(), generations, bearers, name, data.sworn(), carriers);
 		Component itemName = stack.getItemName();
 		if (!wasHeirloom) {
 			if (!stack.has(DataComponents.CUSTOM_NAME)) {
@@ -152,7 +170,7 @@ public final class Heirlooms {
 			? Component.literal(previousBearer + "'s ").append(itemName).append(" has passed to " + lineage.current.name()
 				+ ". It is now an heirloom of House " + data.house() + ": ").append(Component.literal(name.get()).withStyle(ChatFormatting.GOLD))
 			: Component.literal(previousName).withStyle(ChatFormatting.GOLD).append(Component.literal(" passes to "
-				+ lineage.current.name() + ", its " + ordinal(generations.size()) + " bearer.").withStyle(ChatFormatting.WHITE));
+				+ lineage.current.name() + ", its " + ordinal(carriers.size()) + " bearer.").withStyle(ChatFormatting.WHITE));
 		player.sendSystemMessage(message);
 		Lineages.record(player.level().getServer(), lineage, message);
 		player.level().playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1f, 0.8f);
@@ -172,8 +190,23 @@ public final class Heirlooms {
 		return lines;
 	}
 
+	private static String carrierKey(Player player, Lineage lineage) {
+		return player.getUUID() + ":" + lineage.current.generation();
+	}
+
+	/** Whether the heirloom belongs to the player's house: its first owner is the player or a fellow member. */
+	private static boolean belongs(Player player, Data data) {
+		if (data.owner().equals(player.getUUID())) return true;
+		MinecraftServer server = player.level().getServer();
+		if (server == null) return false;
+		BloodlineState state = BloodlineState.get(server);
+		Lineage mine = state.get(player.getUUID());
+		Lineage owners = state.get(data.owner());
+		return mine != null && owners != null && mine.house == owners.house;
+	}
+
 	public static boolean isOathblade(Player player, ItemStack stack) {
-		return read(stack).filter(d -> d.sworn() && d.owner().equals(player.getUUID())).isPresent();
+		return read(stack).filter(d -> d.sworn() && belongs(player, d)).isPresent();
 	}
 
 	/**
@@ -193,8 +226,8 @@ public final class Heirlooms {
 			blade = new ItemStack(net.minecraft.world.item.Items.IRON_SWORD);
 			if (!player.getInventory().add(blade)) player.spawnAtLocation(player.level(), blade);
 		}
-		Data data = new Data(player.getUUID(), lineage.house, List.of(lineage.current.generation()), List.of(lineage.current.name()),
-			Optional.of("Oathblade"), true);
+		Data data = new Data(player.getUUID(), lineage.house.name, List.of(lineage.current.generation()), List.of(lineage.current.name()),
+			Optional.of("Oathblade"), true, List.of(carrierKey(player, lineage)));
 		blade.set(DataComponents.CUSTOM_NAME, Component.literal("Oathblade").withStyle(s -> s.withItalic(false).withColor(ChatFormatting.GOLD)));
 		blade.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
 		write(blade, data);
@@ -216,8 +249,11 @@ public final class Heirlooms {
 			List<String> bearers = new ArrayList<>(d.bearers());
 			bearers.add(lineage.current.name() + " (reclaimed)");
 			List<Integer> generations = new ArrayList<>(d.generations());
-			if (!generations.contains(lineage.current.generation())) generations.add(lineage.current.generation());
-			write(copy, new Data(d.owner(), d.house(), generations, bearers, d.name(), d.sworn()));
+			generations.add(lineage.current.generation());
+			List<String> carriers = new ArrayList<>(d.keys());
+			// Winning it back counts as another bearer, so a reclaimed heirloom comes home a little stronger.
+			carriers.add("reclaimed:" + carriers.size());
+			write(copy, new Data(d.owner(), d.house(), generations, bearers, d.name(), d.sworn(), carriers));
 		});
 		return copy;
 	}
@@ -250,14 +286,14 @@ public final class Heirlooms {
 
 	private static void updateBonuses(ServerPlayer player) {
 		ItemStack mainHand = player.getMainHandItem();
-		int handRank = read(mainHand).filter(d -> d.isHeirloom() && d.owner().equals(player.getUUID())).map(Data::rank).orElse(0);
+		int handRank = read(mainHand).filter(d -> d.isHeirloom() && belongs(player, d)).map(Data::rank).orElse(0);
 		setBonus(player, Attributes.ATTACK_DAMAGE, WEAPON_BONUS, isWeapon(mainHand) ? handRank : 0);
 		setBonus(player, Attributes.MINING_EFFICIENCY, TOOL_BONUS, isTool(mainHand) ? handRank * 2 : 0);
 
 		double toughness = 0;
 		for (EquipmentSlot slot : ARMOR) {
 			ItemStack stack = player.getItemBySlot(slot);
-			toughness += read(stack).filter(d -> d.isHeirloom() && d.owner().equals(player.getUUID())).map(Data::rank).orElse(0) * 0.5;
+			toughness += read(stack).filter(d -> d.isHeirloom() && belongs(player, d)).map(Data::rank).orElse(0) * 0.5;
 		}
 		setBonus(player, Attributes.ARMOR_TOUGHNESS, ARMOR_BONUS, toughness);
 	}

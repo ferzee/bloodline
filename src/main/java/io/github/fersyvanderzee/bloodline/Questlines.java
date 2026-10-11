@@ -170,7 +170,7 @@ public final class Questlines {
 
 	/** Asks a family that hasn't sworn an oath yet to choose one. */
 	public static void offerOath(ServerPlayer player, Lineage lineage) {
-		MutableComponent message = Component.literal("House " + lineage.house + " has sworn no oath. Choose one: ").withStyle(ChatFormatting.GRAY);
+		MutableComponent message = Component.literal("House " + lineage.house.name + " has sworn no oath. Choose one: ").withStyle(ChatFormatting.GRAY);
 		for (Oath oath : OATHS) {
 			message.append(Component.literal("[" + oath.name() + "]").withStyle(s -> s.withColor(ChatFormatting.GOLD)
 				.withClickEvent(new ClickEvent.SuggestCommand("/bloodline oath " + oath.id()))
@@ -185,37 +185,42 @@ public final class Questlines {
 	/** Points a family without an oath to their chronicle, where the oath is chosen. */
 	public static void nudgeOath(ServerPlayer player, Lineage lineage) {
 		Chronicle.ensure(player);
-		player.sendSystemMessage(Component.literal("House " + lineage.house + " has sworn no oath. Open your Chronicle to choose one.")
+		if (!lineage.isHead(player.getUUID())) {
+			player.sendSystemMessage(Component.literal("House " + lineage.house.name + " has sworn no oath yet. The head of the house can choose one in the Chronicle.")
+				.withStyle(ChatFormatting.GRAY));
+			return;
+		}
+		player.sendSystemMessage(Component.literal("House " + lineage.house.name + " has sworn no oath. Open your Chronicle to choose one.")
 			.withStyle(ChatFormatting.GOLD));
 	}
 
 	public static boolean swear(ServerPlayer player, Lineage lineage, String id) {
 		Optional<Oath> oath = oath(id);
-		if (oath.isEmpty() || lineage.oath.isPresent()) return false;
-		lineage.oath = Optional.of(id);
-		lineage.oathActs = 0;
+		if (oath.isEmpty() || lineage.house.oath.isPresent()) return false;
+		lineage.house.oath = Optional.of(id);
+		lineage.house.oathActs = 0;
 		Lineages.record(player.level().getServer(), lineage, Component.literal(lineage.current.name() + " swore the " + oath.get().name()
-			+ " on behalf of House " + lineage.house + ": \"" + oath.get().vow() + "\""));
-		title(player, oath.get().name(), "\"" + oath.get().vow() + "\"");
+			+ " on behalf of House " + lineage.house.name + ": \"" + oath.get().vow() + "\""));
+		titleHouse(player, lineage, oath.get().name(), "\"" + oath.get().vow() + "\"");
 		startAct(player, lineage, oath.get(), 0);
 		return true;
 	}
 
 	/** Starts the next act of the oath if this generation hasn't done one yet. */
 	public static void resume(ServerPlayer player, Lineage lineage) {
-		if (lineage.oath.isEmpty() || lineage.quests.stream().anyMatch(q -> q.line.filter(OATH::equals).isPresent())) return;
-		Oath oath = oath(lineage.oath.get()).orElse(null);
-		if (oath == null || lineage.oathActs >= oath.acts().size()) return;
-		if (lineage.oathActs > 0 && lineage.oathActGeneration >= lineage.current.generation()) return;
-		Act next = oath.acts().get(lineage.oathActs);
-		if (lineage.renown < next.renown()) return;
-		startAct(player, lineage, oath, lineage.oathActs);
+		if (lineage.house.oath.isEmpty() || lineage.allQuests().stream().anyMatch(q -> q.line.filter(OATH::equals).isPresent())) return;
+		Oath oath = oath(lineage.house.oath.get()).orElse(null);
+		if (oath == null || lineage.house.oathActs >= oath.acts().size()) return;
+		if (lineage.house.actPending) return;
+		Act next = oath.acts().get(lineage.house.oathActs);
+		if (lineage.house.renown < next.renown()) return;
+		startAct(player, lineage, oath, lineage.house.oathActs);
 	}
 
 	private static void startAct(ServerPlayer player, Lineage lineage, Oath oath, int act) {
-		player.sendSystemMessage(Component.literal(oath.name() + ", Act " + Names.numeral(act + 1) + ": " + oath.acts().get(act).name())
+		tell(player, lineage, Component.literal(oath.name() + ", Act " + Names.numeral(act + 1) + ": " + oath.acts().get(act).name())
 			.withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
-		player.sendSystemMessage(Component.literal(oath.acts().get(act).intro()).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+		tell(player, lineage, Component.literal(oath.acts().get(act).intro()).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
 		startStep(player, lineage, oath, act, 0);
 	}
 
@@ -223,7 +228,7 @@ public final class Questlines {
 		String title = oath.name() + " " + Names.numeral(act + 1) + ": " + oath.acts().get(act).name();
 		Quest quest = oath.acts().get(act).steps().get(step).factory().create(player, lineage, title).inLine(OATH, act, step);
 		Quests.add(player, lineage, quest);
-		player.sendSystemMessage(Component.literal("New objective: ").withStyle(ChatFormatting.GRAY).append(Quests.line(quest, true)));
+		tell(player, lineage, Component.literal("New objective: ").withStyle(ChatFormatting.GRAY).append(Quests.line(quest, true)));
 		if (quest.goal == Goal.KILL_CHAMPION) addPreparations(player, lineage, quest.targets.get(1));
 		Lineages.markDirty(player.level().getServer());
 	}
@@ -232,23 +237,23 @@ public final class Questlines {
 		String line = quest.line.orElse("");
 		if (line.startsWith(PREP_PREFIX)) {
 			String effect = line.substring(PREP_PREFIX.length());
-			if (!lineage.preparations.contains(effect)) lineage.preparations.add(effect);
-			player.sendSystemMessage(Component.literal("Preparation complete: " + describeEffect(effect) + ".").withStyle(ChatFormatting.GRAY));
+			if (!lineage.house.preparations.contains(effect)) lineage.house.preparations.add(effect);
+			tell(player, lineage, Component.literal("Preparation complete: " + describeEffect(effect) + ".").withStyle(ChatFormatting.GRAY));
 			return;
 		}
 		if (line.equals(RECLAIM)) {
 			finishReclaim(player, lineage, quest);
 			return;
 		}
-		if (!line.equals(OATH) || lineage.oath.isEmpty()) return;
-		Oath oath = oath(lineage.oath.get()).orElse(null);
+		if (!line.equals(OATH) || lineage.house.oath.isEmpty()) return;
+		Oath oath = oath(lineage.house.oath.get()).orElse(null);
 		if (oath == null) return;
 		Act act = oath.acts().get(quest.act);
 		act.steps().get(quest.step).onComplete().run(player, lineage);
 		if (quest.goal == Goal.KILL_CHAMPION) {
 			// The fight is over: unfinished preparations no longer matter.
-			lineage.quests.removeIf(q -> q.type == Type.PREPARATION);
-			lineage.preparations.clear();
+			lineage.house.quests.removeIf(q -> q.type == Type.PREPARATION);
+			lineage.house.preparations.clear();
 		}
 		if (quest.step + 1 < act.steps().size()) {
 			startStep(player, lineage, oath, quest.act, quest.step + 1);
@@ -256,26 +261,26 @@ public final class Questlines {
 		}
 
 		MinecraftServer server = player.level().getServer();
-		lineage.oathActs = quest.act + 1;
-		lineage.oathActGeneration = lineage.current.generation();
+		lineage.house.oathActs = quest.act + 1;
+		lineage.house.actPending = true;
 		Renown.change(player, lineage, Renown.ACT_COMPLETED, "for fulfilling Act " + Names.numeral(quest.act + 1));
 		Lineages.record(server, lineage, Component.literal(lineage.current.name() + " fulfilled Act " + Names.numeral(quest.act + 1)
 			+ " of the " + oath.name() + ": " + act.name() + "."));
-		if (lineage.oathActs < oath.acts().size()) {
-			title(player, "Act " + Names.numeral(quest.act + 1) + " fulfilled", act.name());
-			player.sendSystemMessage(Component.literal("The next act of the oath must fall to your heir.").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+		if (lineage.house.oathActs < oath.acts().size()) {
+			titleHouse(player, lineage, "Act " + Names.numeral(quest.act + 1) + " fulfilled", act.name());
+			tell(player, lineage, Component.literal("The next act must wait for a new generation: it begins when any member's heir takes over.").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
 			return;
 		}
 
 		Trait legacy = Traits.get(oath.legacy());
-		lineage.legacies.add(legacy.id());
+		lineage.house.legacies.add(legacy.id());
 		Traits.apply(player, lineage.allTraits());
-		Lineages.record(server, lineage, Component.literal("After " + (lineage.current.generation()) + " generations, House " + lineage.house
+		Lineages.record(server, lineage, Component.literal("After " + (lineage.current.generation()) + " generations, House " + lineage.house.name
 			+ " fulfilled the " + oath.name() + ". Every child of the house will be born " + legacy.name() + "."));
-		title(player, "Oath fulfilled", "House " + lineage.house + " is " + legacy.name());
-		server.getPlayerList().broadcastSystemMessage(Component.literal("House " + lineage.house + " has fulfilled the " + oath.name() + "!")
+		titleHouse(player, lineage, "Oath fulfilled", "House " + lineage.house.name + " is " + legacy.name());
+		server.getPlayerList().broadcastSystemMessage(Component.literal("House " + lineage.house.name + " has fulfilled the " + oath.name() + "!")
 			.withStyle(ChatFormatting.GOLD), false);
-		player.sendSystemMessage(Component.literal("Legendary trait: ").append(legacy.displayName())
+		tell(player, lineage, Component.literal("Legendary trait: ").append(legacy.displayName())
 			.append(Component.literal(" (every heir is born with it)").withStyle(ChatFormatting.DARK_GRAY)));
 		player.level().playSound(null, player.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 1f, 0.8f);
 	}
@@ -285,13 +290,13 @@ public final class Questlines {
 	private static void addPreparations(ServerPlayer player, Lineage lineage, String championKind) {
 		List<Preparation> preparations = PREPARATIONS.getOrDefault(championKind, List.of());
 		if (preparations.isEmpty()) return;
-		player.sendSystemMessage(Component.literal("Before the fight, you can prepare. Each preparation weakens the champion:")
+		tell(player, lineage, Component.literal("Before the fight, you can prepare. Each preparation weakens the champion:")
 			.withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
 		for (Preparation prep : preparations) {
 			Quest quest = Quest.of(Type.PREPARATION, prep.title(), prep.task(), prep.goal(), prep.targets(), prep.required(), Reward.none());
 			quest.line = Optional.of(PREP_PREFIX + prep.effect());
 			Quests.add(player, lineage, quest);
-			player.sendSystemMessage(Component.literal("  ⚒ ").withStyle(ChatFormatting.DARK_GRAY).append(Quests.line(quest, true))
+			tell(player, lineage, Component.literal("  ⚒ ").withStyle(ChatFormatting.DARK_GRAY).append(Quests.line(quest, true))
 				.append(Component.literal(" - " + describeEffect(prep.effect())).withStyle(ChatFormatting.DARK_GRAY)));
 		}
 	}
@@ -316,9 +321,9 @@ public final class Questlines {
 	 * The chronicle's Main Quest section. Before an oath is sworn it describes each oath with a
 	 * button to swear it; afterwards it shows the acts, the current act's story and objective.
 	 */
-	public static List<Component> bookPages(Lineage lineage, int firstPage) {
+	public static List<Component> bookPages(Lineage lineage, int firstPage, boolean viewerIsHead) {
 		List<Component> pages = new java.util.ArrayList<>();
-		Oath sworn = lineage.oath.flatMap(Questlines::oath).orElse(null);
+		Oath sworn = lineage.house.oath.flatMap(Questlines::oath).orElse(null);
 		if (sworn == null) {
 			MutableComponent intro = Chronicle.heading("The Founder's Oath")
 				.append(Chronicle.body("Every great house is bound by an oath. Choose one, and your bloodline will carry it until it is fulfilled.\n\n"));
@@ -332,8 +337,9 @@ public final class Questlines {
 				}
 				page.append(Chronicle.faint("Reward: ")).append(Traits.get(oath.legacy()).displayName().withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(false)))
 					.append("\n\n")
-					.append(Chronicle.button("Swear this oath", "/bloodline oath " + oath.id(),
-						Component.literal("Swear the " + oath.name() + ". This can't be undone.")));
+					.append(viewerIsHead
+						? Chronicle.button("Swear this oath", "/bloodline oath " + oath.id(), Component.literal("Swear the " + oath.name() + ". This can't be undone."))
+						: Chronicle.faint("Only the head of the house can swear an oath."));
 				pages.add(page);
 			}
 			return pages;
@@ -341,26 +347,26 @@ public final class Questlines {
 
 		MutableComponent overview = Chronicle.heading(sworn.name());
 		for (int i = 0; i < sworn.acts().size(); i++) {
-			String mark = i < lineage.oathActs ? "✔ " : i == lineage.oathActs ? "▶ " : "○ ";
-			ChatFormatting color = i < lineage.oathActs ? ChatFormatting.DARK_GREEN : i == lineage.oathActs ? ChatFormatting.BLACK : ChatFormatting.GRAY;
+			String mark = i < lineage.house.oathActs ? "✔ " : i == lineage.house.oathActs ? "▶ " : "○ ";
+			ChatFormatting color = i < lineage.house.oathActs ? ChatFormatting.DARK_GREEN : i == lineage.house.oathActs ? ChatFormatting.BLACK : ChatFormatting.GRAY;
 			overview.append(Component.literal(mark + Names.numeral(i + 1) + ". " + sworn.acts().get(i).name() + "\n")
 				.withStyle(s -> s.withColor(color).withBold(false)));
 		}
-		overview.append(Chronicle.faint("\nOne act per generation.\nRenown: " + lineage.renown + "\nReward: "))
+		overview.append(Chronicle.faint("\nOne act per generation.\nRenown: " + lineage.house.renown + "\nReward: "))
 			.append(Traits.get(sworn.legacy()).displayName().withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(false)));
 		pages.add(overview);
 
-		if (lineage.oathActs >= sworn.acts().size()) {
-			pages.add(Chronicle.heading("Fulfilled").append(Chronicle.body("House " + lineage.house + " kept its oath. Every child of the house is born "
+		if (lineage.house.oathActs >= sworn.acts().size()) {
+			pages.add(Chronicle.heading("Fulfilled").append(Chronicle.body("House " + lineage.house.name + " kept its oath. Every child of the house is born "
 				+ Traits.get(sworn.legacy()).name() + ".")));
 			return pages;
 		}
-		Act act = sworn.acts().get(lineage.oathActs);
-		pages.add(Chronicle.heading("Act " + Names.numeral(lineage.oathActs + 1) + ": " + act.name())
+		Act act = sworn.acts().get(lineage.house.oathActs);
+		pages.add(Chronicle.heading("Act " + Names.numeral(lineage.house.oathActs + 1) + ": " + act.name())
 			.append(Component.literal(act.intro()).withStyle(s -> s.withColor(ChatFormatting.DARK_GRAY).withItalic(true).withBold(false))));
-		Quest step = lineage.quests.stream().filter(Questlines::isOathStep).findFirst().orElse(null);
+		Quest step = lineage.allQuests().stream().filter(Questlines::isOathStep).findFirst().orElse(null);
 		MutableComponent objective = Chronicle.heading("Objective");
-		int currentAct = lineage.oathActs;
+		int currentAct = lineage.house.oathActs;
 		for (var done : lineage.completed) {
 			if (done.line().filter(OATH::equals).isPresent() && done.act() == currentAct) {
 				objective.append(Component.literal("✔ ").withStyle(s -> s.withColor(ChatFormatting.DARK_GREEN).withBold(false)))
@@ -375,19 +381,19 @@ public final class Questlines {
 			}
 			String reward = Quests.describe(step.reward);
 			objective.append(Chronicle.faint("\n\nStep " + (step.step + 1) + " of " + act.steps().size() + (reward.isEmpty() ? "" : "\nReward: " + reward)));
-		} else if (lineage.oathActs > 0 && lineage.oathActGeneration >= lineage.current.generation()) {
+		} else if (lineage.house.actPending) {
 			objective.append(Chronicle.body("This generation has done its part. The next act falls to your heir."));
 		} else {
 			objective.append(Chronicle.body("The house is not yet renowned enough to begin this act.\n\n"))
-				.append(Component.literal("Renown: " + lineage.renown + " / " + act.renown()).withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(false)))
+				.append(Component.literal("Renown: " + lineage.house.renown + " / " + act.renown()).withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(false)))
 				.append(Chronicle.faint("\n\nFulfil duties, settle blood debts and reclaim heirlooms to earn renown."));
 		}
 		pages.add(objective);
 
-		List<Quest> preparations = lineage.quests.stream().filter(q -> q.type == Type.PREPARATION).toList();
-		if (!preparations.isEmpty() || !lineage.preparations.isEmpty()) {
+		List<Quest> preparations = lineage.allQuests().stream().filter(q -> q.type == Type.PREPARATION).toList();
+		if (!preparations.isEmpty() || !lineage.house.preparations.isEmpty()) {
 			MutableComponent prep = Chronicle.heading("Preparations");
-			for (String effect : lineage.preparations) {
+			for (String effect : lineage.house.preparations) {
 				prep.append(Component.literal("✔ " + describeEffect(effect) + "\n").withStyle(s -> s.withColor(ChatFormatting.DARK_GREEN).withBold(false)));
 			}
 			for (Quest q : preparations) {
@@ -402,35 +408,35 @@ public final class Questlines {
 	}
 
 	public static String oathSummary(Lineage lineage) {
-		if (lineage.oath.isEmpty()) return "";
-		Oath oath = oath(lineage.oath.get()).orElse(null);
+		if (lineage.house.oath.isEmpty()) return "";
+		Oath oath = oath(lineage.house.oath.get()).orElse(null);
 		if (oath == null) return "";
-		if (lineage.oathActs >= oath.acts().size()) return "\n" + oath.name() + ": fulfilled";
-		return "\n" + oath.name() + ": act " + (lineage.oathActs + 1) + " of " + oath.acts().size();
+		if (lineage.house.oathActs >= oath.acts().size()) return "\n" + oath.name() + ": fulfilled";
+		return "\n" + oath.name() + ": act " + (lineage.house.oathActs + 1) + " of " + oath.acts().size();
 	}
 
 	// --- The Stolen Heirloom ------------------------------------------------------------------
 
 	/** Starts a recovery quest for the oldest lost heirloom, if none is under way. */
 	public static void tickReclaim(ServerPlayer player, Lineage lineage) {
-		if (lineage.lostHeirlooms.isEmpty() || player.level().dimension() != Level.OVERWORLD) return;
-		if (lineage.quests.stream().anyMatch(q -> q.line.filter(RECLAIM::equals).isPresent())) return;
-		ItemStack lost = lineage.lostHeirlooms.getFirst();
+		if (lineage.house.lostHeirlooms.isEmpty() || player.level().dimension() != Level.OVERWORLD) return;
+		if (lineage.allQuests().stream().anyMatch(q -> q.line.filter(RECLAIM::equals).isPresent())) return;
+		ItemStack lost = lineage.house.lostHeirlooms.getFirst();
 		String name = Heirlooms.nameOf(lost);
-		player.sendSystemMessage(Component.literal("Rumours reach House " + lineage.house + ": ").withStyle(ChatFormatting.GRAY)
+		tell(player, lineage, Component.literal("Rumours reach House " + lineage.house.name + ": ").withStyle(ChatFormatting.GRAY)
 			.append(Component.literal(name).withStyle(ChatFormatting.GOLD))
 			.append(Component.literal(" was not destroyed. Pillagers were seen carrying a weapon with the family's mark...").withStyle(ChatFormatting.GRAY)));
 		Quest quest = championQuest(player, "The Stolen Heirloom: " + name, "Take " + name + " back from the thief", Champions.THIEF,
 			"reclaim_" + player.getRandom().nextInt(1_000_000), Level.OVERWORLD, BuiltinStructures.PILLAGER_OUTPOST, false, Reward.levels(3))
 			.inLine(RECLAIM, 0, 0);
 		Quests.add(player, lineage, quest);
-		player.sendSystemMessage(Component.literal("New objective: ").withStyle(ChatFormatting.GRAY).append(Quests.line(quest, true)));
+		tell(player, lineage, Component.literal("New objective: ").withStyle(ChatFormatting.GRAY).append(Quests.line(quest, true)));
 		Lineages.markDirty(player.level().getServer());
 	}
 
 	private static void finishReclaim(ServerPlayer player, Lineage lineage, Quest quest) {
-		if (lineage.lostHeirlooms.isEmpty()) return;
-		ItemStack heirloom = Heirlooms.reclaimed(lineage.lostHeirlooms.removeFirst(), lineage);
+		if (lineage.house.lostHeirlooms.isEmpty()) return;
+		ItemStack heirloom = Heirlooms.reclaimed(lineage.house.lostHeirlooms.removeFirst(), lineage);
 		if (!player.getInventory().add(heirloom)) player.spawnAtLocation(player.level(), heirloom);
 		String name = Heirlooms.nameOf(heirloom);
 		player.sendSystemMessage(Component.literal("You take back ").append(Component.literal(name).withStyle(ChatFormatting.GOLD))
@@ -443,7 +449,7 @@ public final class Questlines {
 		Heirlooms.lostOwner(stack).ifPresent(owner -> {
 			Lineage lineage = io.github.fersyvanderzee.bloodline.data.BloodlineState.get(server).get(owner);
 			if (lineage == null) return;
-			lineage.lostHeirlooms.add(stack.copy());
+			lineage.house.lostHeirlooms.add(stack.copy());
 			Lineages.markDirty(server);
 		});
 	}
@@ -497,10 +503,10 @@ public final class Questlines {
 		Optional<ItemStack> weapon = Optional.empty();
 		Lineage lineage = Lineages.get(player);
 		if (lineage == null) return;
-		if (quest.line.filter(RECLAIM::equals).isPresent() && !lineage.lostHeirlooms.isEmpty()) {
-			weapon = Optional.of(lineage.lostHeirlooms.getFirst());
+		if (quest.line.filter(RECLAIM::equals).isPresent() && !lineage.house.lostHeirlooms.isEmpty()) {
+			weapon = Optional.of(lineage.house.lostHeirlooms.getFirst());
 		}
-		List<String> preparations = isOathStep(quest) ? List.copyOf(lineage.preparations) : List.of();
+		List<String> preparations = isOathStep(quest) ? List.copyOf(lineage.house.preparations) : List.of();
 		Champions.spawn(player, kind, key, weapon, preparations);
 		for (String effect : preparations) {
 			player.sendSystemMessage(Component.literal("Your preparation pays off: " + describeEffect(effect) + ".").withStyle(ChatFormatting.GREEN));
@@ -550,6 +556,15 @@ public final class Questlines {
 		if (dimension == Level.NETHER) return "the Nether";
 		if (dimension == Level.END) return "the End";
 		return "the Overworld";
+	}
+
+	/** Oath news concerns the whole house, so it goes to every online member. */
+	private static void tell(ServerPlayer player, Lineage lineage, Component message) {
+		Lineages.tellHouse(player.level().getServer(), lineage.house, message);
+	}
+
+	private static void titleHouse(ServerPlayer player, Lineage lineage, String title, String subtitle) {
+		Lineages.onlineMembers(player.level().getServer(), lineage.house).forEach(member -> title(member, title, subtitle));
 	}
 
 	private static void title(ServerPlayer player, String title, String subtitle) {

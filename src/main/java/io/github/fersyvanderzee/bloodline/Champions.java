@@ -173,9 +173,11 @@ public final class Champions {
 		if (owner == null || key == null) return;
 		Lineage lineage = BloodlineState.get(server).get(owner);
 		if (lineage == null) return;
-		for (Quest quest : lineage.quests) {
+		for (Quest quest : lineage.allQuests()) {
 			if (quest.goal == Quest.Goal.KILL_CHAMPION && quest.targets.contains(key)) {
 				quest.progress = quest.required;
+				// Whoever landed the killing blow on behalf of the house collects the reward.
+				if (champion.getKillCredit() instanceof ServerPlayer killer) quest.lastContributor = killer.getUUID();
 				Lineages.markDirty(server);
 			}
 		}

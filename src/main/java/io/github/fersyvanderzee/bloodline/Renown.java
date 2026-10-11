@@ -33,11 +33,13 @@ public final class Renown {
 	/** Changes the house's renown and tells the player why. Renown never drops below zero. */
 	public static void change(ServerPlayer player, Lineage lineage, int amount, String reason) {
 		if (amount == 0) return;
-		lineage.renown = Math.max(0, lineage.renown + amount);
+		lineage.house.renown = Math.max(0, lineage.house.renown + amount);
 		Lineages.markDirty(player.level().getServer());
-		player.sendSystemMessage(Component.literal((amount > 0 ? "+" : "") + amount + " Renown")
+		// Renown belongs to the whole house, so every member online hears about it.
+		String who = lineage.house.members.size() > 1 ? " (" + lineage.current.name() + ")" : "";
+		Lineages.tellHouse(player.level().getServer(), lineage.house, Component.literal((amount > 0 ? "+" : "") + amount + " Renown")
 			.withStyle(amount > 0 ? ChatFormatting.YELLOW : ChatFormatting.RED)
-			.append(Component.literal(" " + reason + " (House " + lineage.house + ": " + lineage.renown + ")").withStyle(ChatFormatting.GRAY)));
+			.append(Component.literal(" " + reason + who + " (House " + lineage.house.name + ": " + lineage.house.renown + ")").withStyle(ChatFormatting.GRAY)));
 		if (amount > 0) Questlines.resume(player, lineage);
 	}
 }

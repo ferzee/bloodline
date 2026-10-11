@@ -7,8 +7,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.util.StringRepresentable;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * A family duty. Most objectives are measured with vanilla statistics (kills, blocks mined,
@@ -79,7 +82,8 @@ public class Quest {
 		Codec.INT.fieldOf("required").forGetter(q -> q.required),
 		Codec.INT.optionalFieldOf("display_scale", 1).forGetter(q -> q.displayScale),
 		Codec.INT.optionalFieldOf("progress", 0).forGetter(q -> q.progress),
-		Codec.INT.optionalFieldOf("last_seen", 0).forGetter(q -> q.lastSeen),
+		Codec.INT.optionalFieldOf("last_seen", 0).forGetter(q -> 0),
+		Codec.unboundedMap(Codec.STRING, Codec.INT).optionalFieldOf("seen", Map.of()).forGetter(q -> q.seen),
 		GlobalPos.MAP_CODEC.codec().optionalFieldOf("place").forGetter(q -> q.place),
 		Codec.INT.optionalFieldOf("radius", 6).forGetter(q -> q.radius),
 		Reward.CODEC.fieldOf("reward").forGetter(q -> q.reward),
@@ -99,8 +103,11 @@ public class Quest {
 	/** Divides progress for display, e.g. 100 to show centimetres walked as metres. */
 	public int displayScale;
 	public int progress;
-	/** The statistic total last time progress was checked. */
-	public int lastSeen;
+	/**
+	 * Each player's statistic total the last time progress was checked, by player UUID. Shared
+	 * quests count every member's progress, so each member needs their own baseline.
+	 */
+	public final Map<String, Integer> seen;
 	public Optional<GlobalPos> place;
 	/** How close to {@link #place} counts as having arrived. Larger radii only check horizontal distance. */
 	public int radius;
@@ -111,7 +118,8 @@ public class Quest {
 	public int step;
 
 	public Quest(Type type, String title, Component task, Goal goal, List<String> targets, int required, int displayScale,
-				 int progress, int lastSeen, Optional<GlobalPos> place, int radius, Reward reward, Optional<String> line, int act, int step) {
+				 int progress, int legacyLastSeen, Map<String, Integer> seen, Optional<GlobalPos> place, int radius, Reward reward,
+				 Optional<String> line, int act, int step) {
 		this.type = type;
 		this.title = title;
 		this.task = task;
@@ -120,7 +128,9 @@ public class Quest {
 		this.required = required;
 		this.displayScale = displayScale;
 		this.progress = progress;
-		this.lastSeen = lastSeen;
+		this.seen = new HashMap<>(seen);
+		// Saves from before shared progress had a single baseline; it can only have belonged to one player.
+		this.legacyLastSeen = legacyLastSeen;
 		this.place = place;
 		this.radius = radius;
 		this.reward = reward;
@@ -130,7 +140,7 @@ public class Quest {
 	}
 
 	public static Quest of(Type type, String title, Component task, Goal goal, List<String> targets, int required, Reward reward) {
-		return new Quest(type, title, task, goal, targets, required, 1, 0, 0, Optional.empty(), 6, reward, Optional.empty(), 0, 0);
+		return new Quest(type, title, task, goal, targets, required, 1, 0, 0, Map.of(), Optional.empty(), 6, reward, Optional.empty(), 0, 0);
 	}
 
 	public static Quest of(Type type, String title, String task, Goal goal, List<String> targets, int required, Reward reward) {
@@ -154,6 +164,12 @@ public class Quest {
 		this.step = step;
 		return this;
 	}
+
+	/** The member who last made progress on this quest; they get the reward. Not saved. */
+	public UUID lastContributor;
+
+	/** A single-player baseline from old saves, used once for the first player who checks this quest. */
+	public int legacyLastSeen;
 
 	public boolean isDone() {
 		return progress >= required;

@@ -31,6 +31,7 @@ It runs entirely on the server, so players can join a Bloodline server with a va
   - **Bounties:** a named beast roams nearby. You get a map; slay it for emeralds and renown.
   - **Deliveries:** bring goods to any innkeeper.
   - **Rumours:** pay emeralds for a map to a structure nobody has found yet.
+- **Shared houses.** Players can join each other's houses. Each member plays their own branch of the family, with their own character, heirs and family tree. The house shares its name, oath, renown, legendary traits, history, heirlooms and quests: oath steps, preparations and blood debts count every member's progress. The head of the house invites, removes and renames; when joining, a player either brings their own family along as a new branch or starts fresh as a newcomer.
 - **The Chronicle.** A book that writes itself: births, deaths, heirlooms, first steps into the Nether and the End, and bosses slain.
 
 ## Commands
@@ -42,10 +43,19 @@ It runs entirely on the server, so players can join a Bloodline server with a va
 | `/bloodline tree [player]` | The full family tree |
 | `/bloodline quests` | Your family's duties and progress |
 | `/bloodline oath [sword\|deep\|hearth]` | See or swear your family's oath |
+| `/bloodline invite <player>` | Invite a player into your house (head only) |
+| `/bloodline accept keep\|fresh` / `decline` | Answer an invitation: bring your family along, or start fresh |
+| `/bloodline leave` | Leave your house and found a new one |
+| `/bloodline remove <player>` | Send a member away (head only) |
+| `/bloodline head <player>` | Pass leadership to another member (head only) |
 | `/bloodline chronicle` | A new copy of the family chronicle |
 | `/bloodline house <name>` | Rename your house |
 
 Operators can use `/bloodline debug complete` to finish the newest quest and `/bloodline debug champion` to spawn a test champion.
+
+## Testing multiplayer on one computer
+
+`./gradlew runClient` and `./gradlew runClient2` start two clients with different names. Open a world to LAN in the first and join it from the second.
 
 ## Building
 

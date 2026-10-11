@@ -2,6 +2,7 @@ package io.github.fersyvanderzee.bloodline;
 
 import io.github.fersyvanderzee.bloodline.data.Ancestor;
 import io.github.fersyvanderzee.bloodline.data.CompletedQuest;
+import io.github.fersyvanderzee.bloodline.data.House;
 import io.github.fersyvanderzee.bloodline.data.Lineage;
 import io.github.fersyvanderzee.bloodline.data.Member;
 import io.github.fersyvanderzee.bloodline.data.Quest;
@@ -44,6 +45,8 @@ public final class Quests {
 	private static final int MAX_BLOOD_DEBTS = 3;
 	private static final int VISIT_RADIUS = 6;
 	private static final int MIN_TICKS_BEFORE_VISIT = 600;
+	/** Blood debts are marked with the branch whose ancestor they avenge. */
+	private static final String DEBT_PREFIX = "debt:";
 	private static final float STRONG_KILLER_HEALTH = 100;
 
 	private record Template(String title, String task, Goal goal, List<String> targets, int required, int displayScale, Reward reward) {
@@ -101,7 +104,7 @@ public final class Quests {
 	/** Goals for the founder of a new house. */
 	public static void addFounding(ServerPlayer player, Lineage lineage) {
 		List<String> banners = Arrays.stream(DyeColor.values()).map(c -> c.getSerializedName() + "_banner").toList();
-		add(player, lineage, Quest.of(Type.FOUNDING, "Raise the banner of House " + lineage.house, "Craft a banner",
+		add(player, lineage, Quest.of(Type.FOUNDING, "Raise the banner of House " + lineage.house.name, "Craft a banner",
 			Goal.CRAFT, banners, 1, Reward.levels(3)));
 		add(player, lineage, Quest.of(Type.FOUNDING, "A roof for the family", "Sleep in a bed",
 			Goal.CUSTOM_STAT, List.of("sleep_in_bed"), 1, Reward.item(2, "bread", 8)));
@@ -115,9 +118,11 @@ public final class Quests {
 	 * blood debts, which pass on. Then the heir's new duties are added.
 	 */
 	public static void onDeath(ServerPlayer player, Lineage lineage, Ancestor ancestor, DamageSource source) {
-		lineage.quests.removeIf(q -> q.type != Type.BLOOD_DEBT && q.type != Type.QUESTLINE && q.type != Type.PREPARATION);
+		// This branch's own duties die with them; house quests (blood debts, the oath) carry on.
+		lineage.ownQuests.clear();
 		// Debts nobody settled in this life pass to the heir, and the house's standing suffers for it.
-		long inherited = lineage.quests.stream().filter(q -> q.type == Type.BLOOD_DEBT).count();
+		String origin = DEBT_PREFIX + player.getUUID();
+		long inherited = lineage.house.quests.stream().filter(q -> q.type == Type.BLOOD_DEBT && q.line.filter(origin::equals).isPresent()).count();
 		if (inherited > 0) Renown.change(player, lineage, (int) inherited * Renown.DEBT_INHERITED, "for leaving blood debts unpaid");
 
 		LivingEntity killer = source.getEntity() instanceof LivingEntity living ? living : player.getKillCredit();
@@ -135,10 +140,11 @@ public final class Quests {
 					Component.literal("Slay ").append(killer.getType().getDescription()), Goal.KILL,
 					List.of(type.toString()), count, reward);
 			}
+			debt.line = Optional.of(DEBT_PREFIX + player.getUUID());
 			add(player, lineage, debt);
-			List<Quest> debts = lineage.quests.stream().filter(q -> q.type == Type.BLOOD_DEBT).toList();
+			List<Quest> debts = lineage.allQuests().stream().filter(q -> q.type == Type.BLOOD_DEBT).toList();
 			for (int i = 0; i < debts.size() - MAX_BLOOD_DEBTS; i++) {
-				lineage.quests.remove(debts.get(i));
+				lineage.removeQuest(debts.get(i));
 				Renown.change(player, lineage, Renown.DEBT_FORGOTTEN, "for forgetting the debt to " + debts.get(i).title.replace("Avenge ", ""));
 			}
 		}
@@ -152,8 +158,8 @@ public final class Quests {
 	}
 
 	public static void add(ServerPlayer player, Lineage lineage, Quest quest) {
-		quest.lastSeen = statTotal(player, quest);
-		lineage.quests.add(quest);
+		quest.seen.put(player.getUUID().toString(), statTotal(player, quest));
+		lineage.addQuest(quest);
 	}
 
 	public static String describe(GlobalPos place) {
@@ -167,7 +173,7 @@ public final class Quests {
 	/** Checks progress for every duty; runs about once a second per player. */
 	public static void tick(ServerPlayer player, Lineage lineage) {
 		boolean changed = false;
-		for (Quest quest : List.copyOf(lineage.quests)) {
+		for (Quest quest : lineage.allQuests()) {
 			switch (quest.goal) {
 				case KILL_PLAYER, KILL_WITH_OATHBLADE, MANUAL -> {
 				}
@@ -185,25 +191,39 @@ public final class Quests {
 					if (player.getBlockY() <= Integer.parseInt(quest.targets.getFirst())) quest.progress = 1;
 				}
 				default -> {
+					// Each member has their own baseline, so on shared quests everyone's progress adds up.
+					String key = player.getUUID().toString();
 					int now = statTotal(player, quest);
-					int delta = now - quest.lastSeen;
-					if (delta != 0) {
-						quest.lastSeen = now;
+					Integer before = quest.seen.get(key);
+					if (before == null) {
+						before = quest.legacyLastSeen != 0 && quest.seen.isEmpty() ? quest.legacyLastSeen : now;
+						quest.legacyLastSeen = 0;
+					}
+					int delta = now - before;
+					if (delta != 0 || !quest.seen.containsKey(key)) {
+						quest.seen.put(key, now);
 						changed = true;
 					}
 					if (delta > 0) {
 						quest.progress = Math.min(quest.required, quest.progress + delta);
+						quest.lastContributor = player.getUUID();
 						// Distance and time tick up every second, so only count-style duties report progress.
 						if (!quest.isDone() && quest.displayScale == 1) player.sendOverlayMessage(line(quest, false));
 					}
 				}
 			}
-			if (quest.isDone()) {
+			if (quest.isDone() && isRewardedTo(player, quest)) {
 				complete(player, lineage, quest);
 				changed = true;
 			}
 		}
 		if (changed) Lineages.markDirty(player.level().getServer());
+	}
+
+	/** On shared quests the member who made the final progress collects the reward, if they're still online. */
+	private static boolean isRewardedTo(ServerPlayer player, Quest quest) {
+		if (quest.lastContributor == null || quest.lastContributor.equals(player.getUUID())) return true;
+		return player.level().getServer().getPlayerList().getPlayer(quest.lastContributor) == null;
 	}
 
 	/**
@@ -224,9 +244,10 @@ public final class Quests {
 		Lineage lineage = Lineages.get(player);
 		if (lineage == null || !Heirlooms.isOathblade(player, player.getMainHandItem())) return;
 		String type = BuiltInRegistries.ENTITY_TYPE.getKey(killed.getType()).toString();
-		for (Quest quest : lineage.quests) {
+		for (Quest quest : lineage.allQuests()) {
 			if (quest.goal == Goal.KILL_WITH_OATHBLADE && quest.targets.contains(type) && !quest.isDone()) {
 				quest.progress++;
+				quest.lastContributor = player.getUUID();
 				if (!quest.isDone()) player.sendOverlayMessage(line(quest, false));
 				Lineages.markDirty(player.level().getServer());
 			}
@@ -237,7 +258,7 @@ public final class Quests {
 	public static void onPlayerKilled(ServerPlayer killer, ServerPlayer victim) {
 		Lineage lineage = Lineages.get(killer);
 		if (lineage == null) return;
-		for (Quest quest : List.copyOf(lineage.quests)) {
+		for (Quest quest : lineage.allQuests()) {
 			if (quest.goal == Goal.KILL_PLAYER && quest.targets.contains(victim.getUUID().toString())) {
 				quest.progress = 1;
 				complete(killer, lineage, quest);
@@ -266,13 +287,17 @@ public final class Quests {
 
 	private static void complete(ServerPlayer player, Lineage lineage, Quest quest) {
 		MinecraftServer server = player.level().getServer();
-		lineage.quests.remove(quest);
+		lineage.removeQuest(quest);
 		lineage.completed.add(CompletedQuest.of(quest, lineage.current.generation()));
 		while (lineage.completed.size() > MAX_COMPLETED) lineage.completed.removeFirst();
 		player.sendSystemMessage(Component.literal(quest.type == Type.QUESTLINE ? "Done: " : "Duty fulfilled: ").withStyle(ChatFormatting.GREEN)
 			.append(Component.literal(quest.title).withStyle(ChatFormatting.GOLD))
 			.append(quest.type == Type.QUESTLINE ? Component.literal(" - ").append(quest.task.copy()).withStyle(ChatFormatting.GRAY) : Component.empty()));
 		player.level().playSound(null, player.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 0.7f, 1f);
+		if (House.isShared(quest.type)) {
+			Lineages.tellOthers(player, lineage.house, Component.literal(lineage.current.name() + " completed: ").withStyle(ChatFormatting.GREEN)
+				.append(Component.literal(quest.title).withStyle(ChatFormatting.GOLD)));
+		}
 		if (quest.type != Type.QUESTLINE && quest.type != Type.PREPARATION) {
 			String deed = quest.type == Type.BLOOD_DEBT ? " settled a blood debt: " : " fulfilled a family duty: ";
 			Lineages.record(server, lineage, Component.literal(lineage.current.name() + deed + quest.title + "."));
@@ -334,13 +359,13 @@ public final class Quests {
 	/** Lists the family's duties in chat. */
 	public static void show(ServerPlayer viewer, Lineage lineage) {
 		List<CompletedQuest> done = lineage.completedThisGeneration().stream().filter(c -> c.type() != Type.QUESTLINE).toList();
-		if (lineage.quests.isEmpty() && done.isEmpty()) {
-			viewer.sendSystemMessage(Component.literal("House " + lineage.house + " has no duties right now.").withStyle(ChatFormatting.GRAY));
+		if (lineage.allQuests().isEmpty() && done.isEmpty()) {
+			viewer.sendSystemMessage(Component.literal("House " + lineage.house.name + " has no duties right now.").withStyle(ChatFormatting.GRAY));
 			return;
 		}
-		viewer.sendSystemMessage(Component.literal("Duties of House " + lineage.house).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
-			.append(Component.literal("  Renown: " + lineage.renown).withStyle(s -> s.withBold(false).withColor(ChatFormatting.YELLOW))));
-		for (Quest quest : lineage.quests) {
+		viewer.sendSystemMessage(Component.literal("Duties of House " + lineage.house.name).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
+			.append(Component.literal("  Renown: " + lineage.house.renown).withStyle(s -> s.withBold(false).withColor(ChatFormatting.YELLOW))));
+		for (Quest quest : lineage.allQuests()) {
 			String bullet = switch (quest.type) {
 				case BLOOD_DEBT -> "  ⚔ ";
 				case QUESTLINE -> "  ✦ ";
@@ -361,9 +386,9 @@ public final class Quests {
 
 	/** A short clickable reminder that there are duties waiting. */
 	public static void remind(ServerPlayer player, Lineage lineage) {
-		if (lineage.quests.isEmpty()) return;
-		int n = lineage.quests.size();
-		player.sendSystemMessage(Component.literal("House " + lineage.house + " has " + n + (n == 1 ? " duty" : " duties") + " for you. ")
+		if (lineage.allQuests().isEmpty()) return;
+		int n = lineage.allQuests().size();
+		player.sendSystemMessage(Component.literal("House " + lineage.house.name + " has " + n + (n == 1 ? " duty" : " duties") + " for you. ")
 			.withStyle(ChatFormatting.GRAY)
 			.append(Component.literal("[Show]").withStyle(s -> s.withColor(ChatFormatting.GOLD)
 				.withClickEvent(new ClickEvent.RunCommand("/bloodline quests"))

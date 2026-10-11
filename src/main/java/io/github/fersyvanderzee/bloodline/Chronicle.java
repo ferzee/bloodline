@@ -11,7 +11,10 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import io.github.fersyvanderzee.bloodline.data.BloodlineState;
+import java.util.UUID;
 import net.minecraft.server.network.Filterable;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
@@ -50,7 +53,7 @@ public final class Chronicle {
 		if (lineage == null) return;
 		ItemStack book = new ItemStack(Items.WRITTEN_BOOK);
 		CustomData.update(DataComponents.CUSTOM_DATA, book, tag -> tag.putBoolean(KEY, true));
-		book.set(DataComponents.WRITTEN_BOOK_CONTENT, build(lineage));
+		book.set(DataComponents.WRITTEN_BOOK_CONTENT, build(player, lineage));
 		if (!player.getInventory().add(book)) {
 			player.spawnAtLocation(player.level(), book);
 		}
@@ -68,7 +71,7 @@ public final class Chronicle {
 	public static void refresh(ServerPlayer player, ItemStack book) {
 		Lineage lineage = Lineages.get(player);
 		if (lineage != null) {
-			book.set(DataComponents.WRITTEN_BOOK_CONTENT, build(lineage));
+			book.set(DataComponents.WRITTEN_BOOK_CONTENT, build(player, lineage));
 			// The client opens its own copy of the book, so send the new pages before the open-book packet.
 			// Otherwise the inventory sync only arrives next tick and the book shows the previous pages.
 			player.containerMenu.broadcastChanges();
@@ -87,10 +90,10 @@ public final class Chronicle {
 		}
 	}
 
-	static WrittenBookContent build(Lineage lineage) {
-		List<Component> mainQuest = Questlines.bookPages(lineage, 2);
+	static WrittenBookContent build(ServerPlayer viewer, Lineage lineage) {
+		List<Component> mainQuest = Questlines.bookPages(lineage, 2, lineage.isHead(viewer.getUUID()));
 		List<Component> duties = duties(lineage);
-		List<Component> head = List.of(head(lineage));
+		List<Component> head = List.of(head(lineage), members(viewer.level().getServer(), lineage));
 		List<Component> tree = familyTree(lineage);
 		List<Component> history = entries(lineage);
 		int room = MAX_PAGES - 1 - mainQuest.size() - duties.size() - head.size() - tree.size();
@@ -102,13 +105,13 @@ public final class Chronicle {
 		int headPage = dutiesPage + duties.size();
 		int treePage = headPage + head.size();
 		int historyPage = treePage + tree.size();
-		long dutyCount = lineage.quests.stream().filter(q -> !Questlines.isOathStep(q) && q.type != Quest.Type.PREPARATION).count();
+		long dutyCount = lineage.allQuests().stream().filter(q -> !Questlines.isOathStep(q) && q.type != Quest.Type.PREPARATION).count();
 
 		List<Component> pages = new ArrayList<>();
 		pages.add(cover(lineage, List.of(
 			link("Main Quest", mainPage),
 			link("Duties" + (dutyCount > 0 ? " (" + dutyCount + ")" : ""), dutiesPage),
-			link("Head of the House", headPage),
+			link("You & the House", headPage),
 			link("Family Tree", treePage),
 			link("History", historyPage))));
 		pages.addAll(mainQuest);
@@ -117,9 +120,9 @@ public final class Chronicle {
 		pages.addAll(tree);
 		pages.addAll(history.isEmpty() ? List.of(heading("History").append(body("Nothing has happened yet."))) : history);
 
-		String title = "Chronicle of " + lineage.house;
+		String title = "Chronicle of " + lineage.house.name;
 		if (title.length() > WrittenBookContent.TITLE_MAX_LENGTH) title = title.substring(0, WrittenBookContent.TITLE_MAX_LENGTH);
-		return new WrittenBookContent(Filterable.passThrough(title), "House " + lineage.house, 0,
+		return new WrittenBookContent(Filterable.passThrough(title), "House " + lineage.house.name, 0,
 			pages.stream().map(Filterable::passThrough).toList(), true);
 	}
 
@@ -172,17 +175,17 @@ public final class Chronicle {
 	private static Component cover(Lineage lineage, List<Component> contents) {
 		MutableComponent page = Component.empty()
 			.append(faint("The Chronicle of\n"))
-			.append(Component.literal("House " + lineage.house + "\n\n").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD))
-			.append(faint("Head of the house:\n"))
+			.append(Component.literal("House " + lineage.house.name + "\n\n").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD))
+			.append(faint(lineage.house.members.size() > 1 ? "Your character:\n" : "Head of the house:\n"))
 			.append(Component.literal(lineage.current.name() + "\n").withStyle(ChatFormatting.BLACK, ChatFormatting.BOLD))
-			.append(faint("Generation " + Names.numeral(lineage.current.generation()) + ", renown " + lineage.renown + "\n\n"))
+			.append(faint("Generation " + Names.numeral(lineage.current.generation()) + ", renown " + lineage.house.renown + "\n\n"))
 			.append(Component.literal("Contents\n").withStyle(ChatFormatting.BLACK, ChatFormatting.BOLD));
 		contents.forEach(page::append);
 		return page;
 	}
 
 	private static List<Component> duties(Lineage lineage) {
-		List<Quest> quests = lineage.quests.stream().filter(q -> !Questlines.isOathStep(q) && q.type != Quest.Type.PREPARATION).toList();
+		List<Quest> quests = lineage.allQuests().stream().filter(q -> !Questlines.isOathStep(q) && q.type != Quest.Type.PREPARATION).toList();
 		List<CompletedQuest> done = lineage.completedThisGeneration().stream()
 			.filter(c -> c.type() != Quest.Type.QUESTLINE && c.type() != Quest.Type.PREPARATION).toList();
 		List<Component> pages = new ArrayList<>();
@@ -228,14 +231,31 @@ public final class Chronicle {
 		return Component.literal(text).withStyle(s -> s.withColor(ChatFormatting.GRAY).withBold(false).withStrikethrough(true));
 	}
 
+	private static Component members(MinecraftServer server, Lineage lineage) {
+		BloodlineState state = BloodlineState.get(server);
+		MutableComponent page = heading("Members");
+		for (UUID id : lineage.house.members) {
+			Lineage member = state.get(id);
+			if (member == null) continue;
+			boolean head = lineage.house.head.equals(id);
+			page.append(Component.literal(member.current.name() + (head ? " ♛" : "") + "\n").withStyle(s -> s.withColor(ChatFormatting.BLACK).withBold(head)
+				.withHoverEvent(new HoverEvent.ShowText(Component.literal(member.fullName() + (head ? ", head of the house" : ""))))));
+			page.append(faint("   generation " + Names.numeral(member.current.generation()) + "\n"));
+		}
+		if (lineage.house.members.size() == 1) {
+			page.append(faint("\nThe head of the house can invite others with /bloodline invite <player>."));
+		}
+		return page;
+	}
+
 	private static Component head(Lineage lineage) {
-		MutableComponent page = heading("Head of the House")
+		MutableComponent page = heading("Your Character")
 			.append(Component.literal(lineage.fullName() + "\n").withStyle(s -> s.withColor(ChatFormatting.BLACK).withBold(true)))
 			.append(faint("Generation " + Names.numeral(lineage.current.generation()) + ", born day " + lineage.current.bornDay() + "\n\n"))
 			.append(faint("Born with:\n"))
 			.append(traitLines(lineage.current.traits()));
-		if (!lineage.legacies.isEmpty()) {
-			page.append(faint("\nLegacy of the house:\n")).append(traitLines(lineage.legacies));
+		if (!lineage.house.legacies.isEmpty()) {
+			page.append(faint("\nLegacy of the house:\n")).append(traitLines(lineage.house.legacies));
 		}
 		return page;
 	}
@@ -267,7 +287,7 @@ public final class Chronicle {
 		List<Component> pages = new ArrayList<>();
 		MutableComponent page = null;
 		int used = 0;
-		for (ChronicleEntry entry : lineage.chronicle) {
+		for (ChronicleEntry entry : lineage.house.chronicle) {
 			int length = entry.text().getString().length() + 12;
 			if (page == null || used + length > PAGE_BUDGET) {
 				if (page != null) pages.add(page);

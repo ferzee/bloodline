@@ -113,8 +113,8 @@ public final class Inns {
 	 * with a map. Called when a house is founded and when an older family joins.
 	 */
 	public static void addIntroQuest(ServerPlayer player, Lineage lineage) {
-		if (lineage.milestones.contains(MET_INNKEEPER)) return;
-		if (lineage.quests.stream().anyMatch(q -> q.goal == Goal.MANUAL && q.targets.contains(SPEAK_TARGET))) return;
+		if (lineage.house.milestones.contains(MET_INNKEEPER)) return;
+		if (lineage.allQuests().stream().anyMatch(q -> q.goal == Goal.MANUAL && q.targets.contains(SPEAK_TARGET))) return;
 		String task = "Find a village and speak to its innkeeper";
 		ServerLevel overworld = player.level().getServer().overworld();
 		BlockPos village = player.level().dimension() == Level.OVERWORLD
@@ -130,10 +130,10 @@ public final class Inns {
 	}
 
 	private static void markMetInnkeeper(ServerPlayer player, Lineage lineage, BlockPos inn) {
-		for (Quest quest : lineage.quests) {
+		for (Quest quest : lineage.allQuests()) {
 			if (quest.goal == Goal.MANUAL && quest.targets.contains(SPEAK_TARGET)) quest.progress = quest.required;
 		}
-		if (lineage.milestones.add(MET_INNKEEPER)) {
+		if (lineage.house.milestones.add(MET_INNKEEPER)) {
 			Lineages.record(player.level().getServer(), lineage, Component.literal(lineage.current.name() + " first warmed their hands at "
 				+ innName(inn) + "."));
 		}
@@ -236,11 +236,11 @@ public final class Inns {
 	}
 
 	private static boolean taken(Lineage lineage, Offer offer) {
-		return lineage.quests.stream().anyMatch(q -> q.line.filter((LINE_PREFIX + offer.id())::equals).isPresent());
+		return lineage.allQuests().stream().anyMatch(q -> q.line.filter((LINE_PREFIX + offer.id())::equals).isPresent());
 	}
 
 	private static long activeJobs(Lineage lineage) {
-		return lineage.quests.stream().filter(q -> q.type == Type.INN).count();
+		return lineage.allQuests().stream().filter(q -> q.type == Type.INN).count();
 	}
 
 	private static void fill(SimpleContainer board, ServerPlayer player, Lineage lineage, List<Offer> offers) {
@@ -284,10 +284,10 @@ public final class Inns {
 			board.setItem(slot, icon);
 		}
 		ItemStack info = new ItemStack(Items.PAPER);
-		info.set(DataComponents.CUSTOM_NAME, name("House " + lineage.house, ChatFormatting.GOLD));
+		info.set(DataComponents.CUSTOM_NAME, name("House " + lineage.house.name, ChatFormatting.GOLD));
 		info.set(DataComponents.LORE, new ItemLore(List.of(
 			line("Inn jobs: " + activeJobs(lineage) + " / " + MAX_JOBS, ChatFormatting.GRAY),
-			line("Renown: " + lineage.renown, ChatFormatting.YELLOW),
+			line("Renown: " + lineage.house.renown, ChatFormatting.YELLOW),
 			line("New jobs are posted every morning.", ChatFormatting.DARK_GRAY))));
 		board.setItem(8, info);
 	}
@@ -383,7 +383,7 @@ public final class Inns {
 	}
 
 	private static void handInDeliveries(ServerPlayer player, Lineage lineage) {
-		for (Quest quest : lineage.quests) {
+		for (Quest quest : lineage.allQuests()) {
 			if (quest.type != Type.INN || quest.goal != Goal.MANUAL || quest.isDone()) continue;
 			Item item = BuiltInRegistries.ITEM.getOptional(Identifier.parse(quest.targets.getFirst())).orElse(null);
 			if (item == null || count(player, item) < quest.required) continue;

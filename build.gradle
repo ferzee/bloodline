@@ -20,6 +20,17 @@ loom {
 			sourceSet sourceSets.client
 		}
 	}
+
+	runs {
+		// A second client with its own folder and name, for testing multiplayer on one computer:
+		// open a world to LAN in one client and join it from the other.
+		client2 {
+			client()
+			configName = "Minecraft Client (second player)"
+			runDir = "run2"
+			programArgs "--username", "Friend"
+		}
+	}
 }
 
 dependencies {
