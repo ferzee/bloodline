@@ -6,12 +6,15 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerEntityCombatEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.slf4j.Logger;
@@ -37,6 +40,7 @@ public class Bloodline implements ModInitializer {
 		ServerPlayerEvents.JOIN.register(Lineages::onJoin);
 		ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
 			if (entity instanceof ServerPlayer player) Lineages.onDeath(player, source);
+			if (Champions.isChampion(entity)) Champions.onDeath(entity.level().getServer(), entity);
 		});
 		ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
 			if (!alive) Heirlooms.passOn(oldPlayer, newPlayer);
@@ -46,11 +50,15 @@ public class Bloodline implements ModInitializer {
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (server.getTickCount() % HEIRLOOM_TICK_INTERVAL != 0) return;
 			boolean questTick = server.getTickCount() % QUEST_TICK_INTERVAL == 0;
+			Champions.tick(server);
 			for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 				if (!player.isAlive()) continue;
 				Heirlooms.tick(player);
 				var lineage = Lineages.get(player);
-				if (questTick && lineage != null && !lineage.awaitingHeir) Quests.tick(player, lineage);
+				if (questTick && lineage != null && !lineage.awaitingHeir) {
+					Quests.tick(player, lineage);
+					Questlines.tickReclaim(player, lineage);
+				}
 			}
 		});
 
@@ -65,9 +73,23 @@ public class Bloodline implements ModInitializer {
 		ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register((level, killer, killed, source) -> {
 			if (!(killer instanceof ServerPlayer player)) return;
 			if (killed instanceof ServerPlayer victim) Quests.onPlayerKilled(player, victim);
+			Quests.onKill(player, killed);
 			Identifier type = BuiltInRegistries.ENTITY_TYPE.getKey(killed.getType());
 			String deed = type.getNamespace().equals("minecraft") ? BOSSES.get(type.getPath()) : null;
 			if (deed != null) Lineages.milestone(player, "killed_" + type.getPath() + "_" + Lineages.get(player).current.generation(), deed);
+		});
+
+		ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> Champions.onLoad(entity));
+		ServerEntityEvents.ENTITY_UNLOAD.register((entity, level) -> {
+			Champions.onUnload(entity);
+			// An heirloom lying on the ground that burns, despawns or falls out of the world is "lost".
+			// Picked-up items are removed too, but with an empty stack.
+			if (entity instanceof ItemEntity item && !item.getItem().isEmpty()) {
+				Entity.RemovalReason reason = item.getRemovalReason();
+				if (reason == Entity.RemovalReason.KILLED || reason == Entity.RemovalReason.DISCARDED) {
+					Questlines.onHeirloomLost(level.getServer(), item.getItem());
+				}
+			}
 		});
 
 		UseItemCallback.EVENT.register((player, level, hand) -> {

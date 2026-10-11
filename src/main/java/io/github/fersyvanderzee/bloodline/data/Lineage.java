@@ -2,10 +2,12 @@ package io.github.fersyvanderzee.bloodline.data;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /** One player's family: the living head, everyone who came before, and what they did. */
@@ -17,7 +19,12 @@ public class Lineage {
 		Ancestor.CODEC.listOf().optionalFieldOf("ancestors", List.of()).forGetter(l -> l.ancestors),
 		ChronicleEntry.CODEC.listOf().optionalFieldOf("chronicle", List.of()).forGetter(l -> l.chronicle),
 		Codec.STRING.listOf().optionalFieldOf("milestones", List.of()).forGetter(l -> List.copyOf(l.milestones)),
-		Quest.CODEC.listOf().optionalFieldOf("quests", List.of()).forGetter(l -> l.quests)
+		Quest.CODEC.listOf().optionalFieldOf("quests", List.of()).forGetter(l -> l.quests),
+		Codec.STRING.optionalFieldOf("oath").forGetter(l -> l.oath),
+		Codec.INT.optionalFieldOf("oath_acts", 0).forGetter(l -> l.oathActs),
+		Codec.INT.optionalFieldOf("oath_act_generation", 0).forGetter(l -> l.oathActGeneration),
+		Codec.STRING.listOf().optionalFieldOf("legacies", List.of()).forGetter(l -> l.legacies),
+		ItemStack.CODEC.listOf().optionalFieldOf("lost_heirlooms", List.of()).forGetter(l -> l.lostHeirlooms)
 	).apply(i, Lineage::new));
 
 	public String house;
@@ -30,9 +37,19 @@ public class Lineage {
 	public final Set<String> milestones;
 	/** Duties the current head of the family can fulfil. */
 	public final List<Quest> quests;
+	/** The oath the founder swore, if any (see Questlines). */
+	public Optional<String> oath;
+	/** How many acts of the oath are done, and in which generation the last one was finished. */
+	public int oathActs;
+	public int oathActGeneration;
+	/** Legendary traits every member of the family is born with. */
+	public final List<String> legacies;
+	/** Heirlooms that were destroyed or lost; the Stolen Heirloom questline brings them back. */
+	public final List<ItemStack> lostHeirlooms;
 
 	public Lineage(String house, Member current, boolean awaitingHeir, List<Ancestor> ancestors, List<ChronicleEntry> chronicle,
-				   List<String> milestones, List<Quest> quests) {
+				   List<String> milestones, List<Quest> quests, Optional<String> oath, int oathActs, int oathActGeneration,
+				   List<String> legacies, List<ItemStack> lostHeirlooms) {
 		this.house = house;
 		this.current = current;
 		this.awaitingHeir = awaitingHeir;
@@ -40,14 +57,26 @@ public class Lineage {
 		this.chronicle = new ArrayList<>(chronicle);
 		this.milestones = new HashSet<>(milestones);
 		this.quests = new ArrayList<>(quests);
+		this.oath = oath;
+		this.oathActs = oathActs;
+		this.oathActGeneration = oathActGeneration;
+		this.legacies = new ArrayList<>(legacies);
+		this.lostHeirlooms = new ArrayList<>(lostHeirlooms);
 	}
 
 	public Lineage(String house, Member founder) {
-		this(house, founder, false, List.of(), List.of(), List.of(), List.of());
+		this(house, founder, false, List.of(), List.of(), List.of(), List.of(), Optional.empty(), 0, 0, List.of(), List.of());
 	}
 
 	public String fullName() {
 		return current.name() + " " + house;
+	}
+
+	/** The current member's own traits plus the family's legendary ones. */
+	public List<String> allTraits() {
+		List<String> all = new ArrayList<>(current.traits());
+		all.addAll(legacies);
+		return all;
 	}
 
 	public Ancestor parent() {

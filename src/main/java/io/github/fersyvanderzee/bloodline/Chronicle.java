@@ -80,7 +80,8 @@ public final class Chronicle {
 			.append(Component.literal(lineage.current.name() + "\n").withStyle(ChatFormatting.BLACK, ChatFormatting.BOLD))
 			.append(Component.literal("Generation " + Names.numeral(lineage.current.generation()) + ", born day " + lineage.current.bornDay() + "\n\n").withStyle(ChatFormatting.DARK_GRAY))
 			.append(Component.literal("Born with:\n").withStyle(ChatFormatting.DARK_GRAY))
-			.append(bookTraits(lineage.current.traits()));
+			.append(bookTraits(lineage.allTraits()))
+			.append(Component.literal(Questlines.oathSummary(lineage)).withStyle(ChatFormatting.DARK_GRAY));
 	}
 
 	private static Component duties(Lineage lineage) {
@@ -107,6 +108,7 @@ public final class Chronicle {
 				case BOON -> ChatFormatting.DARK_GREEN;
 				case FLAW -> ChatFormatting.DARK_RED;
 				case QUIRK -> ChatFormatting.DARK_AQUA;
+				case LEGENDARY -> ChatFormatting.GOLD;
 			};
 			out.append(trait.displayName().withStyle(color)).append("\n");
 		}

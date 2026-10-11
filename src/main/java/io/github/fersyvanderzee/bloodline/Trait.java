@@ -16,7 +16,9 @@ import java.util.List;
  */
 public record Trait(String id, Kind kind, String group, String name, String description, List<Effect> effects) {
 	public enum Kind {
-		BOON(ChatFormatting.GREEN), FLAW(ChatFormatting.RED), QUIRK(ChatFormatting.AQUA);
+		BOON(ChatFormatting.GREEN), FLAW(ChatFormatting.RED), QUIRK(ChatFormatting.AQUA),
+		/** Earned by finishing an oath. Every later member of the family is born with it. */
+		LEGENDARY(ChatFormatting.GOLD);
 
 		public final ChatFormatting color;
 

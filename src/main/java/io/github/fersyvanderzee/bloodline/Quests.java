@@ -51,8 +51,7 @@ public final class Quests {
 		}
 
 		Quest create(String ancestorName) {
-			return new Quest(Type.UNFINISHED_BUSINESS, title.formatted(ancestorName), Component.literal(task), goal, targets, required,
-				displayScale, 0, 0, Optional.empty(), reward);
+			return Quest.of(Type.UNFINISHED_BUSINESS, title.formatted(ancestorName), task, goal, targets, required, reward).scaled(displayScale);
 		}
 	}
 
@@ -101,12 +100,12 @@ public final class Quests {
 	/** Goals for the founder of a new house. */
 	public static void addFounding(ServerPlayer player, Lineage lineage) {
 		List<String> banners = Arrays.stream(DyeColor.values()).map(c -> c.getSerializedName() + "_banner").toList();
-		add(player, lineage, new Quest(Type.FOUNDING, "Raise the banner of House " + lineage.house, Component.literal("Craft a banner"),
-			Goal.CRAFT, banners, 1, 1, 0, 0, Optional.empty(), Reward.levels(3)));
-		add(player, lineage, new Quest(Type.FOUNDING, "A roof for the family", Component.literal("Sleep in a bed"),
-			Goal.CUSTOM_STAT, List.of("sleep_in_bed"), 1, 1, 0, 0, Optional.empty(), Reward.item(2, "bread", 8)));
-		add(player, lineage, new Quest(Type.FOUNDING, "Make a name for the house", Component.literal("Slay monsters"),
-			Goal.CUSTOM_STAT, List.of("mob_kills"), 15, 1, 0, 0, Optional.empty(), Reward.newTrait(5)));
+		add(player, lineage, Quest.of(Type.FOUNDING, "Raise the banner of House " + lineage.house, "Craft a banner",
+			Goal.CRAFT, banners, 1, Reward.levels(3)));
+		add(player, lineage, Quest.of(Type.FOUNDING, "A roof for the family", "Sleep in a bed",
+			Goal.CUSTOM_STAT, List.of("sleep_in_bed"), 1, Reward.item(2, "bread", 8)));
+		add(player, lineage, Quest.of(Type.FOUNDING, "Make a name for the house", "Slay monsters",
+			Goal.CUSTOM_STAT, List.of("mob_kills"), 15, Reward.newTrait(5)));
 	}
 
 	/**
@@ -114,22 +113,22 @@ public final class Quests {
 	 * blood debts, which pass on. Then the heir's new duties are added.
 	 */
 	public static void onDeath(ServerPlayer player, Lineage lineage, Ancestor ancestor, DamageSource source) {
-		lineage.quests.removeIf(q -> q.type != Type.BLOOD_DEBT);
+		lineage.quests.removeIf(q -> q.type != Type.BLOOD_DEBT && q.type != Type.QUESTLINE);
 
 		LivingEntity killer = source.getEntity() instanceof LivingEntity living ? living : player.getKillCredit();
 		if (killer != null && killer != player) {
 			Reward reward = Reward.newTrait(8);
 			Quest debt;
 			if (killer instanceof ServerPlayer otherPlayer) {
-				debt = new Quest(Type.BLOOD_DEBT, "Avenge " + ancestor.name(),
+				debt = Quest.of(Type.BLOOD_DEBT, "Avenge " + ancestor.name(),
 					Component.literal("Defeat ").append(otherPlayer.getDisplayName()), Goal.KILL_PLAYER,
-					List.of(otherPlayer.getUUID().toString()), 1, 1, 0, 0, Optional.empty(), reward);
+					List.of(otherPlayer.getUUID().toString()), 1, reward);
 			} else {
 				Identifier type = BuiltInRegistries.ENTITY_TYPE.getKey(killer.getType());
 				int count = killer.getMaxHealth() >= STRONG_KILLER_HEALTH ? 1 : 5;
-				debt = new Quest(Type.BLOOD_DEBT, "Avenge " + ancestor.name(),
+				debt = Quest.of(Type.BLOOD_DEBT, "Avenge " + ancestor.name(),
 					Component.literal("Slay ").append(killer.getType().getDescription()), Goal.KILL,
-					List.of(type.toString()), count, 1, 0, 0, Optional.empty(), reward);
+					List.of(type.toString()), count, reward);
 			}
 			add(player, lineage, debt);
 			List<Quest> debts = lineage.quests.stream().filter(q -> q.type == Type.BLOOD_DEBT).toList();
@@ -139,20 +138,19 @@ public final class Quests {
 		}
 
 		GlobalPos place = GlobalPos.of(player.level().dimension(), player.blockPosition());
-		add(player, lineage, new Quest(Type.RESTING_PLACE, "Where " + ancestor.name() + " fell",
-			Component.literal("Visit " + ancestor.name() + "'s resting place at " + describe(place)), Goal.VISIT, List.of(), 1, 1, 0, 0,
-			Optional.of(place), Reward.levels(3)));
+		add(player, lineage, Quest.of(Type.RESTING_PLACE, "Where " + ancestor.name() + " fell",
+			"Visit " + ancestor.name() + "'s resting place at " + describe(place), Goal.VISIT, List.of(), 1, Reward.levels(3)).at(place, VISIT_RADIUS));
 
 		List<Template> options = BY_EPITHET.getOrDefault(ancestor.epithet(), GENERAL);
 		add(player, lineage, options.get(player.getRandom().nextInt(options.size())).create(ancestor.name()));
 	}
 
-	private static void add(ServerPlayer player, Lineage lineage, Quest quest) {
+	public static void add(ServerPlayer player, Lineage lineage, Quest quest) {
 		quest.lastSeen = statTotal(player, quest);
 		lineage.quests.add(quest);
 	}
 
-	private static String describe(GlobalPos place) {
+	public static String describe(GlobalPos place) {
 		String where = place.pos().getX() + ", " + place.pos().getY() + ", " + place.pos().getZ();
 		if (place.dimension() == Level.NETHER) return where + " in the Nether";
 		if (place.dimension() == Level.END) return where + " in the End";
@@ -165,14 +163,20 @@ public final class Quests {
 		boolean changed = false;
 		for (Quest quest : List.copyOf(lineage.quests)) {
 			switch (quest.goal) {
-				case KILL_PLAYER -> {
+				case KILL_PLAYER, KILL_WITH_OATHBLADE, MANUAL -> {
 				}
+				case KILL_CHAMPION -> Questlines.maybeSpawnChampion(player, quest);
 				case VISIT -> {
 					// Wait a little after respawning, so dying next to the spawn point doesn't finish this instantly.
-					if (player.tickCount > MIN_TICKS_BEFORE_VISIT && quest.place.isPresent() && quest.place.get().dimension() == player.level().dimension()
-						&& quest.place.get().pos().closerToCenterThan(player.position(), VISIT_RADIUS)) {
+					if (player.tickCount > MIN_TICKS_BEFORE_VISIT && isAt(player, quest)) {
 						quest.progress = 1;
 					}
+				}
+				case DIMENSION -> {
+					if (player.level().dimension().identifier().toString().equals(quest.targets.getFirst())) quest.progress = 1;
+				}
+				case DEPTH -> {
+					if (player.getBlockY() <= Integer.parseInt(quest.targets.getFirst())) quest.progress = 1;
 				}
 				default -> {
 					int now = statTotal(player, quest);
@@ -194,6 +198,33 @@ public final class Quests {
 			}
 		}
 		if (changed) Lineages.markDirty(player.level().getServer());
+	}
+
+	/**
+	 * Whether the player is at the quest's place. Small radii use real distance; larger ones (whole
+	 * structures) only check horizontal distance, plus depth when the targets say "underground".
+	 */
+	public static boolean isAt(ServerPlayer player, Quest quest) {
+		if (quest.place.isEmpty() || quest.place.get().dimension() != player.level().dimension()) return false;
+		var pos = quest.place.get().pos();
+		if (quest.radius <= VISIT_RADIUS) return pos.closerToCenterThan(player.position(), quest.radius);
+		if (quest.targets.contains("underground") && player.getBlockY() >= 0) return false;
+		double dx = player.getX() - pos.getX(), dz = player.getZ() - pos.getZ();
+		return dx * dx + dz * dz <= (double) quest.radius * quest.radius;
+	}
+
+	/** Kills made with the family's sworn blade count towards oath steps. */
+	public static void onKill(ServerPlayer player, LivingEntity killed) {
+		Lineage lineage = Lineages.get(player);
+		if (lineage == null || !Heirlooms.isOathblade(player, player.getMainHandItem())) return;
+		String type = BuiltInRegistries.ENTITY_TYPE.getKey(killed.getType()).toString();
+		for (Quest quest : lineage.quests) {
+			if (quest.goal == Goal.KILL_WITH_OATHBLADE && quest.targets.contains(type) && !quest.isDone()) {
+				quest.progress++;
+				if (!quest.isDone()) player.sendOverlayMessage(line(quest, false));
+				Lineages.markDirty(player.level().getServer());
+			}
+		}
 	}
 
 	/** Blood debts against players can't be read from statistics, so they are settled here. */
@@ -218,7 +249,7 @@ public final class Quests {
 				case MINE -> BuiltInRegistries.BLOCK.getOptional(id).map(b -> stats.getValue(Stats.BLOCK_MINED.get(b))).orElse(0);
 				case CRAFT -> BuiltInRegistries.ITEM.getOptional(id).map(i -> stats.getValue(Stats.ITEM_CRAFTED.get(i))).orElse(0);
 				case CUSTOM_STAT -> stats.getValue(Stats.CUSTOM.get(id));
-				case KILL_PLAYER, VISIT -> 0;
+				default -> 0;
 			};
 		}
 		return total;
@@ -227,12 +258,16 @@ public final class Quests {
 	private static void complete(ServerPlayer player, Lineage lineage, Quest quest) {
 		MinecraftServer server = player.level().getServer();
 		lineage.quests.remove(quest);
-		player.sendSystemMessage(Component.literal("Duty fulfilled: ").withStyle(ChatFormatting.GREEN)
-			.append(Component.literal(quest.title).withStyle(ChatFormatting.GOLD)));
+		player.sendSystemMessage(Component.literal(quest.type == Type.QUESTLINE ? "Done: " : "Duty fulfilled: ").withStyle(ChatFormatting.GREEN)
+			.append(Component.literal(quest.title).withStyle(ChatFormatting.GOLD))
+			.append(quest.type == Type.QUESTLINE ? Component.literal(" - ").append(quest.task.copy()).withStyle(ChatFormatting.GRAY) : Component.empty()));
 		player.level().playSound(null, player.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 0.7f, 1f);
-		String deed = quest.type == Type.BLOOD_DEBT ? " settled a blood debt: " : " fulfilled a family duty: ";
-		Lineages.record(server, lineage, Component.literal(lineage.current.name() + deed + quest.title + "."));
+		if (quest.type != Type.QUESTLINE) {
+			String deed = quest.type == Type.BLOOD_DEBT ? " settled a blood debt: " : " fulfilled a family duty: ";
+			Lineages.record(server, lineage, Component.literal(lineage.current.name() + deed + quest.title + "."));
+		}
 		giveReward(player, lineage, quest.reward);
+		if (quest.line.isPresent()) Questlines.onStepComplete(player, lineage, quest);
 	}
 
 	private static void giveReward(ServerPlayer player, Lineage lineage, Reward reward) {
@@ -243,7 +278,7 @@ public final class Quests {
 				List<String> traits = new ArrayList<>(current.traits());
 				traits.add(trait.get());
 				lineage.current = new Member(current.name(), current.generation(), traits, current.bornDay(), current.statsAtBirth());
-				Traits.apply(player, traits);
+				Traits.apply(player, lineage.allTraits());
 				player.sendSystemMessage(Component.literal("The deed has changed " + current.name() + ". New trait: ")
 					.append(Traits.get(trait.get()).displayName())
 					.append(Component.literal(" (their children may inherit it)").withStyle(ChatFormatting.DARK_GRAY)));
@@ -292,7 +327,12 @@ public final class Quests {
 		}
 		viewer.sendSystemMessage(Component.literal("Duties of House " + lineage.house).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 		for (Quest quest : lineage.quests) {
-			viewer.sendSystemMessage(Component.literal(quest.type == Type.BLOOD_DEBT ? "  ⚔ " : "  • ").withStyle(ChatFormatting.DARK_GRAY)
+			String bullet = switch (quest.type) {
+				case BLOOD_DEBT -> "  ⚔ ";
+				case QUESTLINE -> "  ✦ ";
+				default -> "  • ";
+			};
+			viewer.sendSystemMessage(Component.literal(bullet).withStyle(ChatFormatting.DARK_GRAY)
 				.append(line(quest, true)));
 		}
 	}

@@ -59,10 +59,12 @@ public final class Lineages {
 		} else if (lineage.awaitingHeir && player.isAlive()) {
 			succeed(player, lineage);
 		} else {
+			Questlines.resume(player, lineage);
 			Quests.remind(player, lineage);
 		}
-		Traits.apply(player, lineage.current.traits());
+		Traits.apply(player, lineage.allTraits());
 		refreshName(player);
+		if (lineage.oath.isEmpty()) Questlines.offerOath(player, lineage);
 	}
 
 	/** Called when a player dies: the current family member becomes an ancestor. */
@@ -87,7 +89,7 @@ public final class Lineages {
 		if (!alive && lineage.awaitingHeir) {
 			succeed(player, lineage);
 		}
-		Traits.apply(player, lineage.current.traits());
+		Traits.apply(player, lineage.allTraits());
 		player.setHealth(player.getMaxHealth());
 		refreshName(player);
 	}
@@ -104,6 +106,7 @@ public final class Lineages {
 		record(server, lineage, Component.literal(heir.name() + ", child of " + parent.name() + ", became head of House " + lineage.house + "."));
 		server.getPlayerList().broadcastSystemMessage(Component.literal(parent.fullName() + " of House " + lineage.house
 			+ " has died. " + heir.name() + " takes up the family name.").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC), false);
+		Questlines.resume(player, lineage);
 		announceBirth(player, lineage, parent);
 	}
 

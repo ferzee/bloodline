@@ -17,6 +17,14 @@ It runs entirely on the server, so players can join a Bloodline server with a va
   - **Blood debt:** avenge them by killing whatever killed them. Unsettled debts pass down the generations. Settling one gives the heir a new trait that their children can inherit.
   - **Resting place:** visit the spot where they fell (and pick up what they dropped).
   - **Unfinished business:** finish something they cared about, based on how they lived. A Delver leaves a mine to finish, a Wanderer leaves a road to walk.
+- **The Founder's Oath.** Each house swears one of three oaths, each a questline of four acts. A family can finish at most one act per generation, so an oath takes at least four lives:
+  - **Oath of the Sword:** forge the Oathblade, temper it on Blazes, defeat the Captain of a real Nether Fortress, and slay the Wither with it.
+  - **Oath of the Deep:** dig deep, find a real Ancient City, defeat the Lost Delver who haunts it, and slay a Warden.
+  - **Oath of the Hearth:** befriend villagers, win raids, and defeat the Warlord at a real Pillager Outpost.
+
+  Finishing an oath gives the family a **legendary trait** that every later heir is born with.
+- **Champions.** Named bosses with extra health, gear, bodyguards and a boss bar. They wait at real structures in your world, and quests give you a map to find them.
+- **The Stolen Heirloom.** If an heirloom is destroyed (burned, despawned, lost in the void), it turns out thieves took it. Track their captain to a pillager outpost and take it back.
 - **The Chronicle.** A book that writes itself: births, deaths, heirlooms, first steps into the Nether and the End, and bosses slain.
 
 ## Commands
@@ -27,8 +35,11 @@ It runs entirely on the server, so players can join a Bloodline server with a va
 | `/bloodline info <player>` | Someone else's family |
 | `/bloodline tree [player]` | The full family tree |
 | `/bloodline quests` | Your family's duties and progress |
+| `/bloodline oath [sword\|deep\|hearth]` | See or swear your family's oath |
 | `/bloodline chronicle` | A new copy of the family chronicle |
 | `/bloodline house <name>` | Rename your house |
+
+Operators can use `/bloodline debug complete` to finish the newest quest and `/bloodline debug champion` to spawn a test champion.
 
 ## Building
 

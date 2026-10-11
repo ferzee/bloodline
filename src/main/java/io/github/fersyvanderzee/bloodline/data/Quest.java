@@ -23,7 +23,9 @@ public class Quest {
 		/** Finish something the ancestor cared about in life. */
 		UNFINISHED_BUSINESS("unfinished_business"),
 		/** Early goals for the founder of a house. */
-		FOUNDING("founding");
+		FOUNDING("founding"),
+		/** A step of a multi-part questline, such as the Founder's Oath. Survives death. */
+		QUESTLINE("questline");
 
 		public static final Codec<Type> CODEC = StringRepresentable.fromEnum(Type::values);
 		private final String name;
@@ -39,7 +41,17 @@ public class Quest {
 	}
 
 	public enum Goal implements StringRepresentable {
-		KILL("kill"), MINE("mine"), CRAFT("craft"), CUSTOM_STAT("custom_stat"), KILL_PLAYER("kill_player"), VISIT("visit");
+		KILL("kill"), MINE("mine"), CRAFT("craft"), CUSTOM_STAT("custom_stat"), KILL_PLAYER("kill_player"), VISIT("visit"),
+		/** Be in the dimension named by the first target. */
+		DIMENSION("dimension"),
+		/** Be at or below the Y level given by the first target. */
+		DEPTH("depth"),
+		/** Kill the target entity types while holding the family's sworn heirloom. */
+		KILL_WITH_OATHBLADE("kill_with_oathblade"),
+		/** Kill the champion spawned for this quest; the first target is its key. */
+		KILL_CHAMPION("kill_champion"),
+		/** Done once something else marks it complete (rewards that happen elsewhere). */
+		MANUAL("manual");
 
 		public static final Codec<Goal> CODEC = StringRepresentable.fromEnum(Goal::values);
 		private final String name;
@@ -65,7 +77,11 @@ public class Quest {
 		Codec.INT.optionalFieldOf("progress", 0).forGetter(q -> q.progress),
 		Codec.INT.optionalFieldOf("last_seen", 0).forGetter(q -> q.lastSeen),
 		GlobalPos.MAP_CODEC.codec().optionalFieldOf("place").forGetter(q -> q.place),
-		Reward.CODEC.fieldOf("reward").forGetter(q -> q.reward)
+		Codec.INT.optionalFieldOf("radius", 6).forGetter(q -> q.radius),
+		Reward.CODEC.fieldOf("reward").forGetter(q -> q.reward),
+		Codec.STRING.optionalFieldOf("line").forGetter(q -> q.line),
+		Codec.INT.optionalFieldOf("act", 0).forGetter(q -> q.act),
+		Codec.INT.optionalFieldOf("step", 0).forGetter(q -> q.step)
 	).apply(i, Quest::new));
 
 	public final Type type;
@@ -77,15 +93,21 @@ public class Quest {
 	public final List<String> targets;
 	public final int required;
 	/** Divides progress for display, e.g. 100 to show centimetres walked as metres. */
-	public final int displayScale;
+	public int displayScale;
 	public int progress;
 	/** The statistic total last time progress was checked. */
 	public int lastSeen;
-	public final Optional<GlobalPos> place;
+	public Optional<GlobalPos> place;
+	/** How close to {@link #place} counts as having arrived. Larger radii only check horizontal distance. */
+	public int radius;
 	public final Reward reward;
+	/** For questline steps: which questline, act and step this is. */
+	public Optional<String> line;
+	public int act;
+	public int step;
 
 	public Quest(Type type, String title, Component task, Goal goal, List<String> targets, int required, int displayScale,
-				 int progress, int lastSeen, Optional<GlobalPos> place, Reward reward) {
+				 int progress, int lastSeen, Optional<GlobalPos> place, int radius, Reward reward, Optional<String> line, int act, int step) {
 		this.type = type;
 		this.title = title;
 		this.task = task;
@@ -96,7 +118,37 @@ public class Quest {
 		this.progress = progress;
 		this.lastSeen = lastSeen;
 		this.place = place;
+		this.radius = radius;
 		this.reward = reward;
+		this.line = line;
+		this.act = act;
+		this.step = step;
+	}
+
+	public static Quest of(Type type, String title, Component task, Goal goal, List<String> targets, int required, Reward reward) {
+		return new Quest(type, title, task, goal, targets, required, 1, 0, 0, Optional.empty(), 6, reward, Optional.empty(), 0, 0);
+	}
+
+	public static Quest of(Type type, String title, String task, Goal goal, List<String> targets, int required, Reward reward) {
+		return of(type, title, Component.literal(task), goal, targets, required, reward);
+	}
+
+	public Quest at(GlobalPos place, int radius) {
+		this.place = Optional.of(place);
+		this.radius = radius;
+		return this;
+	}
+
+	public Quest scaled(int displayScale) {
+		this.displayScale = displayScale;
+		return this;
+	}
+
+	public Quest inLine(String line, int act, int step) {
+		this.line = Optional.of(line);
+		this.act = act;
+		this.step = step;
+		return this;
 	}
 
 	public boolean isDone() {
@@ -122,6 +174,10 @@ public class Quest {
 
 		public static Reward newTrait(int fallbackLevels) {
 			return new Reward(fallbackLevels, Optional.empty(), 0, true);
+		}
+
+		public static Reward none() {
+			return new Reward(0, Optional.empty(), 0, false);
 		}
 	}
 }

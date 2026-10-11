@@ -38,6 +38,52 @@ final class BloodlineCommands {
 					Quests.show(player, lineage);
 					return 1;
 				}))
+			.then(Commands.literal("oath")
+				.executes(ctx -> {
+					ServerPlayer player = ctx.getSource().getPlayerOrException();
+					Lineage lineage = lineageOf(ctx.getSource(), player);
+					if (lineage == null) return 0;
+					if (lineage.oath.isEmpty()) Questlines.offerOath(player, lineage);
+					else ctx.getSource().sendSuccess(() -> Component.literal(Questlines.oathSummary(lineage).trim()).withStyle(ChatFormatting.GOLD), false);
+					return 1;
+				})
+				.then(Commands.argument("oath", StringArgumentType.word())
+					.suggests((ctx, builder) -> {
+						for (String id : new String[]{"sword", "deep", "hearth"}) builder.suggest(id);
+						return builder.buildFuture();
+					})
+					.executes(ctx -> {
+						ServerPlayer player = ctx.getSource().getPlayerOrException();
+						Lineage lineage = lineageOf(ctx.getSource(), player);
+						if (lineage == null) return 0;
+						if (lineage.oath.isPresent()) {
+							ctx.getSource().sendFailure(Component.literal("House " + lineage.house + " has already sworn an oath."));
+							return 0;
+						}
+						if (!Questlines.swear(player, lineage, StringArgumentType.getString(ctx, "oath"))) {
+							ctx.getSource().sendFailure(Component.literal("Unknown oath. Choose sword, deep or hearth."));
+							return 0;
+						}
+						return 1;
+					})))
+			.then(Commands.literal("debug")
+				.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+				.then(Commands.literal("complete")
+					.executes(ctx -> {
+						ServerPlayer player = ctx.getSource().getPlayerOrException();
+						Lineage lineage = lineageOf(ctx.getSource(), player);
+						if (lineage == null || lineage.quests.isEmpty()) return 0;
+						// Finish the newest quest, so testers can step through questlines quickly.
+						var quest = lineage.quests.getLast();
+						quest.progress = quest.required;
+						return 1;
+					}))
+				.then(Commands.literal("champion")
+					.executes(ctx -> {
+						ServerPlayer player = ctx.getSource().getPlayerOrException();
+						Champions.spawn(player, Champions.FORTRESS_CAPTAIN, "debug", java.util.Optional.empty());
+						return 1;
+					})))
 			.then(Commands.literal("chronicle")
 				.executes(ctx -> {
 					Chronicle.give(ctx.getSource().getPlayerOrException());
@@ -65,6 +111,13 @@ final class BloodlineCommands {
 				.withStyle(ChatFormatting.GRAY)), false);
 		source.sendSuccess(() -> Component.literal("Traits: ").withStyle(ChatFormatting.GRAY)
 			.append(Lineages.traitList(lineage.current.traits(), parent)), false);
+		if (!lineage.legacies.isEmpty()) {
+			source.sendSuccess(() -> Component.literal("Legacy: ").withStyle(ChatFormatting.GRAY)
+				.append(Lineages.traitList(lineage.legacies, null)), false);
+		}
+		if (lineage.oath.isPresent()) {
+			source.sendSuccess(() -> Component.literal(Questlines.oathSummary(lineage).trim()).withStyle(ChatFormatting.GRAY), false);
+		}
 		if (parent != null) {
 			source.sendSuccess(() -> Component.literal("Parent: ").withStyle(ChatFormatting.GRAY)
 				.append(Component.literal(parent.fullName()).withStyle(s -> s.withColor(ChatFormatting.WHITE)

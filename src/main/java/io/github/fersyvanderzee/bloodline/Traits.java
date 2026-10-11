@@ -73,6 +73,13 @@ public final class Traits {
 			e(Attributes.SCALE, 0.08, ADD_VALUE), e(Attributes.ENTITY_INTERACTION_RANGE, 0.25, ADD_VALUE));
 		add("small", Kind.QUIRK, "size", "Small", "Short, but quick to duck through gaps.",
 			e(Attributes.SCALE, -0.1, ADD_VALUE));
+
+		add("oathbound", Kind.LEGENDARY, "legacy_oathbound", "Oathbound", "The family's oath runs in the blood. +2 attack damage, +2 hearts.",
+			e(Attributes.ATTACK_DAMAGE, 2, ADD_VALUE), e(Attributes.MAX_HEALTH, 4, ADD_VALUE));
+		add("deepborn", Kind.LEGENDARY, "legacy_deepborn", "Deepborn", "The deep knows this family. Breaks blocks 25% faster, +2 luck.",
+			e(Attributes.BLOCK_BREAK_SPEED, 0.25, ADD_MULTIPLIED_BASE), e(Attributes.LUCK, 2, ADD_VALUE));
+		add("beloved", Kind.LEGENDARY, "legacy_beloved", "Beloved", "Friend to every village. +2 hearts, +2 luck, 5% faster.",
+			e(Attributes.MAX_HEALTH, 4, ADD_VALUE), e(Attributes.LUCK, 2, ADD_VALUE), e(Attributes.MOVEMENT_SPEED, 0.05, ADD_MULTIPLIED_BASE));
 	}
 
 	private Traits() {

@@ -53,17 +53,19 @@ public final class Heirlooms {
 		"Stubborn", "Heartwood", "Birthright", "Ember", "Long Memory", "Grandsire", "Homecoming", "Steadfast"
 	);
 
-	record Data(UUID owner, String house, List<Integer> generations, List<String> bearers, Optional<String> name) {
+	/** {@code sworn} marks the Oathblade, which is an heirloom from the moment it is sworn upon. */
+	record Data(UUID owner, String house, List<Integer> generations, List<String> bearers, Optional<String> name, boolean sworn) {
 		static final Codec<Data> CODEC = RecordCodecBuilder.create(i -> i.group(
 			UUIDUtil.STRING_CODEC.fieldOf("owner").forGetter(Data::owner),
 			Codec.STRING.fieldOf("house").forGetter(Data::house),
 			Codec.INT.listOf().fieldOf("generations").forGetter(Data::generations),
 			Codec.STRING.listOf().fieldOf("bearers").forGetter(Data::bearers),
-			Codec.STRING.optionalFieldOf("name").forGetter(Data::name)
+			Codec.STRING.optionalFieldOf("name").forGetter(Data::name),
+			Codec.BOOL.optionalFieldOf("sworn", false).forGetter(Data::sworn)
 		).apply(i, Data::new));
 
 		boolean isHeirloom() {
-			return generations.size() >= 2;
+			return sworn || generations.size() >= 2;
 		}
 
 		int rank() {
@@ -119,13 +121,14 @@ public final class Heirlooms {
 		int generation = lineage.current.generation();
 		Optional<Data> existing = read(stack);
 		if (existing.isEmpty()) {
-			write(stack, new Data(player.getUUID(), lineage.house, List.of(generation), List.of(lineage.current.name()), Optional.empty()));
+			write(stack, new Data(player.getUUID(), lineage.house, List.of(generation), List.of(lineage.current.name()), Optional.empty(), false));
 			return;
 		}
 		Data data = existing.get();
 		if (!data.owner().equals(player.getUUID()) || data.generations().contains(generation)) return;
 
 		boolean wasHeirloom = data.isHeirloom();
+		String previousName = data.name().orElse("");
 		List<Integer> generations = new ArrayList<>(data.generations());
 		generations.add(generation);
 		List<String> bearers = new ArrayList<>(data.bearers());
@@ -135,7 +138,7 @@ public final class Heirlooms {
 		if (!wasHeirloom) {
 			name = Optional.of(NAMES.get(player.getRandom().nextInt(NAMES.size())));
 		}
-		Data updated = new Data(data.owner(), data.house(), generations, bearers, name);
+		Data updated = new Data(data.owner(), data.house(), generations, bearers, name, data.sworn());
 		Component itemName = stack.getItemName();
 		if (!wasHeirloom) {
 			if (!stack.has(DataComponents.CUSTOM_NAME)) {
@@ -148,7 +151,7 @@ public final class Heirlooms {
 		MutableComponent message = !wasHeirloom
 			? Component.literal(previousBearer + "'s ").append(itemName).append(" has passed to " + lineage.current.name()
 				+ ". It is now an heirloom of House " + data.house() + ": ").append(Component.literal(name.get()).withStyle(ChatFormatting.GOLD))
-			: Component.literal(name.get()).withStyle(ChatFormatting.GOLD).append(Component.literal(" passes to "
+			: Component.literal(previousName).withStyle(ChatFormatting.GOLD).append(Component.literal(" passes to "
 				+ lineage.current.name() + ", its " + ordinal(generations.size()) + " bearer.").withStyle(ChatFormatting.WHITE));
 		player.sendSystemMessage(message);
 		Lineages.record(player.level().getServer(), lineage, message);
@@ -158,7 +161,7 @@ public final class Heirlooms {
 	private static List<Component> lore(ItemStack stack, Data data) {
 		List<Component> lines = new ArrayList<>();
 		if (data.isHeirloom()) {
-			lines.add(line("Heirloom of House " + data.house(), ChatFormatting.GOLD));
+			lines.add(line(data.sworn() ? "Sworn blade of House " + data.house() : "Heirloom of House " + data.house(), ChatFormatting.GOLD));
 			lines.add(line("Carried by " + String.join(", ", data.bearers()), ChatFormatting.GRAY));
 			String bonus = bonusDescription(stack, data.rank());
 			if (bonus != null) lines.add(line(bonus, ChatFormatting.BLUE));
@@ -167,6 +170,56 @@ public final class Heirlooms {
 			lines.add(line("Carried by " + data.bearers().getFirst() + " " + data.house(), ChatFormatting.DARK_GRAY));
 		}
 		return lines;
+	}
+
+	public static boolean isOathblade(Player player, ItemStack stack) {
+		return read(stack).filter(d -> d.sworn() && d.owner().equals(player.getUUID())).isPresent();
+	}
+
+	/**
+	 * Turns an iron sword the player carries into the family's Oathblade, or forges a new one if
+	 * they no longer have it.
+	 */
+	public static void swearBlade(ServerPlayer player, Lineage lineage) {
+		ItemStack blade = ItemStack.EMPTY;
+		for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+			ItemStack stack = player.getInventory().getItem(i);
+			if (stack.is(net.minecraft.world.item.Items.IRON_SWORD)) {
+				blade = stack;
+				break;
+			}
+		}
+		if (blade.isEmpty()) {
+			blade = new ItemStack(net.minecraft.world.item.Items.IRON_SWORD);
+			if (!player.getInventory().add(blade)) player.spawnAtLocation(player.level(), blade);
+		}
+		Data data = new Data(player.getUUID(), lineage.house, List.of(lineage.current.generation()), List.of(lineage.current.name()),
+			Optional.of("Oathblade"), true);
+		blade.set(DataComponents.CUSTOM_NAME, Component.literal("Oathblade").withStyle(s -> s.withItalic(false).withColor(ChatFormatting.GOLD)));
+		blade.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+		write(blade, data);
+	}
+
+	/** Whether this item, lying on the ground, is a family heirloom worth sending thieves after when it is destroyed. */
+	public static Optional<UUID> lostOwner(ItemStack stack) {
+		return read(stack).filter(Data::isHeirloom).map(Data::owner);
+	}
+
+	public static String nameOf(ItemStack stack) {
+		return read(stack).flatMap(Data::name).orElseGet(() -> stack.getHoverName().getString());
+	}
+
+	/** Gives a recovered heirloom back to the family with a note of who reclaimed it. */
+	public static ItemStack reclaimed(ItemStack stack, Lineage lineage) {
+		ItemStack copy = stack.copy();
+		read(copy).ifPresent(d -> {
+			List<String> bearers = new ArrayList<>(d.bearers());
+			bearers.add(lineage.current.name() + " (reclaimed)");
+			List<Integer> generations = new ArrayList<>(d.generations());
+			if (!generations.contains(lineage.current.generation())) generations.add(lineage.current.generation());
+			write(copy, new Data(d.owner(), d.house(), generations, bearers, d.name(), d.sworn()));
+		});
+		return copy;
 	}
 
 	private static Component line(String text, ChatFormatting color) {
