@@ -27,7 +27,9 @@ public class Quest {
 		/** A step of a multi-part questline, such as the Founder's Oath. Survives death. */
 		QUESTLINE("questline"),
 		/** Optional groundwork before a champion fight that weakens the champion. Survives death. */
-		PREPARATION("preparation");
+		PREPARATION("preparation"),
+		/** A job taken from an inn's quest board. */
+		INN("inn");
 
 		public static final Codec<Type> CODEC = StringRepresentable.fromEnum(Type::values);
 		private final String name;

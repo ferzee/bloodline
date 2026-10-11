@@ -338,6 +338,7 @@ public final class Quests {
 				case BLOOD_DEBT -> "  ⚔ ";
 				case QUESTLINE -> "  ✦ ";
 				case PREPARATION -> "  ⚒ ";
+				case INN -> "  ✉ ";
 				default -> "  • ";
 			};
 			viewer.sendSystemMessage(Component.literal(bullet).withStyle(ChatFormatting.DARK_GRAY)

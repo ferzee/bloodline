@@ -64,6 +64,22 @@ public final class Champions {
 		Map.of(EquipmentSlot.HEAD, Items.LEATHER_HELMET),
 		EntityTypes.PILLAGER, 2, BossEvent.BossBarColor.YELLOW, "Finders keepers.");
 
+	// Bounties posted on inn quest boards.
+	public static final Kind ROTGUT = new Kind("rotgut", EntityTypes.ZOMBIE, "Rotgut the Hungry", 60, 2,
+		Map.of(EquipmentSlot.MAINHAND, Items.IRON_SWORD, EquipmentSlot.HEAD, Items.IRON_HELMET),
+		EntityTypes.ZOMBIE, 2, BossEvent.BossBarColor.GREEN, "Fresh meat.");
+	public static final Kind OLD_BONES = new Kind("old_bones", EntityTypes.SKELETON, "Old Bones", 50, 0,
+		Map.of(EquipmentSlot.MAINHAND, Items.BOW, EquipmentSlot.HEAD, Items.CHAINMAIL_HELMET),
+		EntityTypes.SKELETON, 2, BossEvent.BossBarColor.WHITE, "I was hunting here before your house had a name.");
+	public static final Kind BROODMOTHER = new Kind("broodmother", EntityTypes.SPIDER, "The Broodmother", 70, 2,
+		Map.of(), EntityTypes.CAVE_SPIDER, 3, BossEvent.BossBarColor.PINK, "Her children hiss in the dark.");
+	public static final Kind DESERTER = new Kind("deserter", EntityTypes.PILLAGER, "The Deserter", 60, 1,
+		Map.of(EquipmentSlot.MAINHAND, Items.CROSSBOW, EquipmentSlot.HEAD, Items.LEATHER_HELMET),
+		EntityTypes.PILLAGER, 2, BossEvent.BossBarColor.PURPLE, "I'm not going back.");
+
+	public static final List<Kind> ALL = List.of(FORTRESS_CAPTAIN, LOST_DELVER, WARLORD, THIEF, ROTGUT, OLD_BONES, BROODMOTHER, DESERTER);
+	public static final List<Kind> BOUNTIES = List.of(ROTGUT, OLD_BONES, BROODMOTHER, DESERTER);
+
 	private static final Map<LivingEntity, ServerBossEvent> BARS = new IdentityHashMap<>();
 
 	private Champions() {
@@ -124,7 +140,7 @@ public final class Champions {
 	}
 
 	/** Somewhere a few blocks from {@code origin} with room to stand, or {@code origin} itself. */
-	private static BlockPos findSpot(ServerLevel level, BlockPos origin) {
+	static BlockPos findSpot(ServerLevel level, BlockPos origin) {
 		var random = level.getRandom();
 		for (int attempt = 0; attempt < 20; attempt++) {
 			int dx = random.nextIntBetweenInclusive(-8, 8);
@@ -180,7 +196,7 @@ public final class Champions {
 	}
 
 	private static BossEvent.BossBarColor colorOf(LivingEntity entity) {
-		for (Kind kind : List.of(FORTRESS_CAPTAIN, LOST_DELVER, WARLORD, THIEF)) {
+		for (Kind kind : ALL) {
 			if (entity.getType() == kind.type() && entity.getCustomName() != null && entity.getCustomName().getString().equals(kind.name())) {
 				return kind.color();
 			}

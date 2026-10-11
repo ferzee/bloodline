@@ -25,6 +25,7 @@ public final class Renown {
 			case BLOOD_DEBT -> 5;
 			case UNFINISHED_BUSINESS -> 3;
 			case RESTING_PLACE, FOUNDING, PREPARATION -> 2;
+			case INN -> 3;
 			case QUESTLINE -> 0;
 		};
 	}

@@ -27,6 +27,10 @@ It runs entirely on the server, so players can join a Bloodline server with a va
 - **Preparations.** Before each champion fight the family gets three optional preparation duties. Each one weakens the champion: no bodyguards, 30% less health, or glowing and slowed.
 - **Champions.** Named bosses with extra health, gear, bodyguards and a boss bar. They wait at real structures in your world, and quests give you a map to find them.
 - **The Stolen Heirloom.** If an heirloom is destroyed (burned, despawned, lost in the void), it turns out thieves took it. Track their captain to a pillager outpost and take it back.
+- **Inns.** Every village gets an innkeeper by its bell (each inn has its own name, like *The Sleeping Griffin*). Talk to them to open the quest board, with new jobs every day. You can hold two inn jobs at a time:
+  - **Bounties:** a named beast roams nearby. You get a map; slay it for emeralds and renown.
+  - **Deliveries:** bring goods to any innkeeper.
+  - **Rumours:** pay emeralds for a map to a structure nobody has found yet.
 - **The Chronicle.** A book that writes itself: births, deaths, heirlooms, first steps into the Nether and the End, and bosses slain.
 
 ## Commands

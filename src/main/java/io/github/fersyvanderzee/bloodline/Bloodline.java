@@ -8,11 +8,14 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
@@ -28,6 +31,7 @@ public class Bloodline implements ModInitializer {
 
 	private static final int HEIRLOOM_TICK_INTERVAL = 5;
 	private static final int QUEST_TICK_INTERVAL = 20;
+	private static final int INN_TICK_INTERVAL = 100;
 	private static final Map<String, String> BOSSES = Map.of(
 		"ender_dragon", "slew the Ender Dragon.",
 		"wither", "destroyed the Wither.",
@@ -58,6 +62,7 @@ public class Bloodline implements ModInitializer {
 				if (questTick && lineage != null && !lineage.awaitingHeir) {
 					Quests.tick(player, lineage);
 					Questlines.tickReclaim(player, lineage);
+					if (server.getTickCount() % INN_TICK_INTERVAL == 0) Inns.tick(player);
 				}
 			}
 		});
@@ -98,6 +103,14 @@ public class Bloodline implements ModInitializer {
 				Chronicle.refresh(serverPlayer, stack);
 			}
 			return InteractionResult.PASS;
+		});
+
+		UseEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
+			if (!Inns.isInnkeeper(entity)) return InteractionResult.PASS;
+			if (player instanceof ServerPlayer serverPlayer && entity instanceof Villager innkeeper && hand == InteractionHand.MAIN_HAND) {
+				Inns.onInteract(serverPlayer, innkeeper);
+			}
+			return InteractionResult.SUCCESS;
 		});
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> BloodlineCommands.register(dispatcher));

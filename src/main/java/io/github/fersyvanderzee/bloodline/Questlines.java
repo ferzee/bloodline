@@ -156,12 +156,8 @@ public final class Questlines {
 		))
 	);
 
-	private static final Map<String, Champions.Kind> CHAMPIONS = Map.of(
-		Champions.FORTRESS_CAPTAIN.id(), Champions.FORTRESS_CAPTAIN,
-		Champions.LOST_DELVER.id(), Champions.LOST_DELVER,
-		Champions.WARLORD.id(), Champions.WARLORD,
-		Champions.THIEF.id(), Champions.THIEF
-	);
+	private static final Map<String, Champions.Kind> CHAMPIONS = Champions.ALL.stream()
+		.collect(java.util.stream.Collectors.toMap(Champions.Kind::id, k -> k));
 
 	private Questlines() {
 	}
@@ -503,7 +499,12 @@ public final class Questlines {
 		}
 	}
 
-	private static Optional<GlobalPos> locate(ServerPlayer player, ResourceKey<Level> dimension, ResourceKey<Structure> structure) {
+	static Optional<GlobalPos> locate(ServerPlayer player, ResourceKey<Level> dimension, ResourceKey<Structure> structure) {
+		return locate(player, dimension, structure, false);
+	}
+
+	/** {@code skipKnown} skips structures already found or pointed to by maps, like vanilla treasure maps. */
+	static Optional<GlobalPos> locate(ServerPlayer player, ResourceKey<Level> dimension, ResourceKey<Structure> structure, boolean skipKnown) {
 		MinecraftServer server = player.level().getServer();
 		ServerLevel level = server.getLevel(dimension);
 		if (level == null) return Optional.empty();
@@ -517,11 +518,11 @@ public final class Questlines {
 		}
 		var holder = level.registryAccess().lookupOrThrow(Registries.STRUCTURE).get(structure);
 		if (holder.isEmpty()) return Optional.empty();
-		BlockPos found = level.findNearestMapStructure(HolderSet.direct(holder.get()), origin, SEARCH_RADIUS_CHUNKS, false);
+		BlockPos found = level.findNearestMapStructure(HolderSet.direct(holder.get()), origin, SEARCH_RADIUS_CHUNKS, skipKnown);
 		return Optional.ofNullable(found).map(pos -> GlobalPos.of(dimension, pos));
 	}
 
-	private static void giveMap(ServerPlayer player, GlobalPos place, String purpose) {
+	static void giveMap(ServerPlayer player, GlobalPos place, String purpose) {
 		if (place.dimension() != Level.OVERWORLD) return;
 		ServerLevel level = player.level().getServer().overworld();
 		ItemStack map = MapItem.create(level, place.pos().getX(), place.pos().getZ(), (byte) 2, true, true);
