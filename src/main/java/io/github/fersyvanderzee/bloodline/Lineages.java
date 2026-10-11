@@ -64,7 +64,7 @@ public final class Lineages {
 		}
 		Traits.apply(player, lineage.allTraits());
 		refreshName(player);
-		if (lineage.oath.isEmpty()) Questlines.offerOath(player, lineage);
+		if (lineage.oath.isEmpty()) Questlines.nudgeOath(player, lineage);
 	}
 
 	/** Called when a player dies: the current family member becomes an ancestor. */

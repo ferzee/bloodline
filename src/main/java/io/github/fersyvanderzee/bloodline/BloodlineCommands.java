@@ -64,6 +64,8 @@ final class BloodlineCommands {
 							ctx.getSource().sendFailure(Component.literal("Unknown oath. Choose sword, deep or hearth."));
 							return 0;
 						}
+						// Sworn from the book: show the updated Main Quest pages straight away.
+						Chronicle.reopen(player);
 						return 1;
 					})))
 			.then(Commands.literal("debug")

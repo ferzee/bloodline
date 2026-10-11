@@ -311,7 +311,7 @@ public final class Quests {
 		return out;
 	}
 
-	private static String describe(Reward reward) {
+	public static String describe(Reward reward) {
 		List<String> parts = new ArrayList<>();
 		if (reward.trait()) parts.add("a new trait for the bloodline");
 		if (reward.levels() > 0) parts.add((reward.trait() ? "or " : "") + reward.levels() + " levels");

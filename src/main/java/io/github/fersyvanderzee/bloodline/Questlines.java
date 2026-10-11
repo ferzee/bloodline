@@ -151,6 +151,13 @@ public final class Questlines {
 		player.sendSystemMessage(message);
 	}
 
+	/** Points a family without an oath to their chronicle, where the oath is chosen. */
+	public static void nudgeOath(ServerPlayer player, Lineage lineage) {
+		Chronicle.ensure(player);
+		player.sendSystemMessage(Component.literal("House " + lineage.house + " has sworn no oath. Open your Chronicle to choose one.")
+			.withStyle(ChatFormatting.GOLD));
+	}
+
 	public static boolean swear(ServerPlayer player, Lineage lineage, String id) {
 		Optional<Oath> oath = oath(id);
 		if (oath.isEmpty() || lineage.oath.isPresent()) return false;
@@ -233,6 +240,72 @@ public final class Questlines {
 			.append(Component.literal("Oathblade").withStyle(ChatFormatting.GOLD))
 			.append(Component.literal(", and will stay with the family through every death.").withStyle(ChatFormatting.GRAY)));
 		Lineages.record(player.level().getServer(), lineage, Component.literal(lineage.current.name() + " forged the Oathblade."));
+	}
+
+	public static boolean isOathStep(Quest quest) {
+		return quest.line.filter(OATH::equals).isPresent();
+	}
+
+	/**
+	 * The chronicle's Main Quest section. Before an oath is sworn it describes each oath with a
+	 * button to swear it; afterwards it shows the acts, the current act's story and objective.
+	 */
+	public static List<Component> bookPages(Lineage lineage, int firstPage) {
+		List<Component> pages = new java.util.ArrayList<>();
+		Oath sworn = lineage.oath.flatMap(Questlines::oath).orElse(null);
+		if (sworn == null) {
+			MutableComponent intro = Chronicle.heading("The Founder's Oath")
+				.append(Chronicle.body("Every great house is bound by an oath. Choose one, and your bloodline will carry it until it is fulfilled.\n\n"));
+			for (int i = 0; i < OATHS.size(); i++) intro.append(Chronicle.link(OATHS.get(i).name(), firstPage + 1 + i));
+			pages.add(intro);
+			for (Oath oath : OATHS) {
+				MutableComponent page = Component.literal(oath.name() + "\n").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD)
+					.append(Component.literal("\"" + oath.vow() + "\"\n").withStyle(s -> s.withColor(ChatFormatting.DARK_GRAY).withItalic(true).withBold(false)));
+				for (int i = 0; i < oath.acts().size(); i++) {
+					page.append(Chronicle.body(Names.numeral(i + 1) + ". " + oath.acts().get(i).name() + "\n"));
+				}
+				page.append(Chronicle.faint("Reward: ")).append(Traits.get(oath.legacy()).displayName().withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(false)))
+					.append("\n\n")
+					.append(Chronicle.button("Swear this oath", "/bloodline oath " + oath.id(),
+						Component.literal("Swear the " + oath.name() + ". This can't be undone.")));
+				pages.add(page);
+			}
+			return pages;
+		}
+
+		MutableComponent overview = Chronicle.heading(sworn.name());
+		for (int i = 0; i < sworn.acts().size(); i++) {
+			String mark = i < lineage.oathActs ? "✔ " : i == lineage.oathActs ? "▶ " : "○ ";
+			ChatFormatting color = i < lineage.oathActs ? ChatFormatting.DARK_GREEN : i == lineage.oathActs ? ChatFormatting.BLACK : ChatFormatting.GRAY;
+			overview.append(Component.literal(mark + Names.numeral(i + 1) + ". " + sworn.acts().get(i).name() + "\n")
+				.withStyle(s -> s.withColor(color).withBold(false)));
+		}
+		overview.append(Chronicle.faint("\nOne act per generation.\nReward: "))
+			.append(Traits.get(sworn.legacy()).displayName().withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(false)));
+		pages.add(overview);
+
+		if (lineage.oathActs >= sworn.acts().size()) {
+			pages.add(Chronicle.heading("Fulfilled").append(Chronicle.body("House " + lineage.house + " kept its oath. Every child of the house is born "
+				+ Traits.get(sworn.legacy()).name() + ".")));
+			return pages;
+		}
+		Act act = sworn.acts().get(lineage.oathActs);
+		pages.add(Chronicle.heading("Act " + Names.numeral(lineage.oathActs + 1) + ": " + act.name())
+			.append(Component.literal(act.intro()).withStyle(s -> s.withColor(ChatFormatting.DARK_GRAY).withItalic(true).withBold(false))));
+		Quest step = lineage.quests.stream().filter(Questlines::isOathStep).findFirst().orElse(null);
+		MutableComponent objective = Chronicle.heading("Objective");
+		if (step != null) {
+			objective.append(step.task.copy().withStyle(s -> s.withColor(ChatFormatting.BLACK).withBold(false)));
+			if (step.required > 1) {
+				objective.append(Chronicle.faint("\n\n" + step.progress / step.displayScale + " / " + step.required / step.displayScale));
+			}
+			String reward = Quests.describe(step.reward);
+			objective.append(Chronicle.faint("\n\nStep " + (step.step + 1) + " of " + act.steps().size() + (reward.isEmpty() ? "" : "\nReward: " + reward)));
+		} else {
+			objective.append(Chronicle.body("This generation has done its part. The next act falls to your heir."));
+		}
+		pages.add(objective);
+		return pages;
 	}
 
 	public static String oathSummary(Lineage lineage) {
