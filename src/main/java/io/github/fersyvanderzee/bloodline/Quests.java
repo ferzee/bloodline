@@ -248,7 +248,8 @@ public final class Quests {
 				case KILL -> BuiltInRegistries.ENTITY_TYPE.getOptional(id).map(t -> stats.getValue(Stats.ENTITY_KILLED.get(t))).orElse(0);
 				case MINE -> BuiltInRegistries.BLOCK.getOptional(id).map(b -> stats.getValue(Stats.BLOCK_MINED.get(b))).orElse(0);
 				case CRAFT -> BuiltInRegistries.ITEM.getOptional(id).map(i -> stats.getValue(Stats.ITEM_CRAFTED.get(i))).orElse(0);
-				case CUSTOM_STAT -> stats.getValue(Stats.CUSTOM.get(id));
+				// Custom stats must be looked up through the registry: Stats.CUSTOM only accepts the registered instance.
+				case CUSTOM_STAT -> BuiltInRegistries.CUSTOM_STAT.getOptional(id).map(stat -> stats.getValue(Stats.CUSTOM.get(stat))).orElse(0);
 				default -> 0;
 			};
 		}
