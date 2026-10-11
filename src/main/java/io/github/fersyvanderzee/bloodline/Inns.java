@@ -17,6 +17,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.StructureTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.SimpleMenuProvider;
@@ -99,7 +100,43 @@ public final class Inns {
 	/** When an innkeeper was last spawned at each bell, so a missing one isn't replaced every second. */
 	private static final Map<Long, Long> LAST_SPAWN = new HashMap<>();
 
+	/** Milestone recorded the first time the family speaks to an innkeeper. */
+	private static final String MET_INNKEEPER = "met_innkeeper";
+	/** Target of the "speak to an innkeeper" quest. */
+	private static final String SPEAK_TARGET = "innkeeper";
+
 	private Inns() {
+	}
+
+	/**
+	 * Gives families that have never been to an inn a quest pointing them to the nearest village,
+	 * with a map. Called when a house is founded and when an older family joins.
+	 */
+	public static void addIntroQuest(ServerPlayer player, Lineage lineage) {
+		if (lineage.milestones.contains(MET_INNKEEPER)) return;
+		if (lineage.quests.stream().anyMatch(q -> q.goal == Goal.MANUAL && q.targets.contains(SPEAK_TARGET))) return;
+		String task = "Find a village and speak to its innkeeper";
+		ServerLevel overworld = player.level().getServer().overworld();
+		BlockPos village = player.level().dimension() == Level.OVERWORLD
+			? overworld.findNearestMapStructure(StructureTags.VILLAGE, player.blockPosition(), 100, false)
+			: null;
+		if (village != null) {
+			task += " (nearest: " + village.getX() + ", " + village.getZ() + ")";
+			Questlines.giveMap(player, GlobalPos.of(Level.OVERWORLD, village), "The nearest village");
+		}
+		Quests.add(player, lineage, Quest.of(Type.FOUNDING, "A warm hearth", task, Goal.MANUAL, List.of(SPEAK_TARGET), 1,
+			Reward.item(2, "emerald", 5)));
+		Lineages.markDirty(player.level().getServer());
+	}
+
+	private static void markMetInnkeeper(ServerPlayer player, Lineage lineage, BlockPos inn) {
+		for (Quest quest : lineage.quests) {
+			if (quest.goal == Goal.MANUAL && quest.targets.contains(SPEAK_TARGET)) quest.progress = quest.required;
+		}
+		if (lineage.milestones.add(MET_INNKEEPER)) {
+			Lineages.record(player.level().getServer(), lineage, Component.literal(lineage.current.name() + " first warmed their hands at "
+				+ innName(inn) + "."));
+		}
 	}
 
 	public static String innName(BlockPos bell) {
@@ -160,6 +197,7 @@ public final class Inns {
 		if (lineage == null || lineage.awaitingHeir) return;
 		handInDeliveries(player, lineage);
 		BlockPos inn = innOf(innkeeper);
+		markMetInnkeeper(player, lineage, inn);
 		int day = Lineages.today(player.level().getServer());
 		List<Offer> offers = offers(inn, day);
 		SimpleContainer board = new SimpleContainer(9);

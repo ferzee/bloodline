@@ -106,6 +106,7 @@ public final class Quests {
 			Goal.CUSTOM_STAT, List.of("sleep_in_bed"), 1, Reward.item(2, "bread", 8)));
 		add(player, lineage, Quest.of(Type.FOUNDING, "Make a name for the house", "Slay monsters",
 			Goal.CUSTOM_STAT, List.of("mob_kills"), 15, Reward.newTrait(5)));
+		Inns.addIntroQuest(player, lineage);
 	}
 
 	/**

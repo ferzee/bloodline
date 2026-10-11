@@ -60,6 +60,7 @@ public final class Lineages {
 			succeed(player, lineage);
 		} else {
 			Questlines.resume(player, lineage);
+			Inns.addIntroQuest(player, lineage);
 			Quests.remind(player, lineage);
 		}
 		Traits.apply(player, lineage.allTraits());
@@ -107,6 +108,7 @@ public final class Lineages {
 		server.getPlayerList().broadcastSystemMessage(Component.literal(parent.fullName() + " of House " + lineage.house
 			+ " has died. " + heir.name() + " takes up the family name.").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC), false);
 		Questlines.resume(player, lineage);
+		Inns.addIntroQuest(player, lineage);
 		announceBirth(player, lineage, parent);
 	}
 
