@@ -83,7 +83,7 @@ final class BloodlineCommands {
 				.then(Commands.literal("champion")
 					.executes(ctx -> {
 						ServerPlayer player = ctx.getSource().getPlayerOrException();
-						Champions.spawn(player, Champions.FORTRESS_CAPTAIN, "debug", java.util.Optional.empty());
+						Champions.spawn(player, Champions.FORTRESS_CAPTAIN, "debug", java.util.Optional.empty(), java.util.List.of());
 						return 1;
 					})))
 			.then(Commands.literal("chronicle")
@@ -120,6 +120,8 @@ final class BloodlineCommands {
 		if (lineage.oath.isPresent()) {
 			source.sendSuccess(() -> Component.literal(Questlines.oathSummary(lineage).trim()).withStyle(ChatFormatting.GRAY), false);
 		}
+		source.sendSuccess(() -> Component.literal("Renown: ").withStyle(ChatFormatting.GRAY)
+			.append(Component.literal(String.valueOf(lineage.renown)).withStyle(ChatFormatting.YELLOW)), false);
 		if (parent != null) {
 			source.sendSuccess(() -> Component.literal("Parent: ").withStyle(ChatFormatting.GRAY)
 				.append(Component.literal(parent.fullName()).withStyle(s -> s.withColor(ChatFormatting.WHITE)

@@ -113,7 +113,10 @@ public final class Quests {
 	 * blood debts, which pass on. Then the heir's new duties are added.
 	 */
 	public static void onDeath(ServerPlayer player, Lineage lineage, Ancestor ancestor, DamageSource source) {
-		lineage.quests.removeIf(q -> q.type != Type.BLOOD_DEBT && q.type != Type.QUESTLINE);
+		lineage.quests.removeIf(q -> q.type != Type.BLOOD_DEBT && q.type != Type.QUESTLINE && q.type != Type.PREPARATION);
+		// Debts nobody settled in this life pass to the heir, and the house's standing suffers for it.
+		long inherited = lineage.quests.stream().filter(q -> q.type == Type.BLOOD_DEBT).count();
+		if (inherited > 0) Renown.change(player, lineage, (int) inherited * Renown.DEBT_INHERITED, "for leaving blood debts unpaid");
 
 		LivingEntity killer = source.getEntity() instanceof LivingEntity living ? living : player.getKillCredit();
 		if (killer != null && killer != player) {
@@ -134,6 +137,7 @@ public final class Quests {
 			List<Quest> debts = lineage.quests.stream().filter(q -> q.type == Type.BLOOD_DEBT).toList();
 			for (int i = 0; i < debts.size() - MAX_BLOOD_DEBTS; i++) {
 				lineage.quests.remove(debts.get(i));
+				Renown.change(player, lineage, Renown.DEBT_FORGOTTEN, "for forgetting the debt to " + debts.get(i).title.replace("Avenge ", ""));
 			}
 		}
 
@@ -263,12 +267,13 @@ public final class Quests {
 			.append(Component.literal(quest.title).withStyle(ChatFormatting.GOLD))
 			.append(quest.type == Type.QUESTLINE ? Component.literal(" - ").append(quest.task.copy()).withStyle(ChatFormatting.GRAY) : Component.empty()));
 		player.level().playSound(null, player.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 0.7f, 1f);
-		if (quest.type != Type.QUESTLINE) {
+		if (quest.type != Type.QUESTLINE && quest.type != Type.PREPARATION) {
 			String deed = quest.type == Type.BLOOD_DEBT ? " settled a blood debt: " : " fulfilled a family duty: ";
 			Lineages.record(server, lineage, Component.literal(lineage.current.name() + deed + quest.title + "."));
 		}
 		giveReward(player, lineage, quest.reward);
 		if (quest.line.isPresent()) Questlines.onStepComplete(player, lineage, quest);
+		Renown.change(player, lineage, Renown.forDuty(quest), "for " + quest.title);
 	}
 
 	private static void giveReward(ServerPlayer player, Lineage lineage, Reward reward) {
@@ -326,11 +331,13 @@ public final class Quests {
 			viewer.sendSystemMessage(Component.literal("House " + lineage.house + " has no duties right now.").withStyle(ChatFormatting.GRAY));
 			return;
 		}
-		viewer.sendSystemMessage(Component.literal("Duties of House " + lineage.house).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+		viewer.sendSystemMessage(Component.literal("Duties of House " + lineage.house).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
+			.append(Component.literal("  Renown: " + lineage.renown).withStyle(s -> s.withBold(false).withColor(ChatFormatting.YELLOW))));
 		for (Quest quest : lineage.quests) {
 			String bullet = switch (quest.type) {
 				case BLOOD_DEBT -> "  ⚔ ";
 				case QUESTLINE -> "  ✦ ";
+				case PREPARATION -> "  ⚒ ";
 				default -> "  • ";
 			};
 			viewer.sendSystemMessage(Component.literal(bullet).withStyle(ChatFormatting.DARK_GRAY)

@@ -24,6 +24,8 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -71,7 +73,7 @@ public final class Champions {
 	 * Spawns a champion near the player. {@code key} ties it to the quest that wants it dead.
 	 * {@code mainHand} overrides the weapon (used to show a stolen heirloom).
 	 */
-	public static void spawn(ServerPlayer player, Kind kind, String key, Optional<ItemStack> mainHand) {
+	public static void spawn(ServerPlayer player, Kind kind, String key, Optional<ItemStack> mainHand, List<String> preparations) {
 		ServerLevel level = player.level();
 		BlockPos pos = findSpot(level, player.blockPosition());
 		Mob champion = kind.type().create(level, EntitySpawnReason.EVENT);
@@ -85,8 +87,13 @@ public final class Champions {
 			champion.setDropChance(slot, 0);
 		}
 		mainHand.ifPresent(stack -> champion.setItemSlot(EquipmentSlot.MAINHAND, stack.copy()));
-		champion.getAttribute(Attributes.MAX_HEALTH).setBaseValue(kind.health());
-		champion.setHealth((float) kind.health());
+		double health = preparations.contains(Questlines.WEAKENED) ? kind.health() * 0.7 : kind.health();
+		champion.getAttribute(Attributes.MAX_HEALTH).setBaseValue(health);
+		champion.setHealth((float) health);
+		if (preparations.contains(Questlines.EXPOSED)) {
+			champion.addEffect(new MobEffectInstance(MobEffects.GLOWING, MobEffectInstance.INFINITE_DURATION, 0));
+			champion.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, MobEffectInstance.INFINITE_DURATION, 0));
+		}
 		var damage = champion.getAttribute(Attributes.ATTACK_DAMAGE);
 		if (damage != null) damage.setBaseValue(damage.getBaseValue() + kind.extraDamage());
 		champion.setCustomName(Component.literal(kind.name()).withStyle(ChatFormatting.GOLD));
@@ -98,7 +105,8 @@ public final class Champions {
 		champion.setTarget(player);
 		level.addFreshEntity(champion);
 
-		for (int i = 0; i < kind.guards(); i++) {
+		int guards = preparations.contains(Questlines.STANDS_ALONE) ? 0 : kind.guards();
+		for (int i = 0; i < guards; i++) {
 			Mob guard = kind.guard().create(level, EntitySpawnReason.EVENT);
 			if (guard == null) continue;
 			BlockPos guardPos = findSpot(level, pos);

@@ -23,6 +23,8 @@ It runs entirely on the server, so players can join a Bloodline server with a va
   - **Oath of the Hearth:** befriend villagers, win raids, and defeat the Warlord at a real Pillager Outpost.
 
   Finishing an oath gives the family a **legendary trait** that every later heir is born with.
+- **Renown.** Fulfilling duties earns your house renown (blood debts are worth the most); leaving debts unpaid costs it. Each act of the oath needs more renown to begin (Act II: 10, Act III: 25, Act IV: 45), so side duties drive the main quest.
+- **Preparations.** Before each champion fight the family gets three optional preparation duties. Each one weakens the champion: no bodyguards, 30% less health, or glowing and slowed.
 - **Champions.** Named bosses with extra health, gear, bodyguards and a boss bar. They wait at real structures in your world, and quests give you a map to find them.
 - **The Stolen Heirloom.** If an heirloom is destroyed (burned, despawned, lost in the void), it turns out thieves took it. Track their captain to a pillager outpost and take it back.
 - **The Chronicle.** A book that writes itself: births, deaths, heirlooms, first steps into the Nether and the End, and bosses slain.

@@ -24,7 +24,9 @@ public class Lineage {
 		Codec.INT.optionalFieldOf("oath_acts", 0).forGetter(l -> l.oathActs),
 		Codec.INT.optionalFieldOf("oath_act_generation", 0).forGetter(l -> l.oathActGeneration),
 		Codec.STRING.listOf().optionalFieldOf("legacies", List.of()).forGetter(l -> l.legacies),
-		ItemStack.CODEC.listOf().optionalFieldOf("lost_heirlooms", List.of()).forGetter(l -> l.lostHeirlooms)
+		ItemStack.CODEC.listOf().optionalFieldOf("lost_heirlooms", List.of()).forGetter(l -> l.lostHeirlooms),
+		Codec.INT.optionalFieldOf("renown", 0).forGetter(l -> l.renown),
+		Codec.STRING.listOf().optionalFieldOf("preparations", List.of()).forGetter(l -> l.preparations)
 	).apply(i, Lineage::new));
 
 	public String house;
@@ -46,10 +48,14 @@ public class Lineage {
 	public final List<String> legacies;
 	/** Heirlooms that were destroyed or lost; the Stolen Heirloom questline brings them back. */
 	public final List<ItemStack> lostHeirlooms;
+	/** Earned by fulfilling duties; each act of the oath needs a certain amount to begin. */
+	public int renown;
+	/** Preparations finished for the coming champion fight (see Questlines). */
+	public final List<String> preparations;
 
 	public Lineage(String house, Member current, boolean awaitingHeir, List<Ancestor> ancestors, List<ChronicleEntry> chronicle,
 				   List<String> milestones, List<Quest> quests, Optional<String> oath, int oathActs, int oathActGeneration,
-				   List<String> legacies, List<ItemStack> lostHeirlooms) {
+				   List<String> legacies, List<ItemStack> lostHeirlooms, int renown, List<String> preparations) {
 		this.house = house;
 		this.current = current;
 		this.awaitingHeir = awaitingHeir;
@@ -62,10 +68,12 @@ public class Lineage {
 		this.oathActGeneration = oathActGeneration;
 		this.legacies = new ArrayList<>(legacies);
 		this.lostHeirlooms = new ArrayList<>(lostHeirlooms);
+		this.renown = renown;
+		this.preparations = new ArrayList<>(preparations);
 	}
 
 	public Lineage(String house, Member founder) {
-		this(house, founder, false, List.of(), List.of(), List.of(), List.of(), Optional.empty(), 0, 0, List.of(), List.of());
+		this(house, founder, false, List.of(), List.of(), List.of(), List.of(), Optional.empty(), 0, 0, List.of(), List.of(), 0, List.of());
 	}
 
 	public String fullName() {

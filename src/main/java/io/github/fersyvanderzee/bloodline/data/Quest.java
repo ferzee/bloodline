@@ -25,7 +25,9 @@ public class Quest {
 		/** Early goals for the founder of a house. */
 		FOUNDING("founding"),
 		/** A step of a multi-part questline, such as the Founder's Oath. Survives death. */
-		QUESTLINE("questline");
+		QUESTLINE("questline"),
+		/** Optional groundwork before a champion fight that weakens the champion. Survives death. */
+		PREPARATION("preparation");
 
 		public static final Codec<Type> CODEC = StringRepresentable.fromEnum(Type::values);
 		private final String name;

@@ -71,7 +71,42 @@ public final class Questlines {
 		}
 	}
 
-	record Act(String name, String intro, List<Step> steps) {
+	/** {@code renown} is how much renown the house needs before the act can begin. */
+	record Act(int renown, String name, String intro, List<Step> steps) {
+	}
+
+	/** Optional groundwork before a champion fight; {@code effect} is what it does to the champion. */
+	record Preparation(String effect, String title, String task, Goal goal, List<String> targets, int required) {
+	}
+
+	public static final String STANDS_ALONE = "alone";
+	public static final String WEAKENED = "weakened";
+	public static final String EXPOSED = "exposed";
+
+	private static final Preparation SHARPEN = new Preparation(WEAKENED, "Sharpen your edge", "Enchant an item", Goal.CUSTOM_STAT, List.of("enchant_item"), 1);
+	private static final Preparation SPYGLASS = new Preparation(EXPOSED, "Watch from afar", "Craft a spyglass", Goal.CRAFT, List.of("spyglass"), 1);
+
+	/** Preparations offered before each champion, by champion kind. */
+	private static final Map<String, List<Preparation>> PREPARATIONS = Map.of(
+		Champions.FORTRESS_CAPTAIN.id(), List.of(
+			new Preparation(STANDS_ALONE, "Thin their ranks", "Slay Wither Skeletons", Goal.KILL, List.of("minecraft:wither_skeleton"), 8),
+			SHARPEN, SPYGLASS),
+		Champions.LOST_DELVER.id(), List.of(
+			new Preparation(STANDS_ALONE, "Light the dark", "Craft torches", Goal.CRAFT, List.of("torch"), 32),
+			SHARPEN,
+			new Preparation(EXPOSED, "Muffle your steps", "Craft wool", Goal.CRAFT, List.of("white_wool"), 4)),
+		Champions.WARLORD.id(), List.of(
+			new Preparation(STANDS_ALONE, "Warn the villages", "Trade with villagers", Goal.CUSTOM_STAT, List.of("traded_with_villager"), 10),
+			SHARPEN, SPYGLASS)
+	);
+
+	public static String describeEffect(String effect) {
+		return switch (effect) {
+			case STANDS_ALONE -> "the champion faces you without bodyguards";
+			case WEAKENED -> "the champion has 30% less health";
+			case EXPOSED -> "the champion glows and moves slowly";
+			default -> effect;
+		};
 	}
 
 	record Oath(String id, String name, String vow, String legacy, List<Act> acts) {
@@ -79,44 +114,44 @@ public final class Questlines {
 
 	private static final List<Oath> OATHS = List.of(
 		new Oath("sword", "Oath of the Sword", "We will carry one blade through every generation, until it fells the Wither.", "oathbound", List.of(
-			new Act("The First Blade", "Every oath begins with a blade. Prove your arm, then forge the sword your family will carry.", List.of(
+			new Act(0, "The First Blade", "Every oath begins with a blade. Prove your arm, then forge the sword your family will carry.", List.of(
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Slay monsters", Goal.CUSTOM_STAT, List.of("mob_kills"), 30, Reward.levels(3))),
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Craft an iron sword to swear upon", Goal.CRAFT, List.of("iron_sword"), 1, Reward.none()),
 					Questlines::swearBlade))),
-			new Act("Trial by Fire", "The Oathblade must be tempered where the world burns.", List.of(
+			new Act(10, "Trial by Fire", "The Oathblade must be tempered where the world burns.", List.of(
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Carry the Oathblade into the Nether", Goal.DIMENSION, List.of("minecraft:the_nether"), 1, Reward.levels(2))),
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Slay Blazes with the Oathblade", Goal.KILL_WITH_OATHBLADE, List.of("minecraft:blaze"), 3, Reward.levels(4))))),
-			new Act("The Fortress Captain", "A captain of the wither-bones holds a fortress in the Nether. It must fall to the Oathblade.", List.of(
+			new Act(25, "The Fortress Captain", "A captain of the wither-bones holds a fortress in the Nether. It must fall to the Oathblade.", List.of(
 				new Step((p, l, t) -> championQuest(p, t, "Defeat the Captain of the Fortress", Champions.FORTRESS_CAPTAIN, "oath_sword",
 					Level.NETHER, BuiltinStructures.FORTRESS, false, Reward.item(5, "netherite_scrap", 2))))),
-			new Act("Oathfulfilled", "Only the Wither remains. Let the Oathblade strike the final blow.", List.of(
+			new Act(45, "Oathfulfilled", "Only the Wither remains. Let the Oathblade strike the final blow.", List.of(
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Slay the Wither with the Oathblade", Goal.KILL_WITH_OATHBLADE, List.of("minecraft:wither"), 1, Reward.levels(10)))))
 		)),
 		new Oath("deep", "Oath of the Deep", "We will dig until we find what the old ones buried, and silence the Warden.", "deepborn", List.of(
-			new Act("Strike the Earth", "The family's fortune lies below. Dig deep.", List.of(
+			new Act(0, "Strike the Earth", "The family's fortune lies below. Dig deep.", List.of(
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Descend below Y -32", Goal.DEPTH, List.of("-32"), 1, Reward.levels(2))),
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Mine diamond ore", Goal.MINE, List.of("diamond_ore", "deepslate_diamond_ore"), 3, Reward.levels(4))))),
-			new Act("The Silent City", "Somewhere in the deep dark lies a city of the old ones. Walk its halls without waking the Warden.", List.of(
+			new Act(10, "The Silent City", "Somewhere in the deep dark lies a city of the old ones. Walk its halls without waking the Warden.", List.of(
 				new Step((p, l, t) -> structureQuest(p, t, "Find the ancient city", Level.OVERWORLD, BuiltinStructures.ANCIENT_CITY, true, Reward.levels(3))),
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Break sculk catalysts", Goal.MINE, List.of("sculk_catalyst"), 2, Reward.levels(4))))),
-			new Act("The Lost Delver", "A delver of another house never came home from the deep. What is left of them still guards the city.", List.of(
+			new Act(25, "The Lost Delver", "A delver of another house never came home from the deep. What is left of them still guards the city.", List.of(
 				new Step((p, l, t) -> championQuest(p, t, "Defeat the Lost Delver in the ancient city", Champions.LOST_DELVER, "oath_deep",
 					Level.OVERWORLD, BuiltinStructures.ANCIENT_CITY, true, Reward.item(5, "echo_shard", 3))))),
-			new Act("Echoes", "Gather the echoes of the deep, then face the thing that guards them.", List.of(
+			new Act(45, "Echoes", "Gather the echoes of the deep, then face the thing that guards them.", List.of(
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Craft a recovery compass", Goal.CRAFT, List.of("recovery_compass"), 1, Reward.levels(3))),
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Slay a Warden", Goal.KILL, List.of("minecraft:warden"), 1, Reward.levels(10)))))
 		)),
 		new Oath("hearth", "Oath of the Hearth", "We will stand between the villages and those who would burn them.", "beloved", List.of(
-			new Act("Friend of the Village", "A house is nothing without neighbours.", List.of(
+			new Act(0, "Friend of the Village", "A house is nothing without neighbours.", List.of(
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Trade with villagers", Goal.CUSTOM_STAT, List.of("traded_with_villager"), 15, Reward.levels(3))),
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Breed animals", Goal.CUSTOM_STAT, List.of("animals_bred"), 10, Reward.item(2, "emerald", 8))))),
-			new Act("Defender", "Pillagers threaten the villages. Stand between them and the innocent.", List.of(
+			new Act(10, "Defender", "Pillagers threaten the villages. Stand between them and the innocent.", List.of(
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Slay pillagers or vindicators", Goal.KILL, List.of("minecraft:pillager", "minecraft:vindicator"), 8, Reward.levels(3))),
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Win a raid", Goal.CUSTOM_STAT, List.of("raid_win"), 1, Reward.levels(5))))),
-			new Act("The Warlord", "The raids are led from an outpost. Its warlord must answer to your house.", List.of(
+			new Act(25, "The Warlord", "The raids are led from an outpost. Its warlord must answer to your house.", List.of(
 				new Step((p, l, t) -> championQuest(p, t, "Defeat the Warlord of the Outpost", Champions.WARLORD, "oath_hearth",
 					Level.OVERWORLD, BuiltinStructures.PILLAGER_OUTPOST, false, Reward.item(5, "totem_of_undying", 1))))),
-			new Act("Hero of the Realm", "Become the shield the realm remembers.", List.of(
+			new Act(45, "Hero of the Realm", "Become the shield the realm remembers.", List.of(
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Win two more raids", Goal.CUSTOM_STAT, List.of("raid_win"), 2, Reward.levels(10)))))
 		))
 	);
@@ -176,6 +211,8 @@ public final class Questlines {
 		Oath oath = oath(lineage.oath.get()).orElse(null);
 		if (oath == null || lineage.oathActs >= oath.acts().size()) return;
 		if (lineage.oathActs > 0 && lineage.oathActGeneration >= lineage.current.generation()) return;
+		Act next = oath.acts().get(lineage.oathActs);
+		if (lineage.renown < next.renown()) return;
 		startAct(player, lineage, oath, lineage.oathActs);
 	}
 
@@ -191,11 +228,18 @@ public final class Questlines {
 		Quest quest = oath.acts().get(act).steps().get(step).factory().create(player, lineage, title).inLine(OATH, act, step);
 		Quests.add(player, lineage, quest);
 		player.sendSystemMessage(Component.literal("New objective: ").withStyle(ChatFormatting.GRAY).append(Quests.line(quest, true)));
+		if (quest.goal == Goal.KILL_CHAMPION) addPreparations(player, lineage, quest.targets.get(1));
 		Lineages.markDirty(player.level().getServer());
 	}
 
 	public static void onStepComplete(ServerPlayer player, Lineage lineage, Quest quest) {
 		String line = quest.line.orElse("");
+		if (line.startsWith(PREP_PREFIX)) {
+			String effect = line.substring(PREP_PREFIX.length());
+			if (!lineage.preparations.contains(effect)) lineage.preparations.add(effect);
+			player.sendSystemMessage(Component.literal("Preparation complete: " + describeEffect(effect) + ".").withStyle(ChatFormatting.GRAY));
+			return;
+		}
 		if (line.equals(RECLAIM)) {
 			finishReclaim(player, lineage, quest);
 			return;
@@ -205,6 +249,11 @@ public final class Questlines {
 		if (oath == null) return;
 		Act act = oath.acts().get(quest.act);
 		act.steps().get(quest.step).onComplete().run(player, lineage);
+		if (quest.goal == Goal.KILL_CHAMPION) {
+			// The fight is over: unfinished preparations no longer matter.
+			lineage.quests.removeIf(q -> q.type == Type.PREPARATION);
+			lineage.preparations.clear();
+		}
 		if (quest.step + 1 < act.steps().size()) {
 			startStep(player, lineage, oath, quest.act, quest.step + 1);
 			return;
@@ -213,6 +262,7 @@ public final class Questlines {
 		MinecraftServer server = player.level().getServer();
 		lineage.oathActs = quest.act + 1;
 		lineage.oathActGeneration = lineage.current.generation();
+		Renown.change(player, lineage, Renown.ACT_COMPLETED, "for fulfilling Act " + Names.numeral(quest.act + 1));
 		Lineages.record(server, lineage, Component.literal(lineage.current.name() + " fulfilled Act " + Names.numeral(quest.act + 1)
 			+ " of the " + oath.name() + ": " + act.name() + "."));
 		if (lineage.oathActs < oath.acts().size()) {
@@ -232,6 +282,26 @@ public final class Questlines {
 		player.sendSystemMessage(Component.literal("Legendary trait: ").append(legacy.displayName())
 			.append(Component.literal(" (every heir is born with it)").withStyle(ChatFormatting.DARK_GRAY)));
 		player.level().playSound(null, player.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 1f, 0.8f);
+	}
+
+	private static final String PREP_PREFIX = "prep:";
+
+	private static void addPreparations(ServerPlayer player, Lineage lineage, String championKind) {
+		List<Preparation> preparations = PREPARATIONS.getOrDefault(championKind, List.of());
+		if (preparations.isEmpty()) return;
+		player.sendSystemMessage(Component.literal("Before the fight, you can prepare. Each preparation weakens the champion:")
+			.withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+		for (Preparation prep : preparations) {
+			Quest quest = Quest.of(Type.PREPARATION, prep.title(), prep.task(), prep.goal(), prep.targets(), prep.required(), Reward.none());
+			quest.line = Optional.of(PREP_PREFIX + prep.effect());
+			Quests.add(player, lineage, quest);
+			player.sendSystemMessage(Component.literal("  ⚒ ").withStyle(ChatFormatting.DARK_GRAY).append(Quests.line(quest, true))
+				.append(Component.literal(" - " + describeEffect(prep.effect())).withStyle(ChatFormatting.DARK_GRAY)));
+		}
+	}
+
+	public static String effectOf(Quest quest) {
+		return quest.line.filter(l -> l.startsWith(PREP_PREFIX)).map(l -> l.substring(PREP_PREFIX.length())).orElse("");
 	}
 
 	private static void swearBlade(ServerPlayer player, Lineage lineage) {
@@ -280,7 +350,7 @@ public final class Questlines {
 			overview.append(Component.literal(mark + Names.numeral(i + 1) + ". " + sworn.acts().get(i).name() + "\n")
 				.withStyle(s -> s.withColor(color).withBold(false)));
 		}
-		overview.append(Chronicle.faint("\nOne act per generation.\nReward: "))
+		overview.append(Chronicle.faint("\nOne act per generation.\nRenown: " + lineage.renown + "\nReward: "))
 			.append(Traits.get(sworn.legacy()).displayName().withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(false)));
 		pages.add(overview);
 
@@ -301,10 +371,29 @@ public final class Questlines {
 			}
 			String reward = Quests.describe(step.reward);
 			objective.append(Chronicle.faint("\n\nStep " + (step.step + 1) + " of " + act.steps().size() + (reward.isEmpty() ? "" : "\nReward: " + reward)));
-		} else {
+		} else if (lineage.oathActs > 0 && lineage.oathActGeneration >= lineage.current.generation()) {
 			objective.append(Chronicle.body("This generation has done its part. The next act falls to your heir."));
+		} else {
+			objective.append(Chronicle.body("The house is not yet renowned enough to begin this act.\n\n"))
+				.append(Component.literal("Renown: " + lineage.renown + " / " + act.renown()).withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(false)))
+				.append(Chronicle.faint("\n\nFulfil duties, settle blood debts and reclaim heirlooms to earn renown."));
 		}
 		pages.add(objective);
+
+		List<Quest> preparations = lineage.quests.stream().filter(q -> q.type == Type.PREPARATION).toList();
+		if (!preparations.isEmpty() || !lineage.preparations.isEmpty()) {
+			MutableComponent prep = Chronicle.heading("Preparations");
+			for (String effect : lineage.preparations) {
+				prep.append(Component.literal("✔ " + describeEffect(effect) + "\n").withStyle(s -> s.withColor(ChatFormatting.DARK_GREEN).withBold(false)));
+			}
+			for (Quest q : preparations) {
+				String progress = q.required > 1 ? " " + q.progress + "/" + q.required : "";
+				prep.append(Component.literal("○ " + q.task.getString() + progress + "\n").withStyle(s -> s.withColor(ChatFormatting.BLACK).withBold(false)
+					.withHoverEvent(new HoverEvent.ShowText(Component.literal(describeEffect(effectOf(q)))))));
+			}
+			prep.append(Chronicle.faint("\nOptional. Each one weakens the champion."));
+			pages.add(prep);
+		}
 		return pages;
 	}
 
@@ -402,11 +491,16 @@ public final class Questlines {
 			m -> m.entityTags().contains("bloodline_key=" + key)).isEmpty();
 		if (present) return;
 		Optional<ItemStack> weapon = Optional.empty();
-		if (quest.line.filter(RECLAIM::equals).isPresent()) {
-			Lineage lineage = Lineages.get(player);
-			if (lineage != null && !lineage.lostHeirlooms.isEmpty()) weapon = Optional.of(lineage.lostHeirlooms.getFirst());
+		Lineage lineage = Lineages.get(player);
+		if (lineage == null) return;
+		if (quest.line.filter(RECLAIM::equals).isPresent() && !lineage.lostHeirlooms.isEmpty()) {
+			weapon = Optional.of(lineage.lostHeirlooms.getFirst());
 		}
-		Champions.spawn(player, kind, key, weapon);
+		List<String> preparations = isOathStep(quest) ? List.copyOf(lineage.preparations) : List.of();
+		Champions.spawn(player, kind, key, weapon, preparations);
+		for (String effect : preparations) {
+			player.sendSystemMessage(Component.literal("Your preparation pays off: " + describeEffect(effect) + ".").withStyle(ChatFormatting.GREEN));
+		}
 	}
 
 	private static Optional<GlobalPos> locate(ServerPlayer player, ResourceKey<Level> dimension, ResourceKey<Structure> structure) {

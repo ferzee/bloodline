@@ -98,7 +98,7 @@ public final class Chronicle {
 		int headPage = dutiesPage + duties.size();
 		int treePage = headPage + head.size();
 		int historyPage = treePage + tree.size();
-		long dutyCount = lineage.quests.stream().filter(q -> !Questlines.isOathStep(q)).count();
+		long dutyCount = lineage.quests.stream().filter(q -> !Questlines.isOathStep(q) && q.type != Quest.Type.PREPARATION).count();
 
 		List<Component> pages = new ArrayList<>();
 		pages.add(cover(lineage, List.of(
@@ -171,14 +171,14 @@ public final class Chronicle {
 			.append(Component.literal("House " + lineage.house + "\n\n").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD))
 			.append(faint("Head of the house:\n"))
 			.append(Component.literal(lineage.current.name() + "\n").withStyle(ChatFormatting.BLACK, ChatFormatting.BOLD))
-			.append(faint("Generation " + Names.numeral(lineage.current.generation()) + "\n\n"))
+			.append(faint("Generation " + Names.numeral(lineage.current.generation()) + ", renown " + lineage.renown + "\n\n"))
 			.append(Component.literal("Contents\n").withStyle(ChatFormatting.BLACK, ChatFormatting.BOLD));
 		contents.forEach(page::append);
 		return page;
 	}
 
 	private static List<Component> duties(Lineage lineage) {
-		List<Quest> quests = lineage.quests.stream().filter(q -> !Questlines.isOathStep(q)).toList();
+		List<Quest> quests = lineage.quests.stream().filter(q -> !Questlines.isOathStep(q) && q.type != Quest.Type.PREPARATION).toList();
 		List<Component> pages = new ArrayList<>();
 		MutableComponent page = heading("Duties");
 		int used = 20;
