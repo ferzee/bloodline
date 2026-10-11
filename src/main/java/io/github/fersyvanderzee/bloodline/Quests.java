@@ -1,6 +1,7 @@
 package io.github.fersyvanderzee.bloodline;
 
 import io.github.fersyvanderzee.bloodline.data.Ancestor;
+import io.github.fersyvanderzee.bloodline.data.CompletedQuest;
 import io.github.fersyvanderzee.bloodline.data.Lineage;
 import io.github.fersyvanderzee.bloodline.data.Member;
 import io.github.fersyvanderzee.bloodline.data.Quest;
@@ -261,9 +262,13 @@ public final class Quests {
 		return total;
 	}
 
+	private static final int MAX_COMPLETED = 30;
+
 	private static void complete(ServerPlayer player, Lineage lineage, Quest quest) {
 		MinecraftServer server = player.level().getServer();
 		lineage.quests.remove(quest);
+		lineage.completed.add(CompletedQuest.of(quest, lineage.current.generation()));
+		while (lineage.completed.size() > MAX_COMPLETED) lineage.completed.removeFirst();
 		player.sendSystemMessage(Component.literal(quest.type == Type.QUESTLINE ? "Done: " : "Duty fulfilled: ").withStyle(ChatFormatting.GREEN)
 			.append(Component.literal(quest.title).withStyle(ChatFormatting.GOLD))
 			.append(quest.type == Type.QUESTLINE ? Component.literal(" - ").append(quest.task.copy()).withStyle(ChatFormatting.GRAY) : Component.empty()));
@@ -328,7 +333,8 @@ public final class Quests {
 
 	/** Lists the family's duties in chat. */
 	public static void show(ServerPlayer viewer, Lineage lineage) {
-		if (lineage.quests.isEmpty()) {
+		List<CompletedQuest> done = lineage.completedThisGeneration().stream().filter(c -> c.type() != Type.QUESTLINE).toList();
+		if (lineage.quests.isEmpty() && done.isEmpty()) {
 			viewer.sendSystemMessage(Component.literal("House " + lineage.house + " has no duties right now.").withStyle(ChatFormatting.GRAY));
 			return;
 		}
@@ -344,6 +350,12 @@ public final class Quests {
 			};
 			viewer.sendSystemMessage(Component.literal(bullet).withStyle(ChatFormatting.DARK_GRAY)
 				.append(line(quest, true)));
+		}
+		// Finished this generation: shown crossed out below the open ones.
+		for (CompletedQuest quest : done) {
+			viewer.sendSystemMessage(Component.literal("  ✔ ").withStyle(ChatFormatting.DARK_GREEN)
+				.append(Component.literal(quest.title() + ": " + quest.task().getString())
+					.withStyle(s -> s.withColor(ChatFormatting.DARK_GRAY).withStrikethrough(true))));
 		}
 	}
 

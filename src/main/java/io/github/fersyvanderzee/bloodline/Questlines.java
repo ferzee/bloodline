@@ -360,6 +360,14 @@ public final class Questlines {
 			.append(Component.literal(act.intro()).withStyle(s -> s.withColor(ChatFormatting.DARK_GRAY).withItalic(true).withBold(false))));
 		Quest step = lineage.quests.stream().filter(Questlines::isOathStep).findFirst().orElse(null);
 		MutableComponent objective = Chronicle.heading("Objective");
+		int currentAct = lineage.oathActs;
+		for (var done : lineage.completed) {
+			if (done.line().filter(OATH::equals).isPresent() && done.act() == currentAct) {
+				objective.append(Component.literal("✔ ").withStyle(s -> s.withColor(ChatFormatting.DARK_GREEN).withBold(false)))
+					.append(Chronicle.struck(done.task().getString()))
+					.append("\n\n");
+			}
+		}
 		if (step != null) {
 			objective.append(step.task.copy().withStyle(s -> s.withColor(ChatFormatting.BLACK).withBold(false)));
 			if (step.required > 1) {

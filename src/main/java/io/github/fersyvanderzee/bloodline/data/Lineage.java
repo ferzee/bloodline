@@ -26,7 +26,8 @@ public class Lineage {
 		Codec.STRING.listOf().optionalFieldOf("legacies", List.of()).forGetter(l -> l.legacies),
 		ItemStack.CODEC.listOf().optionalFieldOf("lost_heirlooms", List.of()).forGetter(l -> l.lostHeirlooms),
 		Codec.INT.optionalFieldOf("renown", 0).forGetter(l -> l.renown),
-		Codec.STRING.listOf().optionalFieldOf("preparations", List.of()).forGetter(l -> l.preparations)
+		Codec.STRING.listOf().optionalFieldOf("preparations", List.of()).forGetter(l -> l.preparations),
+		CompletedQuest.CODEC.listOf().optionalFieldOf("completed", List.of()).forGetter(l -> l.completed)
 	).apply(i, Lineage::new));
 
 	public String house;
@@ -52,10 +53,13 @@ public class Lineage {
 	public int renown;
 	/** Preparations finished for the coming champion fight (see Questlines). */
 	public final List<String> preparations;
+	/** Quests the current head of the family has finished, shown crossed out. */
+	public final List<CompletedQuest> completed;
 
 	public Lineage(String house, Member current, boolean awaitingHeir, List<Ancestor> ancestors, List<ChronicleEntry> chronicle,
 				   List<String> milestones, List<Quest> quests, Optional<String> oath, int oathActs, int oathActGeneration,
-				   List<String> legacies, List<ItemStack> lostHeirlooms, int renown, List<String> preparations) {
+				   List<String> legacies, List<ItemStack> lostHeirlooms, int renown, List<String> preparations,
+				   List<CompletedQuest> completed) {
 		this.house = house;
 		this.current = current;
 		this.awaitingHeir = awaitingHeir;
@@ -70,10 +74,11 @@ public class Lineage {
 		this.lostHeirlooms = new ArrayList<>(lostHeirlooms);
 		this.renown = renown;
 		this.preparations = new ArrayList<>(preparations);
+		this.completed = new ArrayList<>(completed);
 	}
 
 	public Lineage(String house, Member founder) {
-		this(house, founder, false, List.of(), List.of(), List.of(), List.of(), Optional.empty(), 0, 0, List.of(), List.of(), 0, List.of());
+		this(house, founder, false, List.of(), List.of(), List.of(), List.of(), Optional.empty(), 0, 0, List.of(), List.of(), 0, List.of(), List.of());
 	}
 
 	public String fullName() {
@@ -85,6 +90,11 @@ public class Lineage {
 		List<String> all = new ArrayList<>(current.traits());
 		all.addAll(legacies);
 		return all;
+	}
+
+	/** What the current head of the family has finished. */
+	public List<CompletedQuest> completedThisGeneration() {
+		return completed.stream().filter(c -> c.generation() == current.generation()).toList();
 	}
 
 	public Ancestor parent() {

@@ -2,6 +2,7 @@ package io.github.fersyvanderzee.bloodline;
 
 import io.github.fersyvanderzee.bloodline.data.Ancestor;
 import io.github.fersyvanderzee.bloodline.data.ChronicleEntry;
+import io.github.fersyvanderzee.bloodline.data.CompletedQuest;
 import io.github.fersyvanderzee.bloodline.data.Lineage;
 import io.github.fersyvanderzee.bloodline.data.Quest;
 import net.minecraft.ChatFormatting;
@@ -182,10 +183,12 @@ public final class Chronicle {
 
 	private static List<Component> duties(Lineage lineage) {
 		List<Quest> quests = lineage.quests.stream().filter(q -> !Questlines.isOathStep(q) && q.type != Quest.Type.PREPARATION).toList();
+		List<CompletedQuest> done = lineage.completedThisGeneration().stream()
+			.filter(c -> c.type() != Quest.Type.QUESTLINE && c.type() != Quest.Type.PREPARATION).toList();
 		List<Component> pages = new ArrayList<>();
 		MutableComponent page = heading("Duties");
 		int used = 20;
-		if (quests.isEmpty()) {
+		if (quests.isEmpty() && done.isEmpty()) {
 			page.append(body("The family owes nothing to anyone, for now."));
 		}
 		for (Quest quest : quests) {
@@ -203,8 +206,26 @@ public final class Chronicle {
 				.append(faint(progress + "\n\n"));
 			used += length;
 		}
+		for (CompletedQuest quest : done) {
+			int length = quest.title().length() + quest.task().getString().length() + 10;
+			if (used + length > PAGE_BUDGET) {
+				pages.add(page);
+				page = heading("Duties");
+				used = 20;
+			}
+			page.append(Component.literal("✔ ").withStyle(s -> s.withColor(ChatFormatting.DARK_GREEN).withBold(false).withStrikethrough(false)))
+				.append(struck(quest.title() + "\n"))
+				.append(struck(quest.task().getString()))
+				.append("\n\n");
+			used += length;
+		}
 		pages.add(page);
 		return pages;
+	}
+
+	/** Grey, crossed-out text for finished quests. */
+	static MutableComponent struck(String text) {
+		return Component.literal(text).withStyle(s -> s.withColor(ChatFormatting.GRAY).withBold(false).withStrikethrough(true));
 	}
 
 	private static Component head(Lineage lineage) {
