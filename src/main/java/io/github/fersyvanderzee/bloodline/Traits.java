@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE;
 import static net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE;
@@ -110,18 +111,33 @@ public final class Traits {
 		}
 		float roll = random.nextFloat();
 		Kind kind = roll < QUIRK_CHANCE ? Kind.QUIRK : roll < QUIRK_CHANCE + FLAW_CHANCE ? Kind.FLAW : Kind.BOON;
-		addRandom(traits, random, kind);
+		// The mutation is always something the parent didn't have, so every heir brings something new.
+		if (!addRandom(traits, random, kind, parentTraits)) {
+			addRandom(traits, random, Kind.BOON, parentTraits);
+		}
 		return traits;
 	}
 
+	/** A boon earned during life, e.g. from settling a blood debt. Empty if there's no room for another trait. */
+	public static Optional<String> rollExtraBoon(List<String> current, RandomSource random) {
+		if (current.size() >= MAX_TRAITS) return Optional.empty();
+		List<String> traits = new ArrayList<>(current);
+		return addRandom(traits, random, Kind.BOON, List.of()) ? Optional.of(traits.getLast()) : Optional.empty();
+	}
+
 	private static void addRandom(List<String> traits, RandomSource random, Kind kind) {
+		addRandom(traits, random, kind, List.of());
+	}
+
+	private static boolean addRandom(List<String> traits, RandomSource random, Kind kind, List<String> exclude) {
 		List<Trait> options = ALL.values().stream()
 			.filter(t -> t.kind() == kind)
+			.filter(t -> !exclude.contains(t.id()))
 			.filter(t -> traits.stream().map(Traits::get).noneMatch(o -> o.group().equals(t.group())))
 			.toList();
-		if (!options.isEmpty()) {
-			traits.add(options.get(random.nextInt(options.size())).id());
-		}
+		if (options.isEmpty()) return false;
+		traits.add(options.get(random.nextInt(options.size())).id());
+		return true;
 	}
 
 	/** Replaces any trait modifiers on the player with the ones for these traits. */

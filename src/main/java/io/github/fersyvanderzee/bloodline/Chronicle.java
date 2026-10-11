@@ -3,6 +3,7 @@ package io.github.fersyvanderzee.bloodline;
 import io.github.fersyvanderzee.bloodline.data.Ancestor;
 import io.github.fersyvanderzee.bloodline.data.ChronicleEntry;
 import io.github.fersyvanderzee.bloodline.data.Lineage;
+import io.github.fersyvanderzee.bloodline.data.Quest;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -57,10 +58,11 @@ public final class Chronicle {
 	static WrittenBookContent build(Lineage lineage) {
 		List<Component> pages = new ArrayList<>();
 		pages.add(cover(lineage));
+		if (!lineage.quests.isEmpty()) pages.add(duties(lineage));
 		pages.addAll(familyTree(lineage));
 		pages.addAll(entries(lineage));
 		if (pages.size() > MAX_PAGES) {
-			pages = new ArrayList<>(pages.subList(0, 1 + (int) Math.ceil((lineage.ancestors.size() + 1) / (double) ANCESTORS_PER_PAGE)));
+			pages = new ArrayList<>(pages.subList(0, (lineage.quests.isEmpty() ? 1 : 2) + (int) Math.ceil((lineage.ancestors.size() + 1) / (double) ANCESTORS_PER_PAGE)));
 			List<Component> recent = entries(lineage);
 			pages.addAll(recent.subList(Math.max(0, recent.size() - (MAX_PAGES - pages.size())), recent.size()));
 		}
@@ -79,6 +81,21 @@ public final class Chronicle {
 			.append(Component.literal("Generation " + Names.numeral(lineage.current.generation()) + ", born day " + lineage.current.bornDay() + "\n\n").withStyle(ChatFormatting.DARK_GRAY))
 			.append(Component.literal("Born with:\n").withStyle(ChatFormatting.DARK_GRAY))
 			.append(bookTraits(lineage.current.traits()));
+	}
+
+	private static Component duties(Lineage lineage) {
+		MutableComponent page = Component.literal("Family Duties\n\n").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD);
+		MutableComponent body = Component.empty().withStyle(s -> s.withBold(false));
+		for (Quest quest : lineage.quests) {
+			body.append(Component.literal(quest.title + "\n").withStyle(ChatFormatting.BLACK))
+				.append(quest.task.copy().withStyle(ChatFormatting.DARK_GRAY));
+			if (quest.required > 1) {
+				body.append(Component.literal(" " + quest.progress / quest.displayScale + "/" + quest.required / quest.displayScale)
+					.withStyle(ChatFormatting.DARK_GRAY));
+			}
+			body.append("\n\n");
+		}
+		return page.append(body);
 	}
 
 	private static Component bookTraits(List<String> ids) {

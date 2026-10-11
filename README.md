@@ -13,6 +13,10 @@ It runs entirely on the server, so players can join a Bloodline server with a va
 - **Traits.** Each family member is born with traits such as *Stalwart*, *Swift*, *Long-Armed*, *Frail* or *Tall*. Heirs inherit some of their parent's traits and gain one new one.
 - **Epithets.** When someone dies they get a name based on how they lived: *the Wanderer*, *the Delver*, *the Slayer*, *the Brief*...
 - **Heirlooms.** Gear remembers who carried it. Once it has been carried by two generations it becomes a named heirloom (*"Oathkeeper"*). Heirlooms stay with the family when their bearer dies and grow stronger with each generation.
+- **Family duties (quests).** Founders get a few goals to start their house. When someone dies, their heir inherits duties from them:
+  - **Blood debt:** avenge them by killing whatever killed them. Unsettled debts pass down the generations. Settling one gives the heir a new trait that their children can inherit.
+  - **Resting place:** visit the spot where they fell (and pick up what they dropped).
+  - **Unfinished business:** finish something they cared about, based on how they lived. A Delver leaves a mine to finish, a Wanderer leaves a road to walk.
 - **The Chronicle.** A book that writes itself: births, deaths, heirlooms, first steps into the Nether and the End, and bosses slain.
 
 ## Commands
@@ -22,6 +26,7 @@ It runs entirely on the server, so players can join a Bloodline server with a va
 | `/bloodline` | Your family, current character and traits |
 | `/bloodline info <player>` | Someone else's family |
 | `/bloodline tree [player]` | The full family tree |
+| `/bloodline quests` | Your family's duties and progress |
 | `/bloodline chronicle` | A new copy of the family chronicle |
 | `/bloodline house <name>` | Rename your house |
 

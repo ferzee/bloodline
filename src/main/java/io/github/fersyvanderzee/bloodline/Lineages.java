@@ -16,6 +16,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.damagesource.DamageSource;
 
 import java.util.List;
 
@@ -52,17 +53,20 @@ public final class Lineages {
 			lineage = new Lineage(Names.house(player.getRandom()), founder);
 			state.put(player.getUUID(), lineage);
 			record(server, lineage, Component.literal(founder.name() + " founded House " + lineage.house + "."));
+			Quests.addFounding(player, lineage);
 			Chronicle.give(player);
 			announceBirth(player, lineage, null);
 		} else if (lineage.awaitingHeir && player.isAlive()) {
 			succeed(player, lineage);
+		} else {
+			Quests.remind(player, lineage);
 		}
 		Traits.apply(player, lineage.current.traits());
 		refreshName(player);
 	}
 
 	/** Called when a player dies: the current family member becomes an ancestor. */
-	public static void onDeath(ServerPlayer player) {
+	public static void onDeath(ServerPlayer player, DamageSource source) {
 		Lineage lineage = get(player);
 		if (lineage == null || lineage.awaitingHeir) return;
 		MinecraftServer server = player.level().getServer();
@@ -73,6 +77,7 @@ public final class Lineages {
 		lineage.ancestors.add(ancestor);
 		lineage.awaitingHeir = true;
 		record(server, lineage, Component.literal(ancestor.fullName() + " died. ").append(deathMessage.copy()));
+		Quests.onDeath(player, lineage, ancestor, source);
 	}
 
 	/** Called when a player respawns. After a death, their heir takes over. */
@@ -115,6 +120,7 @@ public final class Lineages {
 		player.sendSystemMessage(Component.literal("You are ").append(Component.literal(lineage.fullName()).withStyle(ChatFormatting.GOLD))
 			.append(parent == null ? ", founder of your house." : ", heir of " + parent.fullName() + "."));
 		player.sendSystemMessage(Component.literal("Born with: ").append(traitList(member.traits(), parent)));
+		Quests.remind(player, lineage);
 	}
 
 	/** Comma-separated trait names; traits that weren't inherited from the parent are marked as new. */

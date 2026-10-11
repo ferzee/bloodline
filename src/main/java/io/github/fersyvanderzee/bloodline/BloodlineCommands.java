@@ -30,6 +30,14 @@ final class BloodlineCommands {
 				.executes(ctx -> tree(ctx.getSource(), ctx.getSource().getPlayerOrException()))
 				.then(Commands.argument("player", EntityArgument.player())
 					.executes(ctx -> tree(ctx.getSource(), EntityArgument.getPlayer(ctx, "player")))))
+			.then(Commands.literal("quests")
+				.executes(ctx -> {
+					ServerPlayer player = ctx.getSource().getPlayerOrException();
+					Lineage lineage = lineageOf(ctx.getSource(), player);
+					if (lineage == null) return 0;
+					Quests.show(player, lineage);
+					return 1;
+				}))
 			.then(Commands.literal("chronicle")
 				.executes(ctx -> {
 					Chronicle.give(ctx.getSource().getPlayerOrException());

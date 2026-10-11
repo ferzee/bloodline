@@ -24,6 +24,7 @@ public class Bloodline implements ModInitializer {
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
 	private static final int HEIRLOOM_TICK_INTERVAL = 5;
+	private static final int QUEST_TICK_INTERVAL = 20;
 	private static final Map<String, String> BOSSES = Map.of(
 		"ender_dragon", "slew the Ender Dragon.",
 		"wither", "destroyed the Wither.",
@@ -35,7 +36,7 @@ public class Bloodline implements ModInitializer {
 	public void onInitialize() {
 		ServerPlayerEvents.JOIN.register(Lineages::onJoin);
 		ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
-			if (entity instanceof ServerPlayer player) Lineages.onDeath(player);
+			if (entity instanceof ServerPlayer player) Lineages.onDeath(player, source);
 		});
 		ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
 			if (!alive) Heirlooms.passOn(oldPlayer, newPlayer);
@@ -44,8 +45,12 @@ public class Bloodline implements ModInitializer {
 
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (server.getTickCount() % HEIRLOOM_TICK_INTERVAL != 0) return;
+			boolean questTick = server.getTickCount() % QUEST_TICK_INTERVAL == 0;
 			for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-				if (player.isAlive()) Heirlooms.tick(player);
+				if (!player.isAlive()) continue;
+				Heirlooms.tick(player);
+				var lineage = Lineages.get(player);
+				if (questTick && lineage != null && !lineage.awaitingHeir) Quests.tick(player, lineage);
 			}
 		});
 
@@ -59,6 +64,7 @@ public class Bloodline implements ModInitializer {
 
 		ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register((level, killer, killed, source) -> {
 			if (!(killer instanceof ServerPlayer player)) return;
+			if (killed instanceof ServerPlayer victim) Quests.onPlayerKilled(player, victim);
 			Identifier type = BuiltInRegistries.ENTITY_TYPE.getKey(killed.getType());
 			String deed = type.getNamespace().equals("minecraft") ? BOSSES.get(type.getPath()) : null;
 			if (deed != null) Lineages.milestone(player, "killed_" + type.getPath() + "_" + Lineages.get(player).current.generation(), deed);
