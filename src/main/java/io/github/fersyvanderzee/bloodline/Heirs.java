@@ -38,19 +38,25 @@ public final class Heirs {
 	private Heirs() {
 	}
 
-	/** Rolls the dead family member's children. Their birth day and starting stats are set once chosen. */
+	/**
+	 * Rolls the dead family member's children. Their birth day and starting stats are set once chosen.
+	 * A family member who died young (less than a day of play, "the Brief") passes on nothing: each
+	 * child has only one trait of their own. This keeps deliberate quick deaths from breeding a
+	 * perfect bloodline.
+	 */
 	public static void roll(ServerPlayer player, Lineage lineage) {
 		Ancestor parent = lineage.parent();
 		if (parent == null) return;
+		List<String> inherited = diedYoung(parent) ? List.of() : parent.traits();
 		RandomSource random = player.getRandom();
 		List<Member> children = new ArrayList<>();
 		Set<String> names = new HashSet<>();
 		Set<Set<String>> traitSets = new HashSet<>();
 		for (int i = 0; i < COUNT; i++) {
-			List<String> traits = Traits.rollHeir(parent.traits(), random, lineage.inheritAll);
+			List<String> traits = Traits.rollHeir(inherited, random, lineage.inheritAll);
 			// Try for children who differ from their siblings, but don't insist forever.
 			for (int attempt = 0; attempt < ATTEMPTS && traitSets.contains(Set.copyOf(traits)); attempt++) {
-				traits = Traits.rollHeir(parent.traits(), random, lineage.inheritAll);
+				traits = Traits.rollHeir(inherited, random, lineage.inheritAll);
 			}
 			traitSets.add(Set.copyOf(traits));
 			String name = Names.given(random, parent.name());
@@ -84,9 +90,17 @@ public final class Heirs {
 		if (lineage.inheritAll) {
 			player.sendSystemMessage(Component.literal("Because " + parent.name() + " gave their life, every child keeps all of their boons.")
 				.withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+		} else if (diedYoung(parent)) {
+			player.sendSystemMessage(Component.literal(parent.fullName() + " lived too short a life to pass on their gifts. "
+				+ "Each child has only a trait of their own.").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
 		}
 		player.sendSystemMessage(Component.literal("Hover over a trait to see what it does. The choice is also in your Chronicle.")
 			.withStyle(ChatFormatting.DARK_GRAY));
+	}
+
+	/** Died within a day of play. Sacrifices never count: they need a fulfilled act and earn "the Devoted". */
+	public static boolean diedYoung(Ancestor ancestor) {
+		return Epithets.BRIEF.equals(ancestor.epithet());
 	}
 
 	private static Component button(int index) {
@@ -127,7 +141,8 @@ public final class Heirs {
 	public static Component bookPage(Lineage lineage) {
 		Ancestor parent = lineage.parent();
 		MutableComponent page = Chronicle.heading("Choose your Heir");
-		if (parent != null) page.append(Chronicle.faint(parent.fullName() + " has died.\n\n"));
+		if (parent != null) page.append(Chronicle.faint(parent.fullName() + " has died."
+			+ (diedYoung(parent) ? " Their life was too short to pass on their gifts." : "") + "\n\n"));
 		for (int i = 0; i < lineage.candidates.size(); i++) {
 			Member child = lineage.candidates.get(i);
 			page.append(Component.literal(child.name() + " ").withStyle(s -> s.withColor(ChatFormatting.BLACK).withBold(true)))

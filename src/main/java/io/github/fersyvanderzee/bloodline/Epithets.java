@@ -21,6 +21,7 @@ final class Epithets {
 	}
 
 	private static final int TICKS_PER_DAY = 24000;
+	public static final String BRIEF = "the Brief";
 
 	private static final List<Deed> DEEDS = List.of(
 		new Deed("kills", 40, List.of("the Slayer", "the Bold", "the Fierce")),
@@ -59,8 +60,8 @@ final class Epithets {
 
 	static String choose(Map<String, Integer> atBirth, Map<String, Integer> atDeath, RandomSource random) {
 		int played = delta(atBirth, atDeath, "play_time");
-		if (played < TICKS_PER_DAY / 2) {
-			return "the Brief";
+		if (played < TICKS_PER_DAY) {
+			return BRIEF;
 		}
 		Deed best = null;
 		double bestScore = 1;

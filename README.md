@@ -9,7 +9,7 @@ It runs entirely on the server, so players can join a Bloodline server with a va
 ## Features
 
 - **Families.** The first time you join, you found a house, e.g. *Elske Ashford, founder of House Ashford*. Your character's name is shown in chat, the tab list and death messages.
-- **Heirs.** When you die, your character becomes an ancestor and leaves three children, each with their own name and inherited traits. On respawn you choose which one carries on the line (in chat or in the Chronicle); if you take too long, the family chooses for you.
+- **Heirs.** When you die, your character becomes an ancestor and leaves three children, each with their own name and inherited traits. On respawn you choose which one carries on the line (in chat or in the Chronicle); if you take too long, the family chooses for you. A family member who lived less than a day (*the Brief*) passes on nothing: each child has only one trait of their own, so dying on purpose doesn't breed a stronger family.
 - **Traits.** Each family member is born with traits such as *Stalwart*, *Swift*, *Long-Armed*, *Frail* or *Tall*. Heirs inherit some of their parent's traits and gain one new one.
 - **Epithets.** When someone dies they get a name based on how they lived: *the Wanderer*, *the Delver*, *the Slayer*, *the Brief*...
 - **Heirlooms.** Gear remembers who carried it. Once it has been carried by two generations it becomes a named heirloom (*"Oathkeeper"*). Heirlooms stay with the family when their bearer dies and grow stronger with each generation.
