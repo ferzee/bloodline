@@ -8,9 +8,7 @@ import io.github.fersyvanderzee.bloodline.data.Quest.Type;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
-import net.minecraft.core.HolderSet;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
@@ -531,11 +529,8 @@ public final class Questlines {
 		} else if (player.level().dimension() != dimension) {
 			origin = BlockPos.ZERO;
 		}
-		var holder = level.registryAccess().lookupOrThrow(Registries.STRUCTURE).get(structure);
-		if (holder.isEmpty()) return Optional.empty();
 		int radius = skipKnown ? BloodlineConfig.get().structures.rumourSearchRadiusChunks : BloodlineConfig.get().structures.searchRadiusChunks;
-		BlockPos found = level.findNearestMapStructure(HolderSet.direct(holder.get()), origin, radius, skipKnown);
-		return Optional.ofNullable(found).map(pos -> GlobalPos.of(dimension, pos));
+		return StructureSearch.find(level, structure, origin, radius, skipKnown).map(pos -> GlobalPos.of(dimension, pos));
 	}
 
 	static void giveMap(ServerPlayer player, GlobalPos place, String purpose) {

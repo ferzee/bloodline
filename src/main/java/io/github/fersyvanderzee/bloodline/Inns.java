@@ -117,7 +117,7 @@ public final class Inns {
 		String task = "Find a village and speak to its innkeeper";
 		ServerLevel overworld = player.level().getServer().overworld();
 		BlockPos village = player.level().dimension() == Level.OVERWORLD
-			? overworld.findNearestMapStructure(StructureTags.VILLAGE, player.blockPosition(), 100, false)
+			? StructureSearch.find(overworld, StructureTags.VILLAGE, player.blockPosition(), BloodlineConfig.get().structures.searchRadiusChunks).orElse(null)
 			: null;
 		if (village != null) {
 			task += " (nearest: " + village.getX() + ", " + village.getZ() + ")";
