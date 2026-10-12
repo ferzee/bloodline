@@ -8,10 +8,10 @@ import net.minecraft.network.chat.ComponentSerialization;
 import java.util.Optional;
 
 /** A quest the current head of the family has finished, kept so it can be shown crossed out. */
-public record CompletedQuest(Quest.Type type, String title, Component task, int generation, Optional<String> line, int act) {
+public record CompletedQuest(Quest.Type type, Component title, Component task, int generation, Optional<String> line, int act) {
 	public static final Codec<CompletedQuest> CODEC = RecordCodecBuilder.create(i -> i.group(
 		Quest.Type.CODEC.fieldOf("type").forGetter(CompletedQuest::type),
-		Codec.STRING.fieldOf("title").forGetter(CompletedQuest::title),
+		ComponentSerialization.CODEC.fieldOf("title").forGetter(CompletedQuest::title),
 		ComponentSerialization.CODEC.fieldOf("task").forGetter(CompletedQuest::task),
 		Codec.INT.fieldOf("generation").forGetter(CompletedQuest::generation),
 		Codec.STRING.optionalFieldOf("line").forGetter(CompletedQuest::line),

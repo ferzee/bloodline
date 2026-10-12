@@ -61,6 +61,12 @@ Server owners can tune Bloodline in `config/bloodline.json`, which is created wi
 
 Operators can use `/bloodline debug complete` to finish the newest quest, `/bloodline debug champion` to spawn a test champion, `/bloodline debug age` to make the current family member count as having lived a full life, and `/bloodline admin reset <player>` to wipe a player's family so they start over.
 
+## Translations
+
+All of Bloodline's text lives in `src/main/resources/assets/bloodline/lang/en_us.json`. To translate it, copy that file to your language's code (for example `nl_nl.json` or `de_de.json`), translate the values (keep the `%s` placeholders and the keys as they are) and send it in.
+
+Bloodline usually runs only on the server, so players without the mod see the English text. Players who have the mod installed (or a resource pack with its language files) see their own language.
+
 ## Testing multiplayer on one computer
 
 `./gradlew runClient` and `./gradlew runClient2` start two clients with different names. Open a world to LAN in the first and join it from the second.

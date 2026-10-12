@@ -99,28 +99,26 @@ public final class Stewards {
 	public static void hire(ServerPlayer player, Lineage lineage) {
 		var respawn = player.getRespawnConfig();
 		if (respawn == null) {
-			player.sendSystemMessage(Component.literal("The steward needs a home to wait at. Sleep in your bed first.").withStyle(ChatFormatting.RED));
+			player.sendSystemMessage(Text.t("steward.need_home").withStyle(ChatFormatting.RED));
 			return;
 		}
 		GlobalPos home = respawn.respawnData().globalPos();
 		House house = lineage.house;
 		int cost = house.steward.isPresent() ? moveCost() : hireCost();
 		if (Inns.count(player, Items.EMERALD) < cost) {
-			player.sendSystemMessage(Component.literal("That costs " + cost + " emeralds.").withStyle(ChatFormatting.RED));
+			player.sendSystemMessage(Text.t("steward.costs", cost).withStyle(ChatFormatting.RED));
 			return;
 		}
 		Inns.take(player, Items.EMERALD, cost);
 		if (house.steward.isPresent()) {
 			house.steward.get().home = home;
-			player.sendSystemMessage(Component.literal(house.steward.get().name + " will move to your home at " + describe(home) + ".")
+			player.sendSystemMessage(Text.t("steward.moving", house.steward.get().name, describe(home))
 				.withStyle(ChatFormatting.GOLD));
 		} else {
 			Steward steward = new Steward(home, Names.given(player.getRandom(), ""), List.of());
 			house.steward = Optional.of(steward);
-			Lineages.record(player.level().getServer(), lineage, Component.literal(lineage.current.name() + " hired " + steward.name
-				+ " as steward of House " + house.name + "."));
-			Lineages.tellHouse(player.level().getServer(), house, Component.literal(steward.name + " now serves House " + house.name
-				+ " and waits at " + describe(home) + ". Talk to them to use the family vault.").withStyle(ChatFormatting.GOLD));
+			Lineages.record(player.level().getServer(), lineage, Text.t("chronicle.steward_hired", lineage.current.name(), steward.name, house.name));
+			Lineages.tellHouse(player.level().getServer(), house, Text.t("steward.hired", steward.name, house.name, describe(home)).withStyle(ChatFormatting.GOLD));
 		}
 		Lineages.markDirty(player.level().getServer());
 		player.level().playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1f, 1f);
@@ -166,7 +164,7 @@ public final class Stewards {
 		villager.setNoAi(true);
 		villager.setPermanentlyInvulnerable(true);
 		villager.setPersistenceRequired();
-		villager.setCustomName(Component.literal(steward.name + ", Steward").withStyle(ChatFormatting.GOLD));
+		villager.setCustomName(Text.t("steward.name", steward.name).withStyle(ChatFormatting.GOLD));
 		villager.setCustomNameVisible(true);
 		villager.addTag(TAG);
 		villager.addTag(HOUSE_TAG + lineage.house.id);
@@ -179,12 +177,12 @@ public final class Stewards {
 		House house = houseOf(villager).map(state::house).orElse(null);
 		if (lineage == null || house == null || house.steward.isEmpty()) return;
 		if (lineage.house != house) {
-			player.sendSystemMessage(Component.literal("\"I serve House " + house.name + ", not you.\"").withStyle(ChatFormatting.GRAY));
+			player.sendSystemMessage(Text.t("steward.not_yours", house.name).withStyle(ChatFormatting.GRAY));
 			return;
 		}
 		Steward steward = house.steward.get();
 		player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new VaultMenu(id, inventory, new VaultView(house, steward), villager),
-			Component.literal("Vault of House " + house.name)));
+			Text.t("steward.vault_title", house.name)));
 	}
 
 	// --- The family vault ---------------------------------------------------------------------
@@ -201,10 +199,9 @@ public final class Stewards {
 	private static ItemStack lockedSlot(House house) {
 		ItemStack pane = new ItemStack(Items.BARRIER);
 		int next = nextTier(house.renown);
-		pane.set(DataComponents.CUSTOM_NAME, Component.literal("Locked").withStyle(s -> s.withItalic(false).withColor(ChatFormatting.DARK_GRAY)));
-		pane.set(DataComponents.LORE, new ItemLore(List.of(Component.literal(next > 0
-			? "The house needs " + next + " renown (" + house.renown + " now)."
-			: "").withStyle(s -> s.withItalic(false).withColor(ChatFormatting.GRAY)))));
+		pane.set(DataComponents.CUSTOM_NAME, Text.t("steward.locked").withStyle(s -> s.withItalic(false).withColor(ChatFormatting.DARK_GRAY)));
+		pane.set(DataComponents.LORE, new ItemLore(List.of((next > 0 ? Text.t("steward.locked.needs", next, house.renown) : Component.empty())
+			.withStyle(s -> s.withItalic(false).withColor(ChatFormatting.GRAY)))));
 		// Marked so a player's own barrier blocks can never stack into a locked slot.
 		CompoundTag tag = new CompoundTag();
 		tag.putBoolean("bloodline_locked", true);

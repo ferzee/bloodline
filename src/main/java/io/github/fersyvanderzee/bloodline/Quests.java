@@ -48,53 +48,55 @@ public final class Quests {
 	private static final String DEBT_PREFIX = "debt:";
 	private static final float STRONG_KILLER_HEALTH = 100;
 
-	private record Template(String title, String task, Goal goal, List<String> targets, int required, int displayScale, Reward reward) {
-		Template(String title, String task, Goal goal, List<String> targets, int required, Reward reward) {
-			this(title, task, goal, targets, required, 1, reward);
+	/** Text is in the language file as bloodline.unfinished.<key> (the title, with the ancestor's name) and .task. */
+	private record Template(String key, Goal goal, List<String> targets, int required, int displayScale, Reward reward) {
+		Template(String key, Goal goal, List<String> targets, int required, Reward reward) {
+			this(key, goal, targets, required, 1, reward);
 		}
 
 		Quest create(String ancestorName) {
-			return Quest.of(Type.UNFINISHED_BUSINESS, title.formatted(ancestorName), task, goal, targets, required, reward).scaled(displayScale);
+			return Quest.of(Type.UNFINISHED_BUSINESS, Text.t("unfinished." + key, ancestorName), Text.t("unfinished." + key + ".task"),
+				goal, targets, required, reward).scaled(displayScale);
 		}
 	}
 
 	private static final List<Template> MINING = List.of(
-		new Template("Finish %s's mine", "Mine iron ore", Goal.MINE, List.of("iron_ore", "deepslate_iron_ore"), 16, Reward.item(3, "diamond", 2)),
-		new Template("%s's last vein", "Mine diamond ore", Goal.MINE, List.of("diamond_ore", "deepslate_diamond_ore"), 3, Reward.item(5, "golden_apple", 2))
+		new Template("finish_mine", Goal.MINE, List.of("iron_ore", "deepslate_iron_ore"), 16, Reward.item(3, "diamond", 2)),
+		new Template("last_vein", Goal.MINE, List.of("diamond_ore", "deepslate_diamond_ore"), 3, Reward.item(5, "golden_apple", 2))
 	);
 	private static final List<Template> FIGHTING = List.of(
-		new Template("Finish %s's hunt", "Slay monsters", Goal.CUSTOM_STAT, List.of("mob_kills"), 25, Reward.item(4, "golden_apple", 1))
+		new Template("finish_hunt", Goal.CUSTOM_STAT, List.of("mob_kills"), 25, Reward.item(4, "golden_apple", 1))
 	);
 	private static final List<Template> GENERAL = List.of(
-		new Template("%s's hearth", "Bake bread", Goal.CRAFT, List.of("bread"), 12, Reward.item(2, "cake", 1)),
-		new Template("Light %s's halls", "Craft lanterns", Goal.CRAFT, List.of("lantern"), 6, Reward.item(2, "emerald", 4)),
-		new Template("Arm the family as %s wished", "Craft an iron sword", Goal.CRAFT, List.of("iron_sword"), 1, Reward.levels(3))
+		new Template("hearth", Goal.CRAFT, List.of("bread"), 12, Reward.item(2, "cake", 1)),
+		new Template("halls", Goal.CRAFT, List.of("lantern"), 6, Reward.item(2, "emerald", 4)),
+		new Template("arm_family", Goal.CRAFT, List.of("iron_sword"), 1, Reward.levels(3))
 	);
 
 	/** Unfinished business, picked by how the ancestor lived (their epithet). */
 	private static final Map<String, List<Template>> BY_EPITHET = Map.ofEntries(
-		Map.entry("the Delver", MINING), Map.entry("the Stonebreaker", MINING), Map.entry("the Deep-Digger", MINING),
-		Map.entry("the Slayer", FIGHTING), Map.entry("the Bold", FIGHTING), Map.entry("the Fierce", FIGHTING),
-		Map.entry("the Scarred", FIGHTING), Map.entry("the Unbroken", FIGHTING),
-		Map.entry("the Wanderer", wandering()), Map.entry("the Far-Walker", wandering()), Map.entry("the Restless", wandering()),
-		Map.entry("the Angler", List.of(new Template("%s's favourite pond", "Catch fish", Goal.CUSTOM_STAT, List.of("fish_caught"), 10, Reward.item(3, "name_tag", 1)))),
-		Map.entry("the Patient", List.of(new Template("%s's favourite pond", "Catch fish", Goal.CUSTOM_STAT, List.of("fish_caught"), 10, Reward.item(3, "name_tag", 1)))),
-		Map.entry("the Shepherd", herding()), Map.entry("the Herder", herding()),
-		Map.entry("the Merchant", trading()), Map.entry("the Silver-Tongued", trading()),
-		Map.entry("the Brief", List.of(new Template("Outlive %s", "Stay alive (minutes)", Goal.CUSTOM_STAT, List.of("play_time"), 24000, 1200, Reward.item(3, "golden_carrot", 8))))
+		Map.entry("delver", MINING), Map.entry("stonebreaker", MINING), Map.entry("deep_digger", MINING),
+		Map.entry("slayer", FIGHTING), Map.entry("bold", FIGHTING), Map.entry("fierce", FIGHTING),
+		Map.entry("scarred", FIGHTING), Map.entry("unbroken", FIGHTING),
+		Map.entry("wanderer", wandering()), Map.entry("far_walker", wandering()), Map.entry("restless", wandering()),
+		Map.entry("angler", List.of(new Template("pond", Goal.CUSTOM_STAT, List.of("fish_caught"), 10, Reward.item(3, "name_tag", 1)))),
+		Map.entry("patient", List.of(new Template("pond", Goal.CUSTOM_STAT, List.of("fish_caught"), 10, Reward.item(3, "name_tag", 1)))),
+		Map.entry("shepherd", herding()), Map.entry("herder", herding()),
+		Map.entry("merchant", trading()), Map.entry("silver_tongued", trading()),
+		Map.entry("brief", List.of(new Template("outlive", Goal.CUSTOM_STAT, List.of("play_time"), 24000, 1200, Reward.item(3, "golden_carrot", 8))))
 	);
 
 	private static List<Template> wandering() {
-		return List.of(new Template("The road %s never finished", "Travel on foot (metres)", Goal.CUSTOM_STAT, List.of("walk_one_cm", "sprint_one_cm"),
+		return List.of(new Template("road", Goal.CUSTOM_STAT, List.of("walk_one_cm", "sprint_one_cm"),
 			300_000, 100, Reward.item(3, "ender_pearl", 4)));
 	}
 
 	private static List<Template> herding() {
-		return List.of(new Template("Tend %s's herd", "Breed animals", Goal.CUSTOM_STAT, List.of("animals_bred"), 10, Reward.item(3, "emerald", 5)));
+		return List.of(new Template("herd", Goal.CUSTOM_STAT, List.of("animals_bred"), 10, Reward.item(3, "emerald", 5)));
 	}
 
 	private static List<Template> trading() {
-		return List.of(new Template("Honour %s's dealings", "Trade with villagers", Goal.CUSTOM_STAT, List.of("traded_with_villager"), 10, Reward.item(3, "emerald", 10)));
+		return List.of(new Template("dealings", Goal.CUSTOM_STAT, List.of("traded_with_villager"), 10, Reward.item(3, "emerald", 10)));
 	}
 
 	private Quests() {
@@ -104,11 +106,11 @@ public final class Quests {
 	public static void addFounding(ServerPlayer player, Lineage lineage) {
 		List<String> banners = Arrays.stream(DyeColor.values()).map(c -> c.getSerializedName() + "_banner").toList();
 		// Placing counts however the banner was obtained, so this works in creative mode too.
-		add(player, lineage, Quest.of(Type.FOUNDING, "Raise the banner of House " + lineage.house.name, "Place your house banner",
+		add(player, lineage, Quest.of(Type.FOUNDING, Text.t("founding.banner", lineage.house.name), Text.t("founding.banner.task"),
 			Goal.USE, banners, 1, Reward.levels(3)));
-		add(player, lineage, Quest.of(Type.FOUNDING, "A roof for the family", "Sleep in a bed",
+		add(player, lineage, Quest.of(Type.FOUNDING, Text.t("founding.bed"), Text.t("founding.bed.task"),
 			Goal.CUSTOM_STAT, List.of("sleep_in_bed"), 1, Reward.item(2, "bread", 8)));
-		add(player, lineage, Quest.of(Type.FOUNDING, "Make a name for the house", "Slay monsters",
+		add(player, lineage, Quest.of(Type.FOUNDING, Text.t("founding.name"), Text.t("founding.name.task"),
 			Goal.CUSTOM_STAT, List.of("mob_kills"), 15, Reward.newTrait(5)));
 		Inns.addIntroQuest(player, lineage);
 	}
@@ -123,7 +125,7 @@ public final class Quests {
 		// Debts nobody settled in this life pass to the heir, and the house's standing suffers for it.
 		String origin = DEBT_PREFIX + player.getUUID();
 		long inherited = lineage.house.quests.stream().filter(q -> q.type == Type.BLOOD_DEBT && q.line.filter(origin::equals).isPresent()).count();
-		if (inherited > 0) Renown.change(player, lineage, (int) inherited * Renown.debtInherited(), "for leaving blood debts unpaid");
+		if (inherited > 0) Renown.change(player, lineage, (int) inherited * Renown.debtInherited(), Text.t("renown.reason.debts_unpaid"));
 
 		LivingEntity killer = source.getEntity() instanceof LivingEntity living ? living : player.getKillCredit();
 		// A sacrifice is given, not taken: nobody owes a blood debt for it.
@@ -131,14 +133,14 @@ public final class Quests {
 			Reward reward = Reward.newTrait(8);
 			Quest debt;
 			if (killer instanceof ServerPlayer otherPlayer) {
-				debt = Quest.of(Type.BLOOD_DEBT, "Avenge " + ancestor.name(),
-					Component.literal("Defeat ").append(otherPlayer.getDisplayName()), Goal.KILL_PLAYER,
+				debt = Quest.of(Type.BLOOD_DEBT, Text.t("debt.title", ancestor.name()),
+					Text.t("debt.defeat", otherPlayer.getDisplayName()), Goal.KILL_PLAYER,
 					List.of(otherPlayer.getUUID().toString()), 1, reward);
 			} else {
 				Identifier type = BuiltInRegistries.ENTITY_TYPE.getKey(killer.getType());
 				int count = killer.getMaxHealth() >= STRONG_KILLER_HEALTH ? 1 : 5;
-				debt = Quest.of(Type.BLOOD_DEBT, "Avenge " + ancestor.name(),
-					Component.literal("Slay ").append(killer.getType().getDescription()), Goal.KILL,
+				debt = Quest.of(Type.BLOOD_DEBT, Text.t("debt.title", ancestor.name()),
+					Text.t("debt.slay", killer.getType().getDescription()), Goal.KILL,
 					List.of(type.toString()), count, reward);
 			}
 			debt.line = Optional.of(DEBT_PREFIX + player.getUUID());
@@ -146,15 +148,15 @@ public final class Quests {
 			List<Quest> debts = lineage.allQuests().stream().filter(q -> q.type == Type.BLOOD_DEBT).toList();
 			for (int i = 0; i < debts.size() - BloodlineConfig.get().renown.maxBloodDebts; i++) {
 				lineage.removeQuest(debts.get(i));
-				Renown.change(player, lineage, Renown.debtForgotten(), "for forgetting the debt to " + debts.get(i).title.replace("Avenge ", ""));
+				Renown.change(player, lineage, Renown.debtForgotten(), Text.t("renown.reason.debt_forgotten", debts.get(i).title));
 			}
 		}
 
 		GlobalPos place = GlobalPos.of(player.level().dimension(), player.blockPosition());
-		add(player, lineage, Quest.of(Type.RESTING_PLACE, "Where " + ancestor.name() + " fell",
-			"Visit " + ancestor.name() + "'s resting place at " + describe(place), Goal.VISIT, List.of(), 1, Reward.levels(3)).at(place, VISIT_RADIUS));
+		add(player, lineage, Quest.of(Type.RESTING_PLACE, Text.t("resting.title", ancestor.name()),
+			Text.t("resting.task", ancestor.name(), describe(place)), Goal.VISIT, List.of(), 1, Reward.levels(3)).at(place, VISIT_RADIUS));
 
-		List<Template> options = BY_EPITHET.getOrDefault(ancestor.epithet(), GENERAL);
+		List<Template> options = BY_EPITHET.getOrDefault(Epithets.id(ancestor.epithet()), GENERAL);
 		add(player, lineage, options.get(player.getRandom().nextInt(options.size())).create(ancestor.name()));
 	}
 
@@ -163,12 +165,13 @@ public final class Quests {
 		lineage.addQuest(quest);
 	}
 
-	public static String describe(GlobalPos place) {
+	/** "12, 64, -30", with the dimension added outside the Overworld. */
+	public static MutableComponent describe(GlobalPos place) {
 		String where = place.pos().getX() + ", " + place.pos().getY() + ", " + place.pos().getZ();
-		if (place.dimension() == Level.NETHER) return where + " in the Nether";
-		if (place.dimension() == Level.END) return where + " in the End";
-		if (place.dimension() == Level.OVERWORLD) return where;
-		return where + " in " + place.dimension().identifier();
+		if (place.dimension() == Level.NETHER) return Text.t("place.nether", where);
+		if (place.dimension() == Level.END) return Text.t("place.end", where);
+		if (place.dimension() == Level.OVERWORLD) return Component.literal(where);
+		return Text.t("place.other", where, place.dimension().identifier().toString());
 	}
 
 	/** Checks progress for every duty; runs about once a second per player. */
@@ -292,21 +295,22 @@ public final class Quests {
 		lineage.removeQuest(quest);
 		lineage.completed.add(CompletedQuest.of(quest, lineage.current.generation()));
 		while (lineage.completed.size() > MAX_COMPLETED) lineage.completed.removeFirst();
-		player.sendSystemMessage(Component.literal(quest.type == Type.QUESTLINE ? "Done: " : "Duty fulfilled: ").withStyle(ChatFormatting.GREEN)
-			.append(Component.literal(quest.title).withStyle(ChatFormatting.GOLD))
+		player.sendSystemMessage((quest.type == Type.QUESTLINE ? Text.t("quest.done") : Text.t("quest.fulfilled")).withStyle(ChatFormatting.GREEN)
+			.append(" ")
+			.append(quest.title.copy().withStyle(ChatFormatting.GOLD))
 			.append(quest.type == Type.QUESTLINE ? Component.literal(" - ").append(quest.task.copy()).withStyle(ChatFormatting.GRAY) : Component.empty()));
 		player.level().playSound(null, player.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 0.7f, 1f);
 		if (House.isShared(quest.type)) {
-			Lineages.tellOthers(player, lineage.house, Component.literal(lineage.current.name() + " completed: ").withStyle(ChatFormatting.GREEN)
-				.append(Component.literal(quest.title).withStyle(ChatFormatting.GOLD)));
+			Lineages.tellOthers(player, lineage.house, Text.t("quest.member_completed", lineage.current.name(), quest.title.copy().withStyle(ChatFormatting.GOLD))
+				.withStyle(ChatFormatting.GREEN));
 		}
 		if (quest.type != Type.QUESTLINE && quest.type != Type.PREPARATION) {
-			String deed = quest.type == Type.BLOOD_DEBT ? " settled a blood debt: " : " fulfilled a family duty: ";
-			Lineages.record(server, lineage, Component.literal(lineage.current.name() + deed + quest.title + "."));
+			String deed = quest.type == Type.BLOOD_DEBT ? "chronicle.debt_settled" : "chronicle.duty_fulfilled";
+			Lineages.record(server, lineage, Text.t(deed, lineage.current.name(), quest.title));
 		}
 		giveReward(player, lineage, quest.reward);
 		if (quest.line.isPresent()) Questlines.onStepComplete(player, lineage, quest);
-		Renown.change(player, lineage, Renown.forDuty(quest), "for " + quest.title);
+		Renown.change(player, lineage, Renown.forDuty(quest), Text.t("renown.reason.duty", quest.title));
 	}
 
 	private static void giveReward(ServerPlayer player, Lineage lineage, Reward reward) {
@@ -318,10 +322,9 @@ public final class Quests {
 				traits.add(trait.get());
 				lineage.current = new Member(current.name(), current.generation(), traits, current.bornDay(), current.statsAtBirth());
 				Traits.apply(player, lineage.allTraits());
-				player.sendSystemMessage(Component.literal("The deed has changed " + current.name() + ". New trait: ")
-					.append(Traits.get(trait.get()).displayName())
-					.append(Component.literal(" (their children may inherit it)").withStyle(ChatFormatting.DARK_GRAY)));
-				Lineages.record(player.level().getServer(), lineage, Component.literal(current.name() + " grew " + Traits.get(trait.get()).name() + "."));
+				player.sendSystemMessage(Text.t("trait.earned", current.name(), Traits.get(trait.get()).displayName())
+					.append(" ").append(Text.t("trait.earned.inheritable").withStyle(ChatFormatting.DARK_GRAY)));
+				Lineages.record(player.level().getServer(), lineage, Text.t("chronicle.trait_earned", current.name(), Traits.get(trait.get()).name()));
 				return;
 			}
 		}
@@ -336,7 +339,7 @@ public final class Quests {
 
 	/** One duty as a line of text: "Avenge Piers: Slay Zombie (2/5)". */
 	public static MutableComponent line(Quest quest, boolean withReward) {
-		MutableComponent out = Component.literal(quest.title).withStyle(ChatFormatting.GOLD)
+		MutableComponent out = quest.title.copy().withStyle(ChatFormatting.GOLD)
 			.append(Component.literal(": ").withStyle(ChatFormatting.GRAY))
 			.append(quest.task.copy().withStyle(ChatFormatting.WHITE));
 		if (quest.required > 1) {
@@ -344,29 +347,35 @@ public final class Quests {
 				.withStyle(ChatFormatting.GRAY));
 		}
 		if (withReward) {
-			out.withStyle(s -> s.withHoverEvent(new HoverEvent.ShowText(Component.literal("Reward: " + describe(quest.reward)))));
+			out.withStyle(s -> s.withHoverEvent(new HoverEvent.ShowText(Text.t("quest.reward", describe(quest.reward)))));
 		}
 		return out;
 	}
 
-	public static String describe(Reward reward) {
-		List<String> parts = new ArrayList<>();
-		if (reward.trait()) parts.add("a new trait for the bloodline");
-		if (reward.levels() > 0) parts.add((reward.trait() ? "or " : "") + reward.levels() + " levels");
+	/** "a new trait for the bloodline, or 8 levels", "3 levels, 2 Diamond". Empty for no reward. */
+	public static MutableComponent describe(Reward reward) {
+		List<Component> parts = new ArrayList<>();
+		if (reward.trait()) parts.add(Text.t("reward.trait"));
+		if (reward.levels() > 0) parts.add(Text.t(reward.trait() ? "reward.or_levels" : "reward.levels", reward.levels()));
 		reward.item().flatMap(id -> BuiltInRegistries.ITEM.getOptional(Identifier.parse(id)))
-			.ifPresent(item -> parts.add(reward.count() + " " + item.getName(new ItemStack(item)).getString()));
-		return String.join(", ", parts);
+			.ifPresent(item -> parts.add(Text.t("reward.item", reward.count(), item.getName(new ItemStack(item)))));
+		MutableComponent out = Component.empty();
+		for (int i = 0; i < parts.size(); i++) {
+			if (i > 0) out.append(", ");
+			out.append(parts.get(i));
+		}
+		return out;
 	}
 
 	/** Lists the family's duties in chat. */
 	public static void show(ServerPlayer viewer, Lineage lineage) {
 		List<CompletedQuest> done = lineage.completedThisGeneration().stream().filter(c -> c.type() != Type.QUESTLINE).toList();
 		if (lineage.allQuests().isEmpty() && done.isEmpty()) {
-			viewer.sendSystemMessage(Component.literal("House " + lineage.house.name + " has no duties right now.").withStyle(ChatFormatting.GRAY));
+			viewer.sendSystemMessage(Text.t("duties.none", lineage.house.name).withStyle(ChatFormatting.GRAY));
 			return;
 		}
-		viewer.sendSystemMessage(Component.literal("Duties of House " + lineage.house.name).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
-			.append(Component.literal("  Renown: " + lineage.house.renown).withStyle(s -> s.withBold(false).withColor(ChatFormatting.YELLOW))));
+		viewer.sendSystemMessage(Text.t("duties.header", lineage.house.name).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
+			.append(Component.literal("  ").append(Text.t("duties.renown", lineage.house.renown)).withStyle(s -> s.withBold(false).withColor(ChatFormatting.YELLOW))));
 		for (Quest quest : lineage.allQuests()) {
 			String bullet = switch (quest.type) {
 				case BLOOD_DEBT -> "  ⚔ ";
@@ -381,7 +390,7 @@ public final class Quests {
 		// Finished this generation: shown crossed out below the open ones.
 		for (CompletedQuest quest : done) {
 			viewer.sendSystemMessage(Component.literal("  ✔ ").withStyle(ChatFormatting.DARK_GREEN)
-				.append(Component.literal(quest.title() + ": " + quest.task().getString())
+				.append(Component.empty().append(quest.title()).append(": ").append(quest.task())
 					.withStyle(s -> s.withColor(ChatFormatting.DARK_GRAY).withStrikethrough(true))));
 		}
 	}
@@ -390,9 +399,10 @@ public final class Quests {
 	public static void remind(ServerPlayer player, Lineage lineage) {
 		if (lineage.allQuests().isEmpty()) return;
 		int n = lineage.allQuests().size();
-		player.sendSystemMessage(Component.literal("House " + lineage.house.name + " has " + n + (n == 1 ? " duty" : " duties") + " for you. ")
+		player.sendSystemMessage(Text.t(n == 1 ? "duties.reminder.one" : "duties.reminder", lineage.house.name, n)
 			.withStyle(ChatFormatting.GRAY)
-			.append(Component.literal("[Show]").withStyle(s -> s.withColor(ChatFormatting.GOLD)
+			.append(" ")
+			.append(Text.t("button.show").withStyle(s -> s.withColor(ChatFormatting.GOLD)
 				.withClickEvent(new ClickEvent.RunCommand("/bloodline quests"))
 				.withHoverEvent(new HoverEvent.ShowText(Component.literal("/bloodline quests"))))));
 	}

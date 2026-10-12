@@ -14,7 +14,7 @@ import java.util.List;
  * Something a family member is born with. Traits in the same group exclude each other
  * (nobody is both Stalwart and Frail).
  */
-public record Trait(String id, Kind kind, String group, String name, String description, List<Effect> effects) {
+public record Trait(String id, Kind kind, String group, List<Effect> effects) {
 	public enum Kind {
 		BOON(ChatFormatting.GREEN), FLAW(ChatFormatting.RED), QUIRK(ChatFormatting.AQUA),
 		/** Earned by finishing an oath. Every later member of the family is born with it. */
@@ -32,7 +32,12 @@ public record Trait(String id, Kind kind, String group, String name, String desc
 
 	/** The trait's name, coloured by kind, with its description on hover. */
 	public MutableComponent displayName() {
-		return Component.literal(name).withStyle(s -> s.withColor(kind.color)
-			.withHoverEvent(new HoverEvent.ShowText(Component.literal(description))));
+		return name().withStyle(s -> s.withColor(kind.color)
+			.withHoverEvent(new HoverEvent.ShowText(Text.t("trait." + id + ".desc"))));
+	}
+
+	/** The trait's name without styling. */
+	public MutableComponent name() {
+		return Text.t("trait." + id);
 	}
 }

@@ -96,7 +96,7 @@ final class BloodlineCommands {
 					Lineage lineage = lineageOf(ctx.getSource(), player);
 					if (lineage == null) return 0;
 					if (lineage.house.oath.isEmpty()) Questlines.offerOath(player, lineage);
-					else ctx.getSource().sendSuccess(() -> Component.literal(Questlines.oathSummary(lineage).trim()).withStyle(ChatFormatting.GOLD), false);
+					else ctx.getSource().sendSuccess(() -> Questlines.oathSummary(lineage).withStyle(ChatFormatting.GOLD), false);
 					return 1;
 				})
 				.then(Commands.argument("oath", StringArgumentType.word())
@@ -109,15 +109,15 @@ final class BloodlineCommands {
 						Lineage lineage = lineageOf(ctx.getSource(), player);
 						if (lineage == null) return 0;
 						if (lineage.house.oath.isPresent()) {
-							ctx.getSource().sendFailure(Component.literal("House " + lineage.house.name + " has already sworn an oath."));
+							ctx.getSource().sendFailure(Text.t("command.oath.already", lineage.house.name));
 							return 0;
 						}
 						if (!lineage.isHead(player.getUUID())) {
-							ctx.getSource().sendFailure(Component.literal("Only the head of House " + lineage.house.name + " can swear its oath."));
+							ctx.getSource().sendFailure(Text.t("command.oath.head_only", lineage.house.name));
 							return 0;
 						}
 						if (!Questlines.swear(player, lineage, StringArgumentType.getString(ctx, "oath"))) {
-							ctx.getSource().sendFailure(Component.literal("Unknown oath. Choose sword, deep or hearth."));
+							ctx.getSource().sendFailure(Text.t("command.oath.unknown"));
 							return 0;
 						}
 						// Sworn from the book: show the updated Main Quest pages straight away.
@@ -137,7 +137,7 @@ final class BloodlineCommands {
 							Houses.detach(server, lineage.house, target.getUUID(), lineage.current.name());
 							BloodlineState.get(server).remove(target.getUUID());
 							Lineages.onJoin(target);
-							ctx.getSource().sendSuccess(() -> Component.literal("Reset the family of " + target.getGameProfile().name() + "."), true);
+							ctx.getSource().sendSuccess(() -> Text.t("command.reset", target.getGameProfile().name()), true);
 							return 1;
 						}))))
 			.then(Commands.literal("debug")
@@ -154,7 +154,7 @@ final class BloodlineCommands {
 						var m = lineage.current;
 						lineage.current = new io.github.fersyvanderzee.bloodline.data.Member(m.name(), m.generation(), m.traits(), m.bornDay(), stats);
 						Lineages.markDirty(player.level().getServer());
-						ctx.getSource().sendSuccess(() -> Component.literal(m.name() + " has now lived a full life."), false);
+						ctx.getSource().sendSuccess(() -> Text.t("command.aged", m.name()), false);
 						return 1;
 					}))
 				.then(Commands.literal("complete")
@@ -185,7 +185,7 @@ final class BloodlineCommands {
 
 	private static Lineage lineageOf(CommandSourceStack source, ServerPlayer player) {
 		Lineage lineage = Lineages.get(player);
-		if (lineage == null) source.sendFailure(Component.literal(player.getGameProfile().name() + " has no family yet."));
+		if (lineage == null) source.sendFailure(Text.t("command.no_family", player.getGameProfile().name()));
 		return lineage;
 	}
 
@@ -193,28 +193,23 @@ final class BloodlineCommands {
 		Lineage lineage = lineageOf(source, player);
 		if (lineage == null) return 0;
 		Ancestor parent = lineage.parent();
-		source.sendSuccess(() -> Component.literal("House " + lineage.house.name).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
-		source.sendSuccess(() -> Component.literal("Head: ").withStyle(ChatFormatting.GRAY)
-			.append(Component.literal(lineage.fullName()).withStyle(ChatFormatting.WHITE))
-			.append(Component.literal(", generation " + Names.numeral(lineage.current.generation()) + ", born day " + lineage.current.bornDay())
-				.withStyle(ChatFormatting.GRAY)), false);
-		source.sendSuccess(() -> Component.literal("Traits: ").withStyle(ChatFormatting.GRAY)
-			.append(Lineages.traitList(lineage.current.traits(), parent)), false);
+		source.sendSuccess(() -> Text.t("book.cover.house", lineage.house.name).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
+		source.sendSuccess(() -> Text.t("info.character", Component.literal(lineage.fullName()).withStyle(ChatFormatting.WHITE),
+			Names.numeral(lineage.current.generation()), lineage.current.bornDay()).withStyle(ChatFormatting.GRAY), false);
+		source.sendSuccess(() -> Text.t("info.traits", Lineages.traitList(lineage.current.traits(), parent)).withStyle(ChatFormatting.GRAY), false);
 		if (!lineage.house.legacies.isEmpty()) {
-			source.sendSuccess(() -> Component.literal("Legacy: ").withStyle(ChatFormatting.GRAY)
-				.append(Lineages.traitList(lineage.house.legacies, null)), false);
+			source.sendSuccess(() -> Text.t("info.legacy", Lineages.traitList(lineage.house.legacies, null)).withStyle(ChatFormatting.GRAY), false);
 		}
 		if (lineage.house.oath.isPresent()) {
-			source.sendSuccess(() -> Component.literal(Questlines.oathSummary(lineage).trim()).withStyle(ChatFormatting.GRAY), false);
+			source.sendSuccess(() -> Questlines.oathSummary(lineage).withStyle(ChatFormatting.GRAY), false);
 		}
-		source.sendSuccess(() -> Component.literal("Members: ").withStyle(ChatFormatting.GRAY)
-			.append(Component.literal(Lineages.memberNames(player.level().getServer(), lineage.house)).withStyle(ChatFormatting.WHITE)), false);
-		source.sendSuccess(() -> Component.literal("Renown: ").withStyle(ChatFormatting.GRAY)
-			.append(Component.literal(String.valueOf(lineage.house.renown)).withStyle(ChatFormatting.YELLOW)), false);
+		source.sendSuccess(() -> Text.t("info.members", Lineages.memberNames(player.level().getServer(), lineage.house).withStyle(ChatFormatting.WHITE))
+			.withStyle(ChatFormatting.GRAY), false);
+		source.sendSuccess(() -> Text.t("duties.renown", Component.literal(String.valueOf(lineage.house.renown)).withStyle(ChatFormatting.YELLOW))
+			.withStyle(ChatFormatting.GRAY), false);
 		if (parent != null) {
-			source.sendSuccess(() -> Component.literal("Parent: ").withStyle(ChatFormatting.GRAY)
-				.append(Component.literal(parent.fullName()).withStyle(s -> s.withColor(ChatFormatting.WHITE)
-					.withHoverEvent(new HoverEvent.ShowText(parent.deathMessage())))), false);
+			source.sendSuccess(() -> Text.t("info.parent", parent.fullName().withStyle(s -> s.withColor(ChatFormatting.WHITE)
+				.withHoverEvent(new HoverEvent.ShowText(parent.deathMessage())))).withStyle(ChatFormatting.GRAY), false);
 		}
 		return 1;
 	}
@@ -222,16 +217,16 @@ final class BloodlineCommands {
 	private static int tree(CommandSourceStack source, ServerPlayer player) {
 		Lineage lineage = lineageOf(source, player);
 		if (lineage == null) return 0;
-		source.sendSuccess(() -> Component.literal("Family tree of House " + lineage.house.name).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
+		source.sendSuccess(() -> Text.t("info.tree", lineage.house.name).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
 		for (Ancestor a : lineage.ancestors) {
 			source.sendSuccess(() -> Component.literal(Names.numeral(a.generation()) + ". ").withStyle(ChatFormatting.DARK_GRAY)
-				.append(Component.literal(a.fullName()).withStyle(s -> s.withColor(ChatFormatting.WHITE)
+				.append(a.fullName().withStyle(s -> s.withColor(ChatFormatting.WHITE)
 					.withHoverEvent(new HoverEvent.ShowText(a.deathMessage()))))
-				.append(Component.literal(" (day " + a.bornDay() + "-" + a.diedDay() + ") ").withStyle(ChatFormatting.GRAY))
+				.append(" (").append(Text.t("book.tree.days", a.bornDay(), a.diedDay())).append(") ").withStyle(ChatFormatting.GRAY)
 				.append(Lineages.traitList(a.traits(), null)), false);
 		}
 		source.sendSuccess(() -> Component.literal(Names.numeral(lineage.current.generation()) + ". ").withStyle(ChatFormatting.DARK_GRAY)
-			.append(Component.literal(lineage.current.name() + " (living) ").withStyle(ChatFormatting.GOLD))
+			.append(Component.literal(lineage.current.name() + " (").append(Text.t("book.tree.living")).append(") ").withStyle(ChatFormatting.GOLD))
 			.append(Lineages.traitList(lineage.current.traits(), null)), false);
 		return 1;
 	}
@@ -241,20 +236,20 @@ final class BloodlineCommands {
 		Lineage lineage = lineageOf(ctx.getSource(), player);
 		if (lineage == null) return 0;
 		if (!lineage.isHead(player.getUUID())) {
-			ctx.getSource().sendFailure(Component.literal("Only the head of the house can rename it."));
+			ctx.getSource().sendFailure(Text.t("command.rename.head_only"));
 			return 0;
 		}
 		String name = StringArgumentType.getString(ctx, "name").trim();
 		if (name.startsWith("House ")) name = name.substring("House ".length()).trim();
 		if (name.isEmpty() || name.length() > MAX_HOUSE_LENGTH || !name.matches("[\\p{L}' -]+")) {
-			ctx.getSource().sendFailure(Component.literal("House names can be up to " + MAX_HOUSE_LENGTH + " letters, spaces, hyphens or apostrophes."));
+			ctx.getSource().sendFailure(Text.t("command.rename.invalid", MAX_HOUSE_LENGTH));
 			return 0;
 		}
 		String old = lineage.house.name;
 		lineage.house.name = name;
-		Lineages.record(player.level().getServer(), lineage, Component.literal("House " + old + " took the name House " + name + "."));
+		Lineages.record(player.level().getServer(), lineage, Text.t("chronicle.renamed", old, name));
 		Lineages.onlineMembers(player.level().getServer(), lineage.house).forEach(Lineages::refreshName);
-		Lineages.tellHouse(player.level().getServer(), lineage.house, Component.literal("Your family is now House " + lineage.house.name + ".").withStyle(ChatFormatting.GOLD));
+		Lineages.tellHouse(player.level().getServer(), lineage.house, Text.t("command.renamed", lineage.house.name).withStyle(ChatFormatting.GOLD));
 		return 1;
 	}
 }

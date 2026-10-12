@@ -6,6 +6,7 @@ import io.github.fersyvanderzee.bloodline.data.Quest;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
@@ -44,38 +45,47 @@ public final class Champions {
 	private static final String TAG = "bloodline_champion";
 	private static final String OWNER_TAG = "bloodline_owner=";
 	private static final String KEY_TAG = "bloodline_key=";
+	private static final String KIND_TAG = "bloodline_kind=";
 	private static final double BAR_RANGE = 48;
 
-	public record Kind(String id, EntityType<? extends Mob> type, String name, double health, double extraDamage,
-					   Map<EquipmentSlot, Item> gear, EntityType<? extends Mob> guard, int guards, BossEvent.BossBarColor color, String taunt) {
+	/** Names and taunts are in the language file as bloodline.champion.<id> and .taunt. */
+	public record Kind(String id, EntityType<? extends Mob> type, double health, double extraDamage,
+					   Map<EquipmentSlot, Item> gear, EntityType<? extends Mob> guard, int guards, BossEvent.BossBarColor color) {
+		public MutableComponent name() {
+			return Text.t("champion." + id);
+		}
+
+		public MutableComponent taunt() {
+			return Text.t("champion." + id + ".taunt");
+		}
 	}
 
-	public static final Kind FORTRESS_CAPTAIN = new Kind("fortress_captain", EntityTypes.WITHER_SKELETON, "Captain of the Fortress", 150, 4,
+	public static final Kind FORTRESS_CAPTAIN = new Kind("fortress_captain", EntityTypes.WITHER_SKELETON, 150, 4,
 		Map.of(EquipmentSlot.MAINHAND, Items.NETHERITE_SWORD, EquipmentSlot.HEAD, Items.NETHERITE_HELMET, EquipmentSlot.CHEST, Items.IRON_CHESTPLATE),
-		EntityTypes.BLAZE, 2, BossEvent.BossBarColor.RED, "Your oath ends in these halls.");
-	public static final Kind LOST_DELVER = new Kind("lost_delver", EntityTypes.ZOMBIE, "The Lost Delver", 120, 3,
+		EntityTypes.BLAZE, 2, BossEvent.BossBarColor.RED);
+	public static final Kind LOST_DELVER = new Kind("lost_delver", EntityTypes.ZOMBIE, 120, 3,
 		Map.of(EquipmentSlot.MAINHAND, Items.DIAMOND_PICKAXE, EquipmentSlot.HEAD, Items.IRON_HELMET, EquipmentSlot.CHEST, Items.IRON_CHESTPLATE,
 			EquipmentSlot.LEGS, Items.IRON_LEGGINGS),
-		EntityTypes.CAVE_SPIDER, 3, BossEvent.BossBarColor.BLUE, "The deep took me. It will take you too.");
-	public static final Kind WARLORD = new Kind("warlord", EntityTypes.VINDICATOR, "Warlord of the Outpost", 150, 3,
+		EntityTypes.CAVE_SPIDER, 3, BossEvent.BossBarColor.BLUE);
+	public static final Kind WARLORD = new Kind("warlord", EntityTypes.VINDICATOR, 150, 3,
 		Map.of(EquipmentSlot.MAINHAND, Items.NETHERITE_AXE, EquipmentSlot.HEAD, Items.IRON_HELMET),
-		EntityTypes.PILLAGER, 3, BossEvent.BossBarColor.PURPLE, "No village will hide behind you again.");
-	public static final Kind THIEF = new Kind("thief", EntityTypes.VINDICATOR, "Heirloom Thief", 80, 1,
+		EntityTypes.PILLAGER, 3, BossEvent.BossBarColor.PURPLE);
+	public static final Kind THIEF = new Kind("thief", EntityTypes.VINDICATOR, 80, 1,
 		Map.of(EquipmentSlot.HEAD, Items.LEATHER_HELMET),
-		EntityTypes.PILLAGER, 2, BossEvent.BossBarColor.YELLOW, "Finders keepers.");
+		EntityTypes.PILLAGER, 2, BossEvent.BossBarColor.YELLOW);
 
 	// Bounties posted on inn quest boards.
-	public static final Kind ROTGUT = new Kind("rotgut", EntityTypes.ZOMBIE, "Rotgut the Hungry", 60, 2,
+	public static final Kind ROTGUT = new Kind("rotgut", EntityTypes.ZOMBIE, 60, 2,
 		Map.of(EquipmentSlot.MAINHAND, Items.IRON_SWORD, EquipmentSlot.HEAD, Items.IRON_HELMET),
-		EntityTypes.ZOMBIE, 2, BossEvent.BossBarColor.GREEN, "Fresh meat.");
-	public static final Kind OLD_BONES = new Kind("old_bones", EntityTypes.SKELETON, "Old Bones", 50, 0,
+		EntityTypes.ZOMBIE, 2, BossEvent.BossBarColor.GREEN);
+	public static final Kind OLD_BONES = new Kind("old_bones", EntityTypes.SKELETON, 50, 0,
 		Map.of(EquipmentSlot.MAINHAND, Items.BOW, EquipmentSlot.HEAD, Items.CHAINMAIL_HELMET),
-		EntityTypes.SKELETON, 2, BossEvent.BossBarColor.WHITE, "I was hunting here before your house had a name.");
-	public static final Kind BROODMOTHER = new Kind("broodmother", EntityTypes.SPIDER, "The Broodmother", 70, 2,
-		Map.of(), EntityTypes.CAVE_SPIDER, 3, BossEvent.BossBarColor.PINK, "Her children hiss in the dark.");
-	public static final Kind DESERTER = new Kind("deserter", EntityTypes.PILLAGER, "The Deserter", 60, 1,
+		EntityTypes.SKELETON, 2, BossEvent.BossBarColor.WHITE);
+	public static final Kind BROODMOTHER = new Kind("broodmother", EntityTypes.SPIDER, 70, 2,
+		Map.of(), EntityTypes.CAVE_SPIDER, 3, BossEvent.BossBarColor.PINK);
+	public static final Kind DESERTER = new Kind("deserter", EntityTypes.PILLAGER, 60, 1,
 		Map.of(EquipmentSlot.MAINHAND, Items.CROSSBOW, EquipmentSlot.HEAD, Items.LEATHER_HELMET),
-		EntityTypes.PILLAGER, 2, BossEvent.BossBarColor.PURPLE, "I'm not going back.");
+		EntityTypes.PILLAGER, 2, BossEvent.BossBarColor.PURPLE);
 
 	public static final List<Kind> ALL = List.of(FORTRESS_CAPTAIN, LOST_DELVER, WARLORD, THIEF, ROTGUT, OLD_BONES, BROODMOTHER, DESERTER);
 	public static final List<Kind> BOUNTIES = List.of(ROTGUT, OLD_BONES, BROODMOTHER, DESERTER);
@@ -112,7 +122,8 @@ public final class Champions {
 		}
 		var damage = champion.getAttribute(Attributes.ATTACK_DAMAGE);
 		if (damage != null) damage.setBaseValue(damage.getBaseValue() + kind.extraDamage());
-		champion.setCustomName(Component.literal(kind.name()).withStyle(ChatFormatting.GOLD));
+		champion.setCustomName(kind.name().withStyle(ChatFormatting.GOLD));
+		champion.addTag(KIND_TAG + kind.id());
 		champion.setCustomNameVisible(true);
 		champion.setPersistenceRequired();
 		champion.addTag(TAG);
@@ -134,8 +145,8 @@ public final class Champions {
 		}
 
 		player.connection.send(new ClientboundSetTitlesAnimationPacket(10, 60, 20));
-		player.connection.send(new ClientboundSetTitleTextPacket(Component.literal(kind.name()).withStyle(ChatFormatting.DARK_RED)));
-		player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("\"" + kind.taunt() + "\"").withStyle(ChatFormatting.GRAY)));
+		player.connection.send(new ClientboundSetTitleTextPacket(kind.name().withStyle(ChatFormatting.DARK_RED)));
+		player.connection.send(new ClientboundSetSubtitleTextPacket(Text.t("oath.quoted", kind.taunt()).withStyle(ChatFormatting.GRAY)));
 		level.playSound(null, pos, SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 2f, 1f);
 	}
 
@@ -199,9 +210,7 @@ public final class Champions {
 
 	private static BossEvent.BossBarColor colorOf(LivingEntity entity) {
 		for (Kind kind : ALL) {
-			if (entity.getType() == kind.type() && entity.getCustomName() != null && entity.getCustomName().getString().equals(kind.name())) {
-				return kind.color();
-			}
+			if (entity.entityTags().contains(KIND_TAG + kind.id())) return kind.color();
 		}
 		return BossEvent.BossBarColor.YELLOW;
 	}

@@ -11,6 +11,7 @@ import net.minecraft.core.GlobalPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -76,18 +77,22 @@ public final class Inns {
 		new Delivery(Items.ARROW, 32, 4), new Delivery(Items.CAKE, 1, 4), new Delivery(Items.PAPER, 24, 3), new Delivery(Items.COAL, 24, 3)
 	);
 
-	private record Rumour(ResourceKey<Structure> structure, String name, int cost) {
+	/** The place's name is in the language file as bloodline.rumour.<key>. */
+	private record Rumour(ResourceKey<Structure> structure, String key, int cost) {
+		MutableComponent name() {
+			return Text.t("rumour." + key);
+		}
 	}
 
 	private static final List<Rumour> RUMOURS = List.of(
-		new Rumour(BuiltinStructures.WOODLAND_MANSION, "a woodland mansion", 8),
-		new Rumour(BuiltinStructures.JUNGLE_TEMPLE, "a jungle temple", 4),
-		new Rumour(BuiltinStructures.DESERT_PYRAMID, "a desert pyramid", 4),
-		new Rumour(BuiltinStructures.IGLOO, "an igloo", 3),
-		new Rumour(BuiltinStructures.SHIPWRECK, "a shipwreck", 3),
-		new Rumour(BuiltinStructures.TRAIL_RUINS, "buried trail ruins", 5),
-		new Rumour(BuiltinStructures.TRIAL_CHAMBERS, "the trial chambers", 6),
-		new Rumour(BuiltinStructures.OCEAN_MONUMENT, "an ocean monument", 6)
+		new Rumour(BuiltinStructures.WOODLAND_MANSION, "mansion", 8),
+		new Rumour(BuiltinStructures.JUNGLE_TEMPLE, "jungle_temple", 4),
+		new Rumour(BuiltinStructures.DESERT_PYRAMID, "desert_pyramid", 4),
+		new Rumour(BuiltinStructures.IGLOO, "igloo", 3),
+		new Rumour(BuiltinStructures.SHIPWRECK, "shipwreck", 3),
+		new Rumour(BuiltinStructures.TRAIL_RUINS, "trail_ruins", 5),
+		new Rumour(BuiltinStructures.TRIAL_CHAMBERS, "trial_chambers", 6),
+		new Rumour(BuiltinStructures.OCEAN_MONUMENT, "monument", 6)
 	);
 
 	private enum Kind { BOUNTY, DELIVERY, RUMOUR }
@@ -114,16 +119,16 @@ public final class Inns {
 	public static void addIntroQuest(ServerPlayer player, Lineage lineage) {
 		if (lineage.house.milestones.contains(MET_INNKEEPER)) return;
 		if (lineage.allQuests().stream().anyMatch(q -> q.goal == Goal.MANUAL && q.targets.contains(SPEAK_TARGET))) return;
-		String task = "Find a village and speak to its innkeeper";
+		MutableComponent task = Text.t("hearth.task");
 		ServerLevel overworld = player.level().getServer().overworld();
 		BlockPos village = player.level().dimension() == Level.OVERWORLD
 			? StructureSearch.find(overworld, StructureTags.VILLAGE, player.blockPosition(), BloodlineConfig.get().structures.searchRadiusChunks).orElse(null)
 			: null;
 		if (village != null) {
-			task += " (nearest: " + village.getX() + ", " + village.getZ() + ")";
-			Questlines.giveMap(player, GlobalPos.of(Level.OVERWORLD, village), "The nearest village");
+			task = Text.t("hearth.task_nearest", village.getX() + ", " + village.getZ());
+			Questlines.giveMap(player, GlobalPos.of(Level.OVERWORLD, village), Text.t("hearth.map"));
 		}
-		Quests.add(player, lineage, Quest.of(Type.FOUNDING, "A warm hearth", task, Goal.MANUAL, List.of(SPEAK_TARGET), 1,
+		Quests.add(player, lineage, Quest.of(Type.FOUNDING, Text.t("hearth.title"), task, Goal.MANUAL, List.of(SPEAK_TARGET), 1,
 			Reward.item(2, "emerald", 5)));
 		Lineages.markDirty(player.level().getServer());
 	}
@@ -133,8 +138,7 @@ public final class Inns {
 			if (quest.goal == Goal.MANUAL && quest.targets.contains(SPEAK_TARGET)) quest.progress = quest.required;
 		}
 		if (lineage.house.milestones.add(MET_INNKEEPER)) {
-			Lineages.record(player.level().getServer(), lineage, Component.literal(lineage.current.name() + " first warmed their hands at "
-				+ innName(inn) + "."));
+			Lineages.record(player.level().getServer(), lineage, Text.t("chronicle.first_inn", lineage.current.name(), innName(inn)));
 		}
 	}
 
@@ -176,14 +180,12 @@ public final class Inns {
 		innkeeper.setNoAi(true);
 		innkeeper.setPermanentlyInvulnerable(true);
 		innkeeper.setPersistenceRequired();
-		innkeeper.setCustomName(Component.literal("Innkeeper " + Names.given(level.getRandom(), "")).withStyle(ChatFormatting.GOLD));
+		innkeeper.setCustomName(Text.t("innkeeper.name", Names.given(level.getRandom(), "")).withStyle(ChatFormatting.GOLD));
 		innkeeper.setCustomNameVisible(true);
 		innkeeper.addTag(TAG);
 		innkeeper.addTag(INN_TAG + bell.asLong());
 		level.addFreshEntity(innkeeper);
-		player.sendSystemMessage(Component.literal("You've found ").withStyle(ChatFormatting.GRAY)
-			.append(Component.literal(innName(bell)).withStyle(ChatFormatting.GOLD))
-			.append(Component.literal(". The innkeeper by the bell has work for travellers.").withStyle(ChatFormatting.GRAY)));
+		player.sendSystemMessage(Text.t("inn.found", Component.literal(innName(bell)).withStyle(ChatFormatting.GOLD)).withStyle(ChatFormatting.GRAY));
 	}
 
 	private static BlockPos innOf(Villager innkeeper) {
@@ -205,7 +207,7 @@ public final class Inns {
 		SimpleContainer board = new SimpleContainer(9);
 		fill(board, player, lineage, offers);
 		player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new BoardMenu(id, inventory, board, player, innkeeper, offers),
-			Component.literal(innName(inn) + " - Quest Board")));
+			Text.t("inn.board_title", innName(inn))));
 	}
 
 	// --- The quest board ----------------------------------------------------------------------
@@ -255,42 +257,42 @@ public final class Inns {
 			switch (offer.kind()) {
 				case BOUNTY -> {
 					icon = new ItemStack(Items.IRON_SWORD);
-					icon.set(DataComponents.CUSTOM_NAME, name("Bounty: " + offer.bounty().name(), ChatFormatting.RED));
-					lore.add(line("A dangerous beast was seen about " + roughDistance(player, offer.bountyPos())
-						+ " blocks " + direction(player.blockPosition(), offer.bountyPos()) + ".", ChatFormatting.GRAY));
-					lore.add(line("Reward: " + offer.emeralds() + " emeralds, 3 levels, 3 Renown", ChatFormatting.GREEN));
+					icon.set(DataComponents.CUSTOM_NAME, name(Text.t("inn.bounty", offer.bounty().name()), ChatFormatting.RED));
+					lore.add(line(Text.t("inn.bounty.seen", roughDistance(player, offer.bountyPos()), direction(player.blockPosition(), offer.bountyPos())),
+						ChatFormatting.GRAY));
+					lore.add(line(Text.t("inn.bounty.reward", offer.emeralds(), BloodlineConfig.get().renown.innJob), ChatFormatting.GREEN));
 				}
 				case DELIVERY -> {
 					icon = new ItemStack(offer.delivery().item(), Math.min(offer.delivery().count(), offer.delivery().item().getDefaultMaxStackSize()));
-					icon.set(DataComponents.CUSTOM_NAME, name("Delivery: " + offer.delivery().count() + " " + itemName(offer.delivery().item()), ChatFormatting.YELLOW));
-					lore.add(line("Bring them to any innkeeper.", ChatFormatting.GRAY));
-					lore.add(line("Reward: " + offer.emeralds() + " emeralds, 2 levels, 3 Renown", ChatFormatting.GREEN));
+					icon.set(DataComponents.CUSTOM_NAME, name(Text.t("inn.delivery", offer.delivery().count(), itemName(offer.delivery().item())), ChatFormatting.YELLOW));
+					lore.add(line(Text.t("inn.delivery.where"), ChatFormatting.GRAY));
+					lore.add(line(Text.t("inn.delivery.reward", offer.emeralds(), BloodlineConfig.get().renown.innJob), ChatFormatting.GREEN));
 				}
 				default -> {
 					icon = new ItemStack(Items.MAP);
-					icon.set(DataComponents.CUSTOM_NAME, name("Rumour: " + offer.rumour().name(), ChatFormatting.AQUA));
-					lore.add(line("A traveller swears they saw " + offer.rumour().name() + ".", ChatFormatting.GRAY));
-					lore.add(line("Costs " + offer.rumour().cost() + " emeralds for the map.", ChatFormatting.GOLD));
-					lore.add(line("Reward for finding it: 4 levels, 3 Renown", ChatFormatting.GREEN));
+					icon.set(DataComponents.CUSTOM_NAME, name(Text.t("inn.rumour", offer.rumour().name()), ChatFormatting.AQUA));
+					lore.add(line(Text.t("inn.rumour.seen", offer.rumour().name()), ChatFormatting.GRAY));
+					lore.add(line(Text.t("inn.rumour.cost", offer.rumour().cost()), ChatFormatting.GOLD));
+					lore.add(line(Text.t("inn.rumour.reward", BloodlineConfig.get().renown.innJob), ChatFormatting.GREEN));
 				}
 			}
 			if (taken) {
-				lore.add(line("✔ Accepted", ChatFormatting.DARK_GREEN));
+				lore.add(line(Text.t("inn.accepted"), ChatFormatting.DARK_GREEN));
 				icon.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
 			} else if (full) {
-				lore.add(line("You already have " + BloodlineConfig.get().inns.maxJobsPerPlayer + " inn jobs.", ChatFormatting.DARK_RED));
+				lore.add(line(Text.t("inn.full", BloodlineConfig.get().inns.maxJobsPerPlayer), ChatFormatting.DARK_RED));
 			} else {
-				lore.add(line("Click to accept", ChatFormatting.WHITE));
+				lore.add(line(Text.t("inn.click_accept"), ChatFormatting.WHITE));
 			}
 			icon.set(DataComponents.LORE, new ItemLore(lore));
 			board.setItem(slot, icon);
 		}
 		ItemStack info = new ItemStack(Items.PAPER);
-		info.set(DataComponents.CUSTOM_NAME, name("House " + lineage.house.name, ChatFormatting.GOLD));
+		info.set(DataComponents.CUSTOM_NAME, name(Text.t("book.cover.house", lineage.house.name), ChatFormatting.GOLD));
 		info.set(DataComponents.LORE, new ItemLore(List.of(
-			line("Inn jobs: " + activeJobs(lineage) + " / " + BloodlineConfig.get().inns.maxJobsPerPlayer, ChatFormatting.GRAY),
-			line("Renown: " + lineage.house.renown, ChatFormatting.YELLOW),
-			line("New jobs are posted every morning.", ChatFormatting.DARK_GRAY))));
+			line(Text.t("inn.info.jobs", activeJobs(lineage), BloodlineConfig.get().inns.maxJobsPerPlayer), ChatFormatting.GRAY),
+			line(Text.t("duties.renown", lineage.house.renown), ChatFormatting.YELLOW),
+			line(Text.t("inn.info.daily"), ChatFormatting.DARK_GRAY))));
 		board.setItem(8, info);
 		board.setItem(STEWARD_SLOT, stewardOffer(lineage));
 	}
@@ -302,18 +304,18 @@ public final class Inns {
 		ItemStack icon = new ItemStack(Items.LECTERN);
 		List<Component> lore = new ArrayList<>();
 		if (lineage.house.steward.isEmpty()) {
-			icon.set(DataComponents.CUSTOM_NAME, name("Hire a steward", ChatFormatting.GOLD));
-			lore.add(line("A loyal servant who waits at your home", ChatFormatting.GRAY));
-			lore.add(line("and keeps the family vault for the house.", ChatFormatting.GRAY));
-			lore.add(line("Vault: " + Stewards.vaultSlots(lineage.house.renown) + " slots for now, more with renown", ChatFormatting.YELLOW));
-			lore.add(line("Costs " + Stewards.hireCost() + " emeralds. They go to your bed.", ChatFormatting.GOLD));
+			icon.set(DataComponents.CUSTOM_NAME, name(Text.t("steward.hire"), ChatFormatting.GOLD));
+			lore.add(line(Text.t("steward.hire.line1"), ChatFormatting.GRAY));
+			lore.add(line(Text.t("steward.hire.line2"), ChatFormatting.GRAY));
+			lore.add(line(Text.t("steward.hire.vault", Stewards.vaultSlots(lineage.house.renown)), ChatFormatting.YELLOW));
+			lore.add(line(Text.t("steward.hire.cost", Stewards.hireCost()), ChatFormatting.GOLD));
 		} else {
 			String name = lineage.house.steward.get().name;
-			icon.set(DataComponents.CUSTOM_NAME, name("Send " + name + " to your home", ChatFormatting.GOLD));
-			lore.add(line("Your steward moves to your current bed.", ChatFormatting.GRAY));
-			lore.add(line("Costs " + Stewards.moveCost() + " emeralds.", ChatFormatting.GOLD));
+			icon.set(DataComponents.CUSTOM_NAME, name(Text.t("steward.move", name), ChatFormatting.GOLD));
+			lore.add(line(Text.t("steward.move.line"), ChatFormatting.GRAY));
+			lore.add(line(Text.t("steward.move.cost", Stewards.moveCost()), ChatFormatting.GOLD));
 		}
-		lore.add(line("Click to agree", ChatFormatting.WHITE));
+		lore.add(line(Text.t("inn.click_agree"), ChatFormatting.WHITE));
 		icon.set(DataComponents.LORE, new ItemLore(lore));
 		return icon;
 	}
@@ -363,22 +365,22 @@ public final class Inns {
 	private static void accept(ServerPlayer player, Lineage lineage, Offer offer) {
 		if (taken(lineage, offer)) return;
 		if (activeJobs(lineage) >= BloodlineConfig.get().inns.maxJobsPerPlayer) {
-			player.sendSystemMessage(Component.literal("Finish one of your inn jobs before taking another.").withStyle(ChatFormatting.RED));
+			player.sendSystemMessage(Text.t("inn.finish_first").withStyle(ChatFormatting.RED));
 			return;
 		}
 		Quest quest = switch (offer.kind()) {
 			case BOUNTY -> {
 				GlobalPos place = GlobalPos.of(player.level().dimension(), offer.bountyPos());
 				String key = "inn_" + offer.id().replace(':', '_') + "_" + player.getUUID().toString().substring(0, 8);
-				Quest bounty = Quest.of(Type.INN, "Bounty: " + offer.bounty().name(), "Slay " + offer.bounty().name() + " near "
-						+ offer.bountyPos().getX() + ", " + offer.bountyPos().getZ(), Goal.KILL_CHAMPION,
+				Quest bounty = Quest.of(Type.INN, Text.t("inn.bounty", offer.bounty().name()), Text.t("inn.bounty.task", offer.bounty().name(),
+						offer.bountyPos().getX() + ", " + offer.bountyPos().getZ()), Goal.KILL_CHAMPION,
 					List.of(key, offer.bounty().id(), player.level().dimension().identifier().toString()), 1,
 					Reward.item(3, "emerald", offer.emeralds())).at(place, 32);
-				Questlines.giveMap(player, place, "Bounty: " + offer.bounty().name());
+				Questlines.giveMap(player, place, Text.t("inn.bounty", offer.bounty().name()));
 				yield bounty;
 			}
-			case DELIVERY -> Quest.of(Type.INN, "Delivery: " + offer.delivery().count() + " " + itemName(offer.delivery().item()),
-				"Bring " + offer.delivery().count() + " " + itemName(offer.delivery().item()) + " to an innkeeper", Goal.MANUAL,
+			case DELIVERY -> Quest.of(Type.INN, Text.t("inn.delivery", offer.delivery().count(), itemName(offer.delivery().item())),
+				Text.t("inn.delivery.task", offer.delivery().count(), itemName(offer.delivery().item())), Goal.MANUAL,
 				List.of(BuiltInRegistries.ITEM.getKey(offer.delivery().item()).toString()), offer.delivery().count(),
 				Reward.item(2, "emerald", offer.emeralds()));
 			case RUMOUR -> rumour(player, offer);
@@ -387,26 +389,26 @@ public final class Inns {
 		quest.line = Optional.of(LINE_PREFIX + offer.id());
 		Quests.add(player, lineage, quest);
 		Lineages.markDirty(player.level().getServer());
-		player.sendSystemMessage(Component.literal("Job accepted: ").withStyle(ChatFormatting.GRAY).append(Quests.line(quest, true)));
+		player.sendSystemMessage(Text.t("inn.accepted_chat").withStyle(ChatFormatting.GRAY).append(" ").append(Quests.line(quest, true)));
 		player.level().playSound(null, player.blockPosition(), SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1f, 1f);
 	}
 
 	private static Quest rumour(ServerPlayer player, Offer offer) {
 		Rumour rumour = offer.rumour();
 		if (count(player, Items.EMERALD) < rumour.cost()) {
-			player.sendSystemMessage(Component.literal("The map costs " + rumour.cost() + " emeralds.").withStyle(ChatFormatting.RED));
+			player.sendSystemMessage(Text.t("inn.rumour.too_poor", rumour.cost()).withStyle(ChatFormatting.RED));
 			return null;
 		}
 		Optional<GlobalPos> place = Questlines.locate(player, Level.OVERWORLD, rumour.structure(), true);
 		if (place.isEmpty()) {
-			player.sendSystemMessage(Component.literal("The innkeeper shrugs. Nobody has heard of " + rumour.name() + " anywhere near here.")
+			player.sendSystemMessage(Text.t("inn.rumour.none", rumour.name())
 				.withStyle(ChatFormatting.GRAY));
 			return null;
 		}
 		take(player, Items.EMERALD, rumour.cost());
-		Questlines.giveMap(player, place.get(), "Rumour: " + rumour.name());
-		return Quest.of(Type.INN, "Rumour: " + rumour.name(), "Find " + rumour.name() + " near " + place.get().pos().getX() + ", "
-			+ place.get().pos().getZ(), Goal.VISIT, List.of(), 1, Reward.levels(4)).at(place.get(), 32);
+		Questlines.giveMap(player, place.get(), Text.t("inn.rumour", rumour.name()));
+		return Quest.of(Type.INN, Text.t("inn.rumour", rumour.name()), Text.t("inn.rumour.task", rumour.name(),
+			place.get().pos().getX() + ", " + place.get().pos().getZ()), Goal.VISIT, List.of(), 1, Reward.levels(4)).at(place.get(), 32);
 	}
 
 	private static void handInDeliveries(ServerPlayer player, Lineage lineage) {
@@ -417,7 +419,7 @@ public final class Inns {
 			take(player, item, quest.required);
 			quest.progress = quest.required;
 			Lineages.markDirty(player.level().getServer());
-			player.sendSystemMessage(Component.literal("You hand over the goods. \"Much obliged.\"").withStyle(ChatFormatting.GRAY));
+			player.sendSystemMessage(Text.t("inn.delivered").withStyle(ChatFormatting.GRAY));
 		}
 	}
 
@@ -445,16 +447,16 @@ public final class Inns {
 
 	// --- Text helpers -------------------------------------------------------------------------
 
-	private static Component name(String text, ChatFormatting color) {
-		return Component.literal(text).withStyle(s -> s.withItalic(false).withColor(color));
+	private static Component name(Component text, ChatFormatting color) {
+		return Component.empty().append(text).withStyle(s -> s.withItalic(false).withColor(color));
 	}
 
-	private static Component line(String text, ChatFormatting color) {
-		return Component.literal(text).withStyle(s -> s.withItalic(false).withColor(color));
+	private static Component line(Component text, ChatFormatting color) {
+		return Component.empty().append(text).withStyle(s -> s.withItalic(false).withColor(color));
 	}
 
-	private static String itemName(Item item) {
-		return item.getName(new ItemStack(item)).getString();
+	private static Component itemName(Item item) {
+		return item.getName(new ItemStack(item));
 	}
 
 	private static int roughDistance(ServerPlayer player, BlockPos target) {
@@ -462,10 +464,10 @@ public final class Inns {
 		return (int) Math.round(Math.sqrt(dx * dx + dz * dz) / 10) * 10;
 	}
 
-	private static String direction(BlockPos from, BlockPos to) {
+	private static Component direction(BlockPos from, BlockPos to) {
 		double angle = Math.toDegrees(Math.atan2(to.getZ() - from.getZ(), to.getX() - from.getX()));
-		String[] names = {"east", "south-east", "south", "south-west", "west", "north-west", "north", "north-east"};
+		String[] names = {"east", "south_east", "south", "south_west", "west", "north_west", "north", "north_east"};
 		int index = (int) Math.round(((angle + 360) % 360) / 45) % 8;
-		return names[index];
+		return Text.t("direction." + names[index]);
 	}
 }

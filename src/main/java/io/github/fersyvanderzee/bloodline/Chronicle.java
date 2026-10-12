@@ -112,20 +112,20 @@ public final class Chronicle {
 
 		List<Component> pages = new ArrayList<>();
 		List<Component> contents = new ArrayList<>();
-		if (choosing) contents.add(link("Choose your Heir", 2));
+		if (choosing) contents.add(link(Text.t("book.heir.title"), 2));
 		contents.addAll(List.of(
-			link("Main Quest", mainPage),
-			link("Duties" + (dutyCount > 0 ? " (" + dutyCount + ")" : ""), dutiesPage),
-			link("You & the House", headPage),
-			link("Family Tree", treePage),
-			link("History", historyPage)));
+			link(Text.t("book.contents.main"), mainPage),
+			link(dutyCount > 0 ? Text.t("book.contents.duties_count", dutyCount) : Text.t("book.contents.duties"), dutiesPage),
+			link(Text.t("book.contents.house"), headPage),
+			link(Text.t("book.contents.tree"), treePage),
+			link(Text.t("book.contents.history"), historyPage)));
 		pages.add(cover(lineage, contents));
 		if (choosing) pages.add(Heirs.bookPage(lineage));
 		pages.addAll(mainQuest);
 		pages.addAll(duties);
 		pages.addAll(head);
 		pages.addAll(tree);
-		pages.addAll(history.isEmpty() ? List.of(heading("History").append(body("Nothing has happened yet."))) : history);
+		pages.addAll(history.isEmpty() ? List.of(heading(Text.t("book.contents.history")).append(body(Text.t("book.history.empty")))) : history);
 
 		String title = "Chronicle of " + lineage.house.name;
 		if (title.length() > WrittenBookContent.TITLE_MAX_LENGTH) title = title.substring(0, WrittenBookContent.TITLE_MAX_LENGTH);
@@ -135,28 +135,33 @@ public final class Chronicle {
 
 	// --- Shared page styling ------------------------------------------------------------------
 
-	static MutableComponent heading(String text) {
-		return Component.literal(text + "\n\n").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD);
+	static MutableComponent heading(Component text) {
+		return Component.empty().append(text).append("\n\n").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD);
 	}
 
-	static MutableComponent body(String text) {
-		return Component.literal(text).withStyle(s -> s.withColor(ChatFormatting.BLACK).withBold(false));
+	static MutableComponent body(Component text) {
+		return Component.empty().append(text).withStyle(s -> s.withColor(ChatFormatting.BLACK).withBold(false));
 	}
 
+	static MutableComponent faint(Component text) {
+		return Component.empty().append(text).withStyle(s -> s.withColor(ChatFormatting.DARK_GRAY).withBold(false));
+	}
+
+	/** For text that needs no translation, such as numbers and line breaks. */
 	static MutableComponent faint(String text) {
-		return Component.literal(text).withStyle(s -> s.withColor(ChatFormatting.DARK_GRAY).withBold(false));
+		return faint(Component.literal(text));
 	}
 
 	/** A line that jumps to another page of the book. */
-	static MutableComponent link(String text, int page) {
-		return Component.literal("» " + text + "\n").withStyle(s -> s.withColor(ChatFormatting.DARK_BLUE).withBold(false)
+	static MutableComponent link(Component text, int page) {
+		return Component.literal("» ").append(text).append("\n").withStyle(s -> s.withColor(ChatFormatting.DARK_BLUE).withBold(false)
 			.withClickEvent(new ClickEvent.ChangePage(page))
-			.withHoverEvent(new HoverEvent.ShowText(Component.literal("Go to page " + page))));
+			.withHoverEvent(new HoverEvent.ShowText(Text.t("book.go_to_page", page))));
 	}
 
-	/** A button that runs a command when clicked. */
-	static MutableComponent button(String text, String command, Component hover) {
-		return Component.literal("[" + text + "]").withStyle(s -> s.withColor(ChatFormatting.DARK_GREEN).withBold(true)
+	/** A button that runs a command when clicked; the label includes its brackets ("[Choose]"). */
+	static MutableComponent button(Component label, String command, Component hover) {
+		return Component.empty().append(label).withStyle(s -> s.withColor(ChatFormatting.DARK_GREEN).withBold(true)
 			.withClickEvent(new ClickEvent.RunCommand(command))
 			.withHoverEvent(new HoverEvent.ShowText(hover)));
 	}
@@ -181,12 +186,12 @@ public final class Chronicle {
 
 	private static Component cover(Lineage lineage, List<Component> contents) {
 		MutableComponent page = Component.empty()
-			.append(faint("The Chronicle of\n"))
-			.append(Component.literal("House " + lineage.house.name + "\n\n").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD))
-			.append(faint(lineage.house.members.size() > 1 ? "Your character:\n" : "Head of the house:\n"))
+			.append(faint(Text.t("book.cover.chronicle_of"))).append("\n")
+			.append(Text.t("book.cover.house", lineage.house.name).withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD)).append("\n\n")
+			.append(faint(Text.t(lineage.house.members.size() > 1 ? "book.cover.your_character" : "book.cover.head"))).append("\n")
 			.append(Component.literal(lineage.current.name() + "\n").withStyle(ChatFormatting.BLACK, ChatFormatting.BOLD))
-			.append(faint("Generation " + Names.numeral(lineage.current.generation()) + ", renown " + lineage.house.renown + "\n\n"))
-			.append(Component.literal("Contents\n").withStyle(ChatFormatting.BLACK, ChatFormatting.BOLD));
+			.append(faint(Text.t("book.cover.generation", Names.numeral(lineage.current.generation()), lineage.house.renown))).append("\n\n")
+			.append(Text.t("book.cover.contents").withStyle(ChatFormatting.BLACK, ChatFormatting.BOLD)).append("\n");
 		contents.forEach(page::append);
 		return page;
 	}
@@ -196,36 +201,36 @@ public final class Chronicle {
 		List<CompletedQuest> done = lineage.completedThisGeneration().stream()
 			.filter(c -> c.type() != Quest.Type.QUESTLINE && c.type() != Quest.Type.PREPARATION).toList();
 		List<Component> pages = new ArrayList<>();
-		MutableComponent page = heading("Duties");
+		MutableComponent page = heading(Text.t("book.contents.duties"));
 		int used = 20;
 		if (quests.isEmpty() && done.isEmpty()) {
-			page.append(body("The family owes nothing to anyone, for now."));
+			page.append(body(Text.t("book.duties.none")));
 		}
 		for (Quest quest : quests) {
 			String progress = quest.required > 1 ? " " + quest.progress / quest.displayScale + "/" + quest.required / quest.displayScale : "";
-			int length = quest.title.length() + quest.task.getString().length() + progress.length() + 10;
+			int length = quest.title.getString().length() + quest.task.getString().length() + progress.length() + 10;
 			if (used + length > PAGE_BUDGET) {
 				pages.add(page);
-				page = heading("Duties");
+				page = heading(Text.t("book.contents.duties"));
 				used = 20;
 			}
 			String marker = quest.type == Quest.Type.BLOOD_DEBT ? "⚔ " : "";
-			page.append(Component.literal(marker + quest.title + "\n").withStyle(s -> s.withColor(ChatFormatting.BLACK).withBold(false)
-					.withHoverEvent(new HoverEvent.ShowText(Component.literal("Reward: " + Quests.describe(quest.reward))))))
+			page.append(Component.literal(marker).append(quest.title).append("\n").withStyle(s -> s.withColor(ChatFormatting.BLACK).withBold(false)
+					.withHoverEvent(new HoverEvent.ShowText(Text.t("quest.reward", Quests.describe(quest.reward))))))
 				.append(quest.task.copy().withStyle(s -> s.withColor(ChatFormatting.DARK_GRAY).withBold(false)))
 				.append(faint(progress + "\n\n"));
 			used += length;
 		}
 		for (CompletedQuest quest : done) {
-			int length = quest.title().length() + quest.task().getString().length() + 10;
+			int length = quest.title().getString().length() + quest.task().getString().length() + 10;
 			if (used + length > PAGE_BUDGET) {
 				pages.add(page);
-				page = heading("Duties");
+				page = heading(Text.t("book.contents.duties"));
 				used = 20;
 			}
 			page.append(Component.literal("✔ ").withStyle(s -> s.withColor(ChatFormatting.DARK_GREEN).withBold(false).withStrikethrough(false)))
-				.append(struck(quest.title() + "\n"))
-				.append(struck(quest.task().getString()))
+				.append(struck(quest.title())).append("\n")
+				.append(struck(quest.task()))
 				.append("\n\n");
 			used += length;
 		}
@@ -234,62 +239,59 @@ public final class Chronicle {
 	}
 
 	/** Grey, crossed-out text for finished quests. */
-	static MutableComponent struck(String text) {
-		return Component.literal(text).withStyle(s -> s.withColor(ChatFormatting.GRAY).withBold(false).withStrikethrough(true));
+	static MutableComponent struck(Component text) {
+		return Component.empty().append(text).withStyle(s -> s.withColor(ChatFormatting.GRAY).withBold(false).withStrikethrough(true));
 	}
 
 	private static Component members(MinecraftServer server, Lineage lineage) {
 		BloodlineState state = BloodlineState.get(server);
-		MutableComponent page = heading("Members");
+		MutableComponent page = heading(Text.t("book.members.title"));
 		for (UUID id : lineage.house.members) {
 			Lineage member = state.get(id);
 			if (member == null) continue;
 			boolean head = lineage.house.head.equals(id);
 			page.append(Component.literal(member.current.name() + (head ? " ♛" : "") + "\n").withStyle(s -> s.withColor(ChatFormatting.BLACK).withBold(head)
-				.withHoverEvent(new HoverEvent.ShowText(Component.literal(member.fullName() + (head ? ", head of the house" : ""))))));
-			page.append(faint("   generation " + Names.numeral(member.current.generation()) + "\n"));
+				.withHoverEvent(new HoverEvent.ShowText(head ? Text.t("book.members.head", member.fullName()) : Component.literal(member.fullName())))));
+			page.append(faint("   ")).append(faint(Text.t("book.members.generation", Names.numeral(member.current.generation())))).append("\n");
 		}
 		if (lineage.house.steward.isPresent()) {
 			var steward = lineage.house.steward.get();
-			page.append(faint("\nSteward: " + steward.name + "\n   at " + steward.home.pos().getX() + ", " + steward.home.pos().getZ()
-				+ "\n   vault: " + Stewards.vaultSlots(lineage.house.renown) + " slots"));
+			page.append("\n").append(faint(Text.t("book.members.steward", steward.name, steward.home.pos().getX() + ", " + steward.home.pos().getZ(),
+				Stewards.vaultSlots(lineage.house.renown))));
 		} else if (lineage.house.members.size() == 1) {
-			page.append(faint("\nThe head of the house can invite others with /bloodline invite <player>."));
+			page.append("\n").append(faint(Text.t("book.members.invite_hint")));
 		}
 		return page;
 	}
 
 	private static Component sacrifice(ServerPlayer viewer, Lineage lineage) {
 		Sacrifice.Conditions now = Sacrifice.check(viewer, lineage);
-		MutableComponent page = heading("The Sacrifice")
-			.append(body("One who fulfilled an act of the oath may give their life for the house, under a full moon at an ancestor's grave.\n\n"));
-		page.append(condition(now.actDone(), "You fulfilled an act"));
-		page.append(condition(now.night(), "It is night"));
-		page.append(condition(now.fullMoon(), now.fullMoon() ? "The moon is full" : "Full moon in " + now.nightsUntilFullMoon() + " nights"));
-		page.append(condition(now.place().isPresent(), now.place().map(p -> "At " + p)
-			.orElse(now.founder() ? "At a grave or your steward's home" : "At an ancestor's grave")));
-		page.append(faint("\nHeir keeps every boon, +" + Sacrifice.renown() + " renown. Sacrifices: "
-			+ lineage.house.sacrifices + "/" + Sacrifice.forBloodSworn() + "\n\n"));
+		MutableComponent page = heading(Text.t("book.sacrifice.title"))
+			.append(body(Text.t("book.sacrifice.intro"))).append("\n\n");
+		page.append(condition(now.actDone(), Text.t("book.sacrifice.act")));
+		page.append(condition(now.night(), Text.t("book.sacrifice.night")));
+		page.append(condition(now.fullMoon(), now.fullMoon() ? Text.t("book.sacrifice.moon") : Text.t("book.sacrifice.moon_in", now.nightsUntilFullMoon())));
+		page.append(condition(now.place().isPresent(), now.place().map(p -> Text.t("book.sacrifice.at", p))
+			.orElse(Text.t(now.founder() ? "book.sacrifice.place_founder" : "book.sacrifice.place"))));
+		page.append("\n").append(faint(Text.t("book.sacrifice.reward", Sacrifice.renown(), lineage.house.sacrifices, Sacrifice.forBloodSworn()))).append("\n\n");
 		// Always offer the button: if something is missing, the command says exactly what.
-		page.append(button("Offer your life", "/bloodline sacrifice", Component.literal(now.met()
-			? "You'll be asked to confirm. Your belongings fall where you kneel."
-			: "Not possible yet: click to see what's missing.")));
+		page.append(button(Text.t("button.offer_life"), "/bloodline sacrifice", Text.t(now.met() ? "book.sacrifice.hover_ready" : "book.sacrifice.hover_missing")));
 		return page;
 	}
 
-	private static Component condition(boolean met, String text) {
-		return Component.literal((met ? "✔ " : "✘ ") + text + "\n")
+	private static Component condition(boolean met, Component text) {
+		return Component.literal(met ? "✔ " : "✘ ").append(text).append("\n")
 			.withStyle(s -> s.withColor(met ? ChatFormatting.DARK_GREEN : ChatFormatting.DARK_RED).withBold(false));
 	}
 
 	private static Component head(Lineage lineage) {
-		MutableComponent page = heading("Your Character")
+		MutableComponent page = heading(Text.t("book.character.title"))
 			.append(Component.literal(lineage.fullName() + "\n").withStyle(s -> s.withColor(ChatFormatting.BLACK).withBold(true)))
-			.append(faint("Generation " + Names.numeral(lineage.current.generation()) + ", born day " + lineage.current.bornDay() + "\n\n"))
-			.append(faint("Born with:\n"))
+			.append(faint(Text.t("book.character.generation", Names.numeral(lineage.current.generation()), lineage.current.bornDay()))).append("\n\n")
+			.append(faint(Text.t("book.character.born_with"))).append("\n")
 			.append(traitLines(lineage.current.traits()));
 		if (!lineage.house.legacies.isEmpty()) {
-			page.append(faint("\nLegacy of the house:\n")).append(traitLines(lineage.house.legacies));
+			page.append("\n").append(faint(Text.t("book.character.legacy"))).append("\n").append(traitLines(lineage.house.legacies));
 		}
 		return page;
 	}
@@ -299,18 +301,18 @@ public final class Chronicle {
 		for (Ancestor a : lineage.ancestors) {
 			lines.add(Component.empty()
 				.append(faint(Names.numeral(a.generation()) + ". "))
-				.append(Component.literal(a.fullName()).withStyle(s -> s.withColor(ChatFormatting.BLACK).withBold(false)
+				.append(a.fullName().withStyle(s -> s.withColor(ChatFormatting.BLACK).withBold(false)
 					.withHoverEvent(new HoverEvent.ShowText(a.deathMessage()))))
-				.append(faint("\n   day " + a.bornDay() + "-" + a.diedDay() + "\n")));
+				.append("\n   ").append(faint(Text.t("book.tree.days", a.bornDay(), a.diedDay()))).append("\n"));
 		}
 		lines.add(Component.empty()
 			.append(faint(Names.numeral(lineage.current.generation()) + ". "))
 			.append(Component.literal(lineage.current.name()).withStyle(ChatFormatting.BLACK, ChatFormatting.BOLD))
-			.append(faint("\n   living\n")));
+			.append("\n   ").append(faint(Text.t("book.tree.living"))).append("\n"));
 
 		List<Component> pages = new ArrayList<>();
 		for (int start = 0; start < lines.size(); start += ANCESTORS_PER_PAGE) {
-			MutableComponent page = heading("Family Tree");
+			MutableComponent page = heading(Text.t("book.contents.tree"));
 			lines.subList(start, Math.min(lines.size(), start + ANCESTORS_PER_PAGE)).forEach(page::append);
 			pages.add(page);
 		}
@@ -328,7 +330,7 @@ public final class Chronicle {
 				page = Component.empty();
 				used = 0;
 			}
-			page.append(Component.literal("Day " + entry.day() + "\n").withStyle(ChatFormatting.DARK_RED))
+			page.append(Text.t("book.history.day", entry.day()).withStyle(ChatFormatting.DARK_RED)).append("\n")
 				.append(entry.text().copy().withStyle(ChatFormatting.BLACK))
 				.append("\n\n");
 			used += length;

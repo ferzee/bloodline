@@ -166,10 +166,9 @@ public final class Heirlooms {
 		write(stack, updated);
 
 		MutableComponent message = !wasHeirloom
-			? Component.literal(previousBearer + "'s ").append(itemName).append(" has passed to " + lineage.current.name()
-				+ ". It is now an heirloom of House " + data.house() + ": ").append(Component.literal(name.get()).withStyle(ChatFormatting.GOLD))
-			: Component.literal(previousName).withStyle(ChatFormatting.GOLD).append(Component.literal(" passes to "
-				+ lineage.current.name() + ", its " + ordinal(carriers.size()) + " bearer.").withStyle(ChatFormatting.WHITE));
+			? Text.t("heirloom.became", previousBearer, itemName, lineage.current.name(), data.house(),
+				Component.literal(name.get()).withStyle(ChatFormatting.GOLD))
+			: Text.t("heirloom.passes", Component.literal(previousName).withStyle(ChatFormatting.GOLD), lineage.current.name(), carriers.size());
 		player.sendSystemMessage(message);
 		Lineages.record(player.level().getServer(), lineage, message);
 		player.level().playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1f, 0.8f);
@@ -178,13 +177,13 @@ public final class Heirlooms {
 	private static List<Component> lore(ItemStack stack, Data data) {
 		List<Component> lines = new ArrayList<>();
 		if (data.isHeirloom()) {
-			lines.add(line(data.sworn() ? "Sworn blade of House " + data.house() : "Heirloom of House " + data.house(), ChatFormatting.GOLD));
-			lines.add(line("Carried by " + String.join(", ", data.bearers()), ChatFormatting.GRAY));
-			String bonus = bonusDescription(stack, data.rank());
+			lines.add(line(Text.t(data.sworn() ? "heirloom.lore.sworn" : "heirloom.lore.title", data.house()), ChatFormatting.GOLD));
+			lines.add(line(Text.t("heirloom.lore.carried", String.join(", ", data.bearers())), ChatFormatting.GRAY));
+			Component bonus = bonusDescription(stack, data.rank());
 			if (bonus != null) lines.add(line(bonus, ChatFormatting.BLUE));
-			lines.add(line("Stays with the family on death", ChatFormatting.DARK_GRAY));
+			lines.add(line(Text.t("heirloom.lore.kept"), ChatFormatting.DARK_GRAY));
 		} else {
-			lines.add(line("Carried by " + data.bearers().getFirst() + " " + data.house(), ChatFormatting.DARK_GRAY));
+			lines.add(line(Text.t("heirloom.lore.carried", data.bearers().getFirst() + " " + data.house()), ChatFormatting.DARK_GRAY));
 		}
 		return lines;
 	}
@@ -227,7 +226,7 @@ public final class Heirlooms {
 		}
 		Data data = new Data(player.getUUID(), lineage.house.name, List.of(lineage.current.generation()), List.of(lineage.current.name()),
 			Optional.of("Oathblade"), true, List.of(carrierKey(player, lineage)));
-		blade.set(DataComponents.CUSTOM_NAME, Component.literal("Oathblade").withStyle(s -> s.withItalic(false).withColor(ChatFormatting.GOLD)));
+		blade.set(DataComponents.CUSTOM_NAME, Text.t("oathblade.name").withStyle(s -> s.withItalic(false).withColor(ChatFormatting.GOLD)));
 		blade.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
 		write(blade, data);
 	}
@@ -257,8 +256,8 @@ public final class Heirlooms {
 		return copy;
 	}
 
-	private static Component line(String text, ChatFormatting color) {
-		return Component.literal(text).withStyle(s -> s.withItalic(false).withColor(color));
+	private static Component line(Component text, ChatFormatting color) {
+		return Component.empty().append(text).withStyle(s -> s.withItalic(false).withColor(color));
 	}
 
 	private static boolean isWeapon(ItemStack stack) {
@@ -275,12 +274,18 @@ public final class Heirlooms {
 		return equippable != null && equippable.slot().getType() == EquipmentSlot.Type.HUMANOID_ARMOR;
 	}
 
-	private static String bonusDescription(ItemStack stack, int rank) {
-		List<String> parts = new ArrayList<>();
-		if (isWeapon(stack)) parts.add("+" + rank + " attack damage");
-		if (isTool(stack)) parts.add("+" + rank * 2 + " mining efficiency");
-		if (isArmor(stack)) parts.add("+" + rank * 0.5 + " armor toughness");
-		return parts.isEmpty() ? null : String.join(", ", parts);
+	private static Component bonusDescription(ItemStack stack, int rank) {
+		List<Component> parts = new ArrayList<>();
+		if (isWeapon(stack)) parts.add(Text.t("heirloom.bonus.damage", rank));
+		if (isTool(stack)) parts.add(Text.t("heirloom.bonus.mining", rank * 2));
+		if (isArmor(stack)) parts.add(Text.t("heirloom.bonus.toughness", String.valueOf(rank * 0.5)));
+		if (parts.isEmpty()) return null;
+		MutableComponent out = Component.empty();
+		for (int i = 0; i < parts.size(); i++) {
+			if (i > 0) out.append(", ");
+			out.append(parts.get(i));
+		}
+		return out;
 	}
 
 	private static void updateBonuses(ServerPlayer player) {
@@ -308,15 +313,4 @@ public final class Heirlooms {
 		}
 	}
 
-	private static String ordinal(int n) {
-		return switch (n) {
-			case 2 -> "second";
-			case 3 -> "third";
-			case 4 -> "fourth";
-			case 5 -> "fifth";
-			case 6 -> "sixth";
-			case 7 -> "seventh";
-			default -> n + "th";
-		};
-	}
 }

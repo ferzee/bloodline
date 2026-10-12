@@ -29,64 +29,65 @@ public final class Traits {
 	private static final Map<String, Trait> ALL = new LinkedHashMap<>();
 
 	static {
-		add("stalwart", Kind.BOON, "health", "Stalwart", "Broad-shouldered and hard to kill. +2 hearts.",
+		add("stalwart", Kind.BOON, "health",
 			e(Attributes.MAX_HEALTH, 4, ADD_VALUE));
-		add("frail", Kind.FLAW, "health", "Frail", "Sickly since birth. -2 hearts.",
+		add("frail", Kind.FLAW, "health",
 			e(Attributes.MAX_HEALTH, -4, ADD_VALUE));
-		add("swift", Kind.BOON, "speed", "Swift", "Light on their feet. +8% movement speed.",
+		add("swift", Kind.BOON, "speed",
 			e(Attributes.MOVEMENT_SPEED, 0.08, ADD_MULTIPLIED_BASE));
-		add("sluggish", Kind.FLAW, "speed", "Sluggish", "Never in a hurry. -6% movement speed.",
+		add("sluggish", Kind.FLAW, "speed",
 			e(Attributes.MOVEMENT_SPEED, -0.06, ADD_MULTIPLIED_BASE));
-		add("mighty", Kind.BOON, "strength", "Mighty", "Strong arms. +1 attack damage.",
+		add("mighty", Kind.BOON, "strength",
 			e(Attributes.ATTACK_DAMAGE, 1, ADD_VALUE));
-		add("feeble", Kind.FLAW, "strength", "Feeble", "Weak arms. -1 attack damage.",
+		add("feeble", Kind.FLAW, "strength",
 			e(Attributes.ATTACK_DAMAGE, -1, ADD_VALUE));
-		add("quick_handed", Kind.BOON, "attack_speed", "Quick-Handed", "Fast with a blade. +10% attack speed.",
+		add("quick_handed", Kind.BOON, "attack_speed",
 			e(Attributes.ATTACK_SPEED, 0.1, ADD_MULTIPLIED_BASE));
-		add("sure_footed", Kind.BOON, "falling", "Sure-Footed", "Lands like a cat. Takes fall damage 2 blocks later.",
+		add("sure_footed", Kind.BOON, "falling",
 			e(Attributes.SAFE_FALL_DISTANCE, 2, ADD_VALUE));
-		add("clumsy", Kind.FLAW, "falling", "Clumsy", "Always tripping. +50% fall damage.",
+		add("clumsy", Kind.FLAW, "falling",
 			e(Attributes.FALL_DAMAGE_MULTIPLIER, 0.5, ADD_VALUE));
-		add("stonehand", Kind.BOON, "mining", "Stonehand", "A born miner. Breaks blocks 15% faster.",
+		add("stonehand", Kind.BOON, "mining",
 			e(Attributes.BLOCK_BREAK_SPEED, 0.15, ADD_MULTIPLIED_BASE));
-		add("long_armed", Kind.BOON, "reach", "Long-Armed", "Reaches further. +1 block reach.",
+		add("long_armed", Kind.BOON, "reach",
 			e(Attributes.BLOCK_INTERACTION_RANGE, 1, ADD_VALUE), e(Attributes.ENTITY_INTERACTION_RANGE, 0.5, ADD_VALUE));
-		add("lucky", Kind.BOON, "luck", "Lucky", "Fortune smiles on them. +1 luck.",
+		add("lucky", Kind.BOON, "luck",
 			e(Attributes.LUCK, 1, ADD_VALUE));
-		add("unlucky", Kind.FLAW, "luck", "Ill-Starred", "Born under a bad sign. -1 luck.",
+		add("unlucky", Kind.FLAW, "luck",
 			e(Attributes.LUCK, -1, ADD_VALUE));
-		add("thick_skinned", Kind.BOON, "armor", "Thick-Skinned", "Hide like leather. +2 armor.",
+		add("thick_skinned", Kind.BOON, "armor",
 			e(Attributes.ARMOR, 2, ADD_VALUE));
-		add("unyielding", Kind.BOON, "knockback", "Unyielding", "Hard to push around. +20% knockback resistance.",
+		add("unyielding", Kind.BOON, "knockback",
 			e(Attributes.KNOCKBACK_RESISTANCE, 0.2, ADD_VALUE));
-		add("fireborn", Kind.BOON, "fire", "Fireborn", "Fire doesn't cling to them. Burns for half as long.",
+		add("fireborn", Kind.BOON, "fire",
 			e(Attributes.BURNING_TIME, -0.5, ADD_MULTIPLIED_BASE));
-		add("waterborn", Kind.BOON, "water", "Waterborn", "At home in the water. Swims faster and mines faster underwater.",
+		add("waterborn", Kind.BOON, "water",
 			e(Attributes.WATER_MOVEMENT_EFFICIENCY, 0.25, ADD_VALUE), e(Attributes.SUBMERGED_MINING_SPEED, 0.5, ADD_VALUE));
-		add("deep_lunged", Kind.BOON, "water_breathing", "Deep-Lunged", "Can hold their breath much longer.",
+		add("deep_lunged", Kind.BOON, "water_breathing",
 			e(Attributes.OXYGEN_BONUS, 2, ADD_VALUE));
-		add("nimble", Kind.BOON, "jump", "Nimble", "Jumps higher than most.",
+		add("nimble", Kind.BOON, "jump",
 			e(Attributes.JUMP_STRENGTH, 0.06, ADD_VALUE));
-		add("tall", Kind.QUIRK, "size", "Tall", "Stands a head above the rest, with a little extra reach.",
+		add("tall", Kind.QUIRK, "size",
 			e(Attributes.SCALE, 0.08, ADD_VALUE), e(Attributes.ENTITY_INTERACTION_RANGE, 0.25, ADD_VALUE));
-		add("small", Kind.QUIRK, "size", "Small", "Short, but quick to duck through gaps.",
+		add("small", Kind.QUIRK, "size",
 			e(Attributes.SCALE, -0.1, ADD_VALUE));
 
-		add("oathbound", Kind.LEGENDARY, "legacy_oathbound", "Oathbound", "The family's oath runs in the blood. +2 attack damage, +2 hearts.",
+		add("oathbound", Kind.LEGENDARY, "legacy_oathbound",
 			e(Attributes.ATTACK_DAMAGE, 2, ADD_VALUE), e(Attributes.MAX_HEALTH, 4, ADD_VALUE));
-		add("deepborn", Kind.LEGENDARY, "legacy_deepborn", "Deepborn", "The deep knows this family. Breaks blocks 25% faster, +2 luck.",
+		add("deepborn", Kind.LEGENDARY, "legacy_deepborn",
 			e(Attributes.BLOCK_BREAK_SPEED, 0.25, ADD_MULTIPLIED_BASE), e(Attributes.LUCK, 2, ADD_VALUE));
-		add("blood_sworn", Kind.LEGENDARY, "legacy_blood_sworn", "Blood-Sworn", "Three gave their lives for this house. +1 attack damage, +2 armor, +1 heart.",
+		add("blood_sworn", Kind.LEGENDARY, "legacy_blood_sworn",
 			e(Attributes.ATTACK_DAMAGE, 1, ADD_VALUE), e(Attributes.ARMOR, 2, ADD_VALUE), e(Attributes.MAX_HEALTH, 2, ADD_VALUE));
-		add("beloved", Kind.LEGENDARY, "legacy_beloved", "Beloved", "Friend to every village. +2 hearts, +2 luck, 5% faster.",
+		add("beloved", Kind.LEGENDARY, "legacy_beloved",
 			e(Attributes.MAX_HEALTH, 4, ADD_VALUE), e(Attributes.LUCK, 2, ADD_VALUE), e(Attributes.MOVEMENT_SPEED, 0.05, ADD_MULTIPLIED_BASE));
 	}
 
 	private Traits() {
 	}
 
-	private static void add(String id, Kind kind, String group, String name, String description, Effect... effects) {
-		ALL.put(id, new Trait(id, kind, group, name, description, List.of(effects)));
+	/** Names and descriptions are in the language file, as bloodline.trait.<id> and bloodline.trait.<id>.desc. */
+	private static void add(String id, Kind kind, String group, Effect... effects) {
+		ALL.put(id, new Trait(id, kind, group, List.of(effects)));
 	}
 
 	private static Effect e(Holder<Attribute> attribute, double amount, Operation operation) {

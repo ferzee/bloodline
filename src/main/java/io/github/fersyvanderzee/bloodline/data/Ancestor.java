@@ -3,7 +3,9 @@ package io.github.fersyvanderzee.bloodline.data;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.GlobalPos;
+import io.github.fersyvanderzee.bloodline.Epithets;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.ComponentSerialization;
 
 import java.util.List;
@@ -24,7 +26,8 @@ public record Ancestor(String name, String epithet, int generation, List<String>
 		GlobalPos.MAP_CODEC.codec().optionalFieldOf("place").forGetter(Ancestor::place)
 	).apply(i, Ancestor::new));
 
-	public String fullName() {
-		return name + " " + epithet;
+	/** "Elske the Bold". */
+	public MutableComponent fullName() {
+		return Component.literal(name + " ").append(Epithets.display(epithet));
 	}
 }

@@ -77,7 +77,8 @@ public class Quest {
 
 	public static final Codec<Quest> CODEC = RecordCodecBuilder.create(i -> i.group(
 		Type.CODEC.fieldOf("type").forGetter(q -> q.type),
-		Codec.STRING.fieldOf("title").forGetter(q -> q.title),
+		// Older saves stored titles as plain strings, which this codec reads as literal text.
+		ComponentSerialization.CODEC.fieldOf("title").forGetter(q -> q.title),
 		ComponentSerialization.CODEC.fieldOf("task").forGetter(q -> q.task),
 		Goal.CODEC.fieldOf("goal").forGetter(q -> q.goal),
 		Codec.STRING.listOf().fieldOf("targets").forGetter(q -> q.targets),
@@ -95,7 +96,7 @@ public class Quest {
 	).apply(i, Quest::new));
 
 	public final Type type;
-	public final String title;
+	public final Component title;
 	/** What to do, e.g. "Slay Zombie". Progress is shown after it. */
 	public final Component task;
 	public final Goal goal;
@@ -119,7 +120,7 @@ public class Quest {
 	public int act;
 	public int step;
 
-	public Quest(Type type, String title, Component task, Goal goal, List<String> targets, int required, int displayScale,
+	public Quest(Type type, Component title, Component task, Goal goal, List<String> targets, int required, int displayScale,
 				 int progress, int legacyLastSeen, Map<String, Integer> seen, Optional<GlobalPos> place, int radius, Reward reward,
 				 Optional<String> line, int act, int step) {
 		this.type = type;
@@ -141,13 +142,11 @@ public class Quest {
 		this.step = step;
 	}
 
-	public static Quest of(Type type, String title, Component task, Goal goal, List<String> targets, int required, Reward reward) {
+	public static Quest of(Type type, Component title, Component task, Goal goal, List<String> targets, int required, Reward reward) {
 		return new Quest(type, title, task, goal, targets, required, 1, 0, 0, Map.of(), Optional.empty(), 6, reward, Optional.empty(), 0, 0);
 	}
 
-	public static Quest of(Type type, String title, String task, Goal goal, List<String> targets, int required, Reward reward) {
-		return of(type, title, Component.literal(task), goal, targets, required, reward);
-	}
+
 
 	public Quest at(GlobalPos place, int radius) {
 		this.place = Optional.of(place);

@@ -16,21 +16,23 @@ import java.util.Map;
  * Gives a family member their epithet when they die ("Elske the Wanderer"), based on what
  * they did most during their life compared with the stats they were born with.
  */
-final class Epithets {
+public final class Epithets {
 	private record Deed(String stat, double threshold, List<String> epithets) {
 	}
 
 	private static final int TICKS_PER_DAY = 24000;
-	public static final String BRIEF = "the Brief";
+	/** Epithets are saved as ids ("brief"); their words are in the language file as bloodline.epithet.<id>. */
+	public static final String BRIEF = "brief";
+	public static final String DEVOTED = "devoted";
 
 	private static final List<Deed> DEEDS = List.of(
-		new Deed("kills", 40, List.of("the Slayer", "the Bold", "the Fierce")),
-		new Deed("mined", 1500, List.of("the Delver", "the Stonebreaker", "the Deep-Digger")),
-		new Deed("distance", 500_000, List.of("the Wanderer", "the Far-Walker", "the Restless")),
-		new Deed("fish", 15, List.of("the Angler", "the Patient")),
-		new Deed("bred", 20, List.of("the Shepherd", "the Herder")),
-		new Deed("traded", 20, List.of("the Merchant", "the Silver-Tongued")),
-		new Deed("damage", 3000, List.of("the Scarred", "the Unbroken"))
+		new Deed("kills", 40, List.of("slayer", "bold", "fierce")),
+		new Deed("mined", 1500, List.of("delver", "stonebreaker", "deep_digger")),
+		new Deed("distance", 500_000, List.of("wanderer", "far_walker", "restless")),
+		new Deed("fish", 15, List.of("angler", "patient")),
+		new Deed("bred", 20, List.of("shepherd", "herder")),
+		new Deed("traded", 20, List.of("merchant", "silver_tongued")),
+		new Deed("damage", 3000, List.of("scarred", "unbroken"))
 	);
 
 	private Epithets() {
@@ -75,7 +77,20 @@ final class Epithets {
 		if (best != null) {
 			return best.epithets().get(random.nextInt(best.epithets().size()));
 		}
-		return played > TICKS_PER_DAY * 10 ? "the Elder" : "the Quiet";
+		return played > TICKS_PER_DAY * 10 ? "elder" : "quiet";
+	}
+
+	/** The epithet's id; older saves stored the English words ("the Deep-Digger" becomes "deep_digger"). */
+	public static String id(String stored) {
+		String id = stored.toLowerCase(java.util.Locale.ROOT);
+		if (id.startsWith("the ")) id = id.substring(4);
+		return id.replace('-', '_').replace(' ', '_');
+	}
+
+	/** The epithet as text, e.g. "the Deep-Digger". */
+	public static net.minecraft.network.chat.MutableComponent display(String stored) {
+		String id = id(stored);
+		return Text.has("epithet." + id) ? Text.t("epithet." + id) : net.minecraft.network.chat.Component.literal(stored);
 	}
 
 	private static int delta(Map<String, Integer> before, Map<String, Integer> after, String key) {

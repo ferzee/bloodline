@@ -76,10 +76,9 @@ public final class Heirs {
 		DEADLINES.put(player.getUUID(), player.level().getGameTime() + 20L * BloodlineConfig.get().families.heirAutoChooseSeconds);
 
 		player.connection.send(new ClientboundSetTitlesAnimationPacket(10, 80, 20));
-		player.connection.send(new ClientboundSetTitleTextPacket(Component.literal("Choose your heir").withStyle(ChatFormatting.GOLD)));
-		player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(parent.fullName() + " has died")));
-		player.sendSystemMessage(Component.literal(parent.fullName() + " leaves " + lineage.candidates.size()
-			+ " children. Who will carry on the line?").withStyle(ChatFormatting.GOLD));
+		player.connection.send(new ClientboundSetTitleTextPacket(Text.t("heir.title").withStyle(ChatFormatting.GOLD)));
+		player.connection.send(new ClientboundSetSubtitleTextPacket(Text.t("heir.subtitle", parent.fullName())));
+		player.sendSystemMessage(Text.t("heir.leaves", parent.fullName(), lineage.candidates.size()).withStyle(ChatFormatting.GOLD));
 		for (int i = 0; i < lineage.candidates.size(); i++) {
 			Member child = lineage.candidates.get(i);
 			player.sendSystemMessage(Component.literal("  ")
@@ -88,37 +87,36 @@ public final class Heirs {
 				.append(Lineages.traitList(child.traits(), parent)));
 		}
 		if (lineage.inheritAll) {
-			player.sendSystemMessage(Component.literal("Because " + parent.name() + " gave their life, every child keeps all of their boons.")
+			player.sendSystemMessage(Text.t("heir.sacrifice_note", parent.name())
 				.withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
 		} else if (diedYoung(parent)) {
-			player.sendSystemMessage(Component.literal(parent.fullName() + " lived too short a life to pass on their gifts. "
-				+ "Each child has only a trait of their own.").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+			player.sendSystemMessage(Text.t("heir.brief_note", parent.fullName()).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
 		}
-		player.sendSystemMessage(Component.literal("Hover over a trait to see what it does. The choice is also in your Chronicle.")
+		player.sendSystemMessage(Text.t("heir.hint")
 			.withStyle(ChatFormatting.DARK_GRAY));
 	}
 
 	/** Died within a day of play. Sacrifices never count: they need a fulfilled act and earn "the Devoted". */
 	public static boolean diedYoung(Ancestor ancestor) {
-		return Epithets.BRIEF.equals(ancestor.epithet());
+		return Epithets.BRIEF.equals(Epithets.id(ancestor.epithet()));
 	}
 
 	private static Component button(int index) {
-		return Component.literal("[Choose]").withStyle(s -> s.withColor(ChatFormatting.GREEN)
+		return Text.t("button.choose").withStyle(s -> s.withColor(ChatFormatting.GREEN)
 			.withClickEvent(new ClickEvent.RunCommand("/bloodline heir " + (index + 1)))
-			.withHoverEvent(new HoverEvent.ShowText(Component.literal("Carry on as this child"))));
+			.withHoverEvent(new HoverEvent.ShowText(Text.t("heir.choose_hover"))));
 	}
 
 	/** The heir the player picked (1-based, as typed in the command). */
 	public static void choose(ServerPlayer player, int number) {
 		Lineage lineage = Lineages.get(player);
 		if (lineage == null || !lineage.awaitingHeir || lineage.candidates.isEmpty()) {
-			player.sendSystemMessage(Component.literal("There is no heir to choose right now.").withStyle(ChatFormatting.RED));
+			player.sendSystemMessage(Text.t("heir.none").withStyle(ChatFormatting.RED));
 			return;
 		}
 		if (!player.isAlive()) return;
 		if (number < 1 || number > lineage.candidates.size()) {
-			player.sendSystemMessage(Component.literal("Choose a number from 1 to " + lineage.candidates.size() + ".").withStyle(ChatFormatting.RED));
+			player.sendSystemMessage(Text.t("heir.number", lineage.candidates.size()).withStyle(ChatFormatting.RED));
 			return;
 		}
 		DEADLINES.remove(player.getUUID());
@@ -132,7 +130,7 @@ public final class Heirs {
 		if (deadline == null) {
 			offer(player, lineage);
 		} else if (player.level().getGameTime() > deadline) {
-			player.sendSystemMessage(Component.literal("The family could wait no longer and chose for you.").withStyle(ChatFormatting.GRAY));
+			player.sendSystemMessage(Text.t("heir.auto").withStyle(ChatFormatting.GRAY));
 			choose(player, 1);
 		}
 	}
@@ -140,13 +138,14 @@ public final class Heirs {
 	/** The Chronicle page for choosing an heir. */
 	public static Component bookPage(Lineage lineage) {
 		Ancestor parent = lineage.parent();
-		MutableComponent page = Chronicle.heading("Choose your Heir");
-		if (parent != null) page.append(Chronicle.faint(parent.fullName() + " has died."
-			+ (diedYoung(parent) ? " Their life was too short to pass on their gifts." : "") + "\n\n"));
+		MutableComponent page = Chronicle.heading(Text.t("book.heir.title"));
+		if (parent != null) {
+			page.append(Chronicle.faint(Text.t(diedYoung(parent) ? "book.heir.died_young" : "book.heir.died", parent.fullName()))).append("\n\n");
+		}
 		for (int i = 0; i < lineage.candidates.size(); i++) {
 			Member child = lineage.candidates.get(i);
 			page.append(Component.literal(child.name() + " ").withStyle(s -> s.withColor(ChatFormatting.BLACK).withBold(true)))
-				.append(Chronicle.button("Choose", "/bloodline heir " + (i + 1), Component.literal("Carry on as " + child.name())))
+				.append(Chronicle.button(Text.t("button.choose"), "/bloodline heir " + (i + 1), Text.t("heir.choose_hover_named", child.name())))
 				.append("\n");
 			for (String id : child.traits()) {
 				Trait trait = Traits.get(id);

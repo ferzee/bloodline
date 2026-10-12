@@ -8,6 +8,7 @@ import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -54,7 +55,7 @@ public final class Sacrifice {
 	 * Which of the ritual's conditions hold right now. {@code place} describes where the player
 	 * kneels ("Elske the Bold's grave", or "the family seat"); {@code atSeat} is true for the latter.
 	 */
-	public record Conditions(boolean actDone, boolean night, boolean fullMoon, Optional<String> place, boolean atSeat, boolean founder,
+	public record Conditions(boolean actDone, boolean night, boolean fullMoon, Optional<Component> place, boolean atSeat, boolean founder,
 							 int nightsUntilFullMoon) {
 		public boolean met() {
 			return actDone && night && fullMoon && place.isPresent();
@@ -68,11 +69,11 @@ public final class Sacrifice {
 		boolean fullMoon = overworld && level.environmentAttributes().getDimensionValue(EnvironmentAttributes.MOON_PHASE) == MoonPhase.FULL_MOON;
 		int day = Lineages.today(level.getServer()) - 1;
 		int nightsUntil = (MoonPhase.COUNT - day % MoonPhase.COUNT) % MoonPhase.COUNT;
-		Optional<String> grave = graveNear(player, lineage).map(name -> name + "'s grave");
+		Optional<Component> grave = graveNear(player, lineage).map(name -> Text.t("sacrifice.place.grave", name));
 		// Founders have no graves to kneel at yet, so they may perform the ritual at the steward's home instead.
 		boolean founder = lineage.ancestors.stream().noneMatch(a -> a.place().isPresent());
 		boolean atSeat = grave.isEmpty() && founder && atStewardsHome(player, lineage);
-		return new Conditions(lineage.fulfilledAct, night, fullMoon, atSeat ? Optional.of("the family seat") : grave, atSeat, founder, nightsUntil);
+		return new Conditions(lineage.fulfilledAct, night, fullMoon, atSeat ? Optional.of(Text.t("sacrifice.place.seat")) : grave, atSeat, founder, nightsUntil);
 	}
 
 	private static boolean atStewardsHome(ServerPlayer player, Lineage lineage) {
@@ -82,7 +83,7 @@ public final class Sacrifice {
 	}
 
 	/** The name of an ancestor of any branch of the house whose resting place the player stands at. */
-	private static Optional<String> graveNear(ServerPlayer player, Lineage lineage) {
+	private static Optional<Component> graveNear(ServerPlayer player, Lineage lineage) {
 		BloodlineState state = BloodlineState.get(player.level().getServer());
 		for (UUID member : lineage.house.members) {
 			Lineage branch = state.get(member);
@@ -104,25 +105,26 @@ public final class Sacrifice {
 		if (lineage == null || lineage.awaitingHeir || !player.isAlive()) return;
 		Conditions conditions = check(player, lineage);
 		if (!conditions.met()) {
-			player.sendSystemMessage(Component.literal("The ritual can't be performed here and now.").withStyle(ChatFormatting.RED));
-			if (!conditions.actDone()) player.sendSystemMessage(Component.literal(" - " + lineage.current.name()
-				+ " must first fulfil an act of the oath.").withStyle(ChatFormatting.GRAY));
-			if (!conditions.night()) player.sendSystemMessage(Component.literal(" - It must be night.").withStyle(ChatFormatting.GRAY));
-			if (!conditions.fullMoon()) player.sendSystemMessage(Component.literal(" - The moon must be full (in "
-				+ conditions.nightsUntilFullMoon() + " nights).").withStyle(ChatFormatting.GRAY));
-			if (conditions.place().isEmpty()) player.sendSystemMessage(Component.literal(conditions.founder()
-				? " - You must stand at an ancestor's resting place, or (as a founder) at your steward's home."
-				: " - You must stand at an ancestor's resting place.").withStyle(ChatFormatting.GRAY));
+			player.sendSystemMessage(Text.t("sacrifice.not_now").withStyle(ChatFormatting.RED));
+			if (!conditions.actDone()) player.sendSystemMessage(missing(Text.t("sacrifice.missing.act", lineage.current.name())));
+			if (!conditions.night()) player.sendSystemMessage(missing(Text.t("sacrifice.missing.night")));
+			if (!conditions.fullMoon()) player.sendSystemMessage(missing(Text.t("sacrifice.missing.moon", conditions.nightsUntilFullMoon())));
+			if (conditions.place().isEmpty()) player.sendSystemMessage(missing(Text.t(conditions.founder()
+				? "sacrifice.missing.place_founder" : "sacrifice.missing.place")));
 			return;
 		}
 		AWAITING_CONFIRMATION.put(player.getUUID(), player.level().getGameTime() + CONFIRM_TICKS);
-		player.sendSystemMessage(Component.literal("You kneel at " + conditions.place().get() + ". ").withStyle(ChatFormatting.GRAY)
-			.append(Component.literal("Will " + lineage.current.name() + " give their life for House " + lineage.house.name + "? ")
-				.withStyle(ChatFormatting.WHITE))
-			.append(Component.literal("[I give my life]").withStyle(s -> s.withColor(ChatFormatting.DARK_RED).withBold(true)
+		player.sendSystemMessage(Text.t("sacrifice.kneel", conditions.place().get()).withStyle(ChatFormatting.GRAY)
+			.append(" ")
+			.append(Text.t("sacrifice.ask", lineage.current.name(), lineage.house.name).withStyle(ChatFormatting.WHITE))
+			.append(" ")
+			.append(Text.t("button.give_life").withStyle(s -> s.withColor(ChatFormatting.DARK_RED).withBold(true)
 				.withClickEvent(new ClickEvent.RunCommand("/bloodline sacrifice confirm"))
-				.withHoverEvent(new HoverEvent.ShowText(Component.literal(lineage.current.name() + " dies. Everything they carry falls here.\n"
-					+ "Their heir inherits every boon, and the house gains " + renown() + " renown."))))));
+				.withHoverEvent(new HoverEvent.ShowText(Text.t("sacrifice.confirm_hover", lineage.current.name(), renown()))))));
+	}
+
+	private static Component missing(MutableComponent reason) {
+		return Component.literal(" - ").append(reason).withStyle(ChatFormatting.GRAY);
 	}
 
 	/** Second step: the player dies, and their death is recorded as a sacrifice. */
@@ -130,12 +132,12 @@ public final class Sacrifice {
 		Lineage lineage = Lineages.get(player);
 		Long until = AWAITING_CONFIRMATION.remove(player.getUUID());
 		if (lineage == null || until == null || player.level().getGameTime() > until) {
-			player.sendSystemMessage(Component.literal("Kneel first: open your Chronicle or use /bloodline sacrifice.")
+			player.sendSystemMessage(Text.t("sacrifice.kneel_first")
 				.withStyle(ChatFormatting.RED));
 			return;
 		}
 		if (!check(player, lineage).met()) {
-			player.sendSystemMessage(Component.literal("The moment has passed.").withStyle(ChatFormatting.RED));
+			player.sendSystemMessage(Text.t("sacrifice.passed").withStyle(ChatFormatting.RED));
 			return;
 		}
 		ServerLevel level = player.level();
@@ -155,15 +157,14 @@ public final class Sacrifice {
 		MinecraftServer server = player.level().getServer();
 		lineage.inheritAll = true;
 		lineage.house.sacrifices++;
-		server.getPlayerList().broadcastSystemMessage(Component.literal(ancestor.name() + " gave their life for House " + lineage.house.name + ".")
+		server.getPlayerList().broadcastSystemMessage(Text.t("broadcast.sacrifice", ancestor.name(), lineage.house.name)
 			.withStyle(ChatFormatting.DARK_RED, ChatFormatting.ITALIC), false);
-		Renown.change(player, lineage, renown(), "for the sacrifice of " + ancestor.name());
+		Renown.change(player, lineage, renown(), Text.t("renown.reason.sacrifice", ancestor.name()));
 		if (lineage.house.sacrifices == forBloodSworn() && !lineage.house.legacies.contains("blood_sworn")) {
 			lineage.house.legacies.add("blood_sworn");
-			Lineages.record(server, lineage, Component.literal("Three have now given their lives for House " + lineage.house.name
-				+ ". The house is Blood-Sworn, and every child of it will be too."));
-			Lineages.tellHouse(server, lineage.house, Component.literal("House " + lineage.house.name + " is Blood-Sworn! Legendary trait: ")
-				.withStyle(ChatFormatting.GOLD).append(Traits.get("blood_sworn").displayName()));
+			Lineages.record(server, lineage, Text.t("chronicle.blood_sworn", lineage.house.sacrifices, lineage.house.name));
+			Lineages.tellHouse(server, lineage.house, Text.t("sacrifice.blood_sworn", lineage.house.name, Traits.get("blood_sworn").displayName())
+				.withStyle(ChatFormatting.GOLD));
 			Lineages.onlineMembers(server, lineage.house).forEach(member -> {
 				Lineage theirs = Lineages.get(member);
 				if (theirs != null && !theirs.awaitingHeir) Traits.apply(member, theirs.allTraits());

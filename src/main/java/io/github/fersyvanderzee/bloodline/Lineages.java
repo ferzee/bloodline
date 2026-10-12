@@ -22,6 +22,7 @@ import net.minecraft.world.damagesource.DamageSource;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /** Founding families, recording deaths and passing the family on to an heir. */
 public final class Lineages {
@@ -38,13 +39,17 @@ public final class Lineages {
 	}
 
 	/** "Bram Ashford (head), Cora Ashford" for every member of the house, online or not. */
-	public static String memberNames(MinecraftServer server, House house) {
+	public static MutableComponent memberNames(MinecraftServer server, House house) {
 		BloodlineState state = BloodlineState.get(server);
-		return String.join(", ", house.members.stream().map(id -> {
+		MutableComponent out = Component.empty();
+		for (int i = 0; i < house.members.size(); i++) {
+			UUID id = house.members.get(i);
 			Lineage member = state.get(id);
+			if (i > 0) out.append(", ");
 			String name = member == null ? "?" : member.fullName();
-			return house.head.equals(id) ? name + " (head)" : name;
-		}).toList());
+			out.append(house.head.equals(id) ? Text.t("house.member_head", name) : Component.literal(name));
+		}
+		return out;
 	}
 
 	/** Sends a message to every online member of the house. */
@@ -80,7 +85,7 @@ public final class Lineages {
 				today(server), Epithets.snapshot(player));
 			lineage = new Lineage(House.found(Names.house(player.getRandom()), player.getUUID()), founder);
 			state.put(player.getUUID(), lineage);
-			record(server, lineage, Component.literal(founder.name() + " founded House " + lineage.house.name + "."));
+			record(server, lineage, Text.t("chronicle.founded", founder.name(), lineage.house.name));
 			Quests.addFounding(player, lineage);
 			Chronicle.give(player);
 			announceBirth(player, lineage, null);
@@ -103,9 +108,9 @@ public final class Lineages {
 		MinecraftServer server = player.level().getServer();
 		Member dead = lineage.current;
 		boolean sacrificed = Sacrifice.consume(player);
-		String epithet = sacrificed ? "the Devoted" : Epithets.choose(dead.statsAtBirth(), Epithets.snapshot(player), player.getRandom());
+		String epithet = sacrificed ? Epithets.DEVOTED : Epithets.choose(dead.statsAtBirth(), Epithets.snapshot(player), player.getRandom());
 		Component deathMessage = sacrificed
-			? Component.literal(dead.name() + " gave their life for House " + lineage.house.name)
+			? Text.t("death.sacrifice", dead.name(), lineage.house.name)
 			: player.getCombatTracker().getDeathMessage();
 		GlobalPos place = GlobalPos.of(player.level().dimension(), player.blockPosition());
 		Ancestor ancestor = new Ancestor(dead.name(), epithet, dead.generation(), dead.traits(), dead.bornDay(), today(server), deathMessage,
@@ -113,8 +118,8 @@ public final class Lineages {
 		lineage.ancestors.add(ancestor);
 		lineage.awaitingHeir = true;
 		record(server, lineage, sacrificed
-			? Component.literal(ancestor.fullName() + " gave their life for the house under the full moon.")
-			: Component.literal(ancestor.fullName() + " died. ").append(deathMessage.copy()));
+			? Text.t("chronicle.sacrificed", ancestor.fullName())
+			: Text.t("chronicle.died", ancestor.fullName(), deathMessage.copy()));
 		Quests.onDeath(player, lineage, ancestor, source, sacrificed);
 		if (sacrificed) Sacrifice.honour(player, lineage, ancestor);
 		Heirs.roll(player, lineage);
@@ -152,9 +157,9 @@ public final class Lineages {
 		// A new generation has come: the house may begin its next act of the oath.
 		lineage.house.actPending = false;
 		markDirty(server);
-		record(server, lineage, Component.literal(heir.name() + ", child of " + parent.name() + ", took their place in House " + lineage.house.name + "."));
-		server.getPlayerList().broadcastSystemMessage(Component.literal(parent.fullName() + " of House " + lineage.house.name
-			+ " has died. " + heir.name() + " takes up the family name.").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC), false);
+		record(server, lineage, Text.t("chronicle.heir", heir.name(), parent.name(), lineage.house.name));
+		server.getPlayerList().broadcastSystemMessage(Text.t("broadcast.succession", parent.fullName(), lineage.house.name, heir.name())
+			.withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC), false);
 		Questlines.resume(player, lineage);
 		Inns.addIntroQuest(player, lineage);
 		announceBirth(player, lineage, parent);
@@ -163,24 +168,23 @@ public final class Lineages {
 		refreshName(player);
 		if (lineage.house.oath.isEmpty()) Questlines.nudgeOath(player, lineage);
 		if (inheritAll) {
-			player.sendSystemMessage(Component.literal("Because " + parent.name() + " gave their life, every one of their boons lives on in "
-				+ heir.name() + ".").withStyle(ChatFormatting.GOLD));
+			player.sendSystemMessage(Text.t("heir.after_sacrifice", parent.name(), heir.name()).withStyle(ChatFormatting.GOLD));
 		}
 	}
 
 	private static void announceBirth(ServerPlayer player, Lineage lineage, Ancestor parent) {
 		Member member = lineage.current;
 		Component subtitle = parent == null
-			? Component.literal("Founder of House " + lineage.house.name)
-			: Component.literal("Heir of " + parent.fullName() + " · Generation " + Names.numeral(member.generation()));
+			? Text.t("birth.founder_subtitle", lineage.house.name)
+			: Text.t("birth.heir_subtitle", parent.fullName(), Names.numeral(member.generation()));
 		player.connection.send(new ClientboundSetTitlesAnimationPacket(10, 70, 20));
 		player.connection.send(new ClientboundSetTitleTextPacket(Component.literal(lineage.fullName()).withStyle(ChatFormatting.GOLD)));
 		player.connection.send(new ClientboundSetSubtitleTextPacket(subtitle));
 		player.level().playSound(null, player.blockPosition(), SoundEvents.BELL_RESONATE, SoundSource.PLAYERS, 0.6f, 1.2f);
 
-		player.sendSystemMessage(Component.literal("You are ").append(Component.literal(lineage.fullName()).withStyle(ChatFormatting.GOLD))
-			.append(parent == null ? ", founder of your house." : ", heir of " + parent.fullName() + "."));
-		player.sendSystemMessage(Component.literal("Born with: ").append(traitList(member.traits(), parent)));
+		Component name = Component.literal(lineage.fullName()).withStyle(ChatFormatting.GOLD);
+		player.sendSystemMessage(parent == null ? Text.t("birth.you_founder", name) : Text.t("birth.you_heir", name, parent.fullName()));
+		player.sendSystemMessage(Text.t("birth.born_with", traitList(member.traits(), parent)));
 		Quests.remind(player, lineage);
 	}
 
@@ -193,19 +197,23 @@ public final class Lineages {
 			if (i > 0) out.append(", ");
 			out.append(trait.displayName());
 			if (parent != null && !parent.traits().contains(trait.id())) {
-				out.append(Component.literal(" (new)").withStyle(ChatFormatting.DARK_GRAY));
+				out.append(" ").append(Text.t("trait.new").withStyle(ChatFormatting.DARK_GRAY));
 			}
 		}
-		return traitIds.isEmpty() ? Component.literal("nothing remarkable").withStyle(ChatFormatting.GRAY) : out;
+		return traitIds.isEmpty() ? Text.t("trait.none").withStyle(ChatFormatting.GRAY) : out;
 	}
 
 	/** Records a family-wide first, such as the first to reach the Nether. Returns false if it already happened. */
-	public static boolean milestone(ServerPlayer player, String key, String description) {
+	/**
+	 * Records a house-wide first once. {@code text} is a language key whose text takes the family
+	 * member's name, e.g. "milestone.nether": "%s was the first of the family to set foot in the Nether."
+	 */
+	public static boolean milestone(ServerPlayer player, String key, String text) {
 		Lineage lineage = get(player);
 		if (lineage == null || !lineage.house.milestones.add(key)) return false;
-		record(player.level().getServer(), lineage, Component.literal(lineage.current.name() + " " + description));
-		player.sendSystemMessage(Component.literal("The chronicle of House " + lineage.house.name + " records: ")
-			.withStyle(ChatFormatting.GRAY).append(Component.literal(lineage.current.name() + " " + description).withStyle(ChatFormatting.WHITE)));
+		record(player.level().getServer(), lineage, Text.t(text, lineage.current.name()));
+		player.sendSystemMessage(Text.t("milestone.recorded", lineage.house.name).withStyle(ChatFormatting.GRAY)
+			.append(" ").append(Text.t(text, lineage.current.name()).withStyle(ChatFormatting.WHITE)));
 		return true;
 	}
 
@@ -214,7 +222,7 @@ public final class Lineages {
 		Lineage lineage = get(player);
 		if (lineage == null) return fallback;
 		// While choosing an heir the old name no longer fits, and the new one isn't known yet.
-		return Component.literal(lineage.awaitingHeir ? "Heir of House " + lineage.house.name : lineage.fullName());
+		return lineage.awaitingHeir ? Text.t("name.mourning", lineage.house.name) : Component.literal(lineage.fullName());
 	}
 
 	public static void refreshName(ServerPlayer player) {

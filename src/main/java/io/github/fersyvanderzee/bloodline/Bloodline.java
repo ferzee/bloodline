@@ -24,7 +24,6 @@ import net.minecraft.world.level.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
 
 public class Bloodline implements ModInitializer {
 	public static final String MOD_ID = "bloodline";
@@ -33,12 +32,7 @@ public class Bloodline implements ModInitializer {
 	private static final int HEIRLOOM_TICK_INTERVAL = 5;
 	private static final int QUEST_TICK_INTERVAL = 20;
 	private static final int INN_TICK_INTERVAL = 100;
-	private static final Map<String, String> BOSSES = Map.of(
-		"ender_dragon", "slew the Ender Dragon.",
-		"wither", "destroyed the Wither.",
-		"elder_guardian", "slew an Elder Guardian.",
-		"warden", "slew a Warden."
-	);
+	private static final java.util.Set<String> BOSSES = java.util.Set.of("ender_dragon", "wither", "elder_guardian", "warden");
 
 	@Override
 	public void onInitialize() {
@@ -77,9 +71,9 @@ public class Bloodline implements ModInitializer {
 
 		ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((player, origin, destination) -> {
 			if (destination.dimension() == Level.NETHER) {
-				Lineages.milestone(player, "entered_nether", "was the first of the family to set foot in the Nether.");
+				Lineages.milestone(player, "entered_nether", "milestone.nether");
 			} else if (destination.dimension() == Level.END) {
-				Lineages.milestone(player, "entered_end", "was the first of the family to reach the End.");
+				Lineages.milestone(player, "entered_end", "milestone.end");
 			}
 		});
 
@@ -88,8 +82,9 @@ public class Bloodline implements ModInitializer {
 			if (killed instanceof ServerPlayer victim) Quests.onPlayerKilled(player, victim);
 			Quests.onKill(player, killed);
 			Identifier type = BuiltInRegistries.ENTITY_TYPE.getKey(killed.getType());
-			String deed = type.getNamespace().equals("minecraft") ? BOSSES.get(type.getPath()) : null;
-			if (deed != null) Lineages.milestone(player, "killed_" + type.getPath() + "_" + Lineages.get(player).current.generation(), deed);
+			if (type.getNamespace().equals("minecraft") && BOSSES.contains(type.getPath())) {
+				Lineages.milestone(player, "killed_" + type.getPath() + "_" + Lineages.get(player).current.generation(), "milestone.killed." + type.getPath());
+			}
 		});
 
 		ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> Champions.onLoad(entity));

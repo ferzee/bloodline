@@ -4,6 +4,7 @@ import io.github.fersyvanderzee.bloodline.data.Lineage;
 import io.github.fersyvanderzee.bloodline.data.Quest;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -51,15 +52,17 @@ public final class Renown {
 	}
 
 	/** Changes the house's renown and tells the player why. Renown never drops below zero. */
-	public static void change(ServerPlayer player, Lineage lineage, int amount, String reason) {
+	public static void change(ServerPlayer player, Lineage lineage, int amount, Component reason) {
 		if (amount == 0) return;
 		lineage.house.renown = Math.max(0, lineage.house.renown + amount);
 		Lineages.markDirty(player.level().getServer());
 		// Renown belongs to the whole house, so every member online hears about it.
-		String who = lineage.house.members.size() > 1 ? " (" + lineage.current.name() + ")" : "";
-		Lineages.tellHouse(player.level().getServer(), lineage.house, Component.literal((amount > 0 ? "+" : "") + amount + " Renown")
+		MutableComponent detail = Component.literal(" ").append(reason);
+		if (lineage.house.members.size() > 1) detail.append(" (" + lineage.current.name() + ")");
+		detail.append(" ").append(Text.t("renown.total", lineage.house.name, lineage.house.renown));
+		Lineages.tellHouse(player.level().getServer(), lineage.house, Text.t("renown.change", (amount > 0 ? "+" : "") + amount)
 			.withStyle(amount > 0 ? ChatFormatting.YELLOW : ChatFormatting.RED)
-			.append(Component.literal(" " + reason + who + " (House " + lineage.house.name + ": " + lineage.house.renown + ")").withStyle(ChatFormatting.GRAY)));
+			.append(detail.withStyle(ChatFormatting.GRAY)));
 		if (amount > 0) Questlines.resume(player, lineage);
 	}
 }

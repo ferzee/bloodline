@@ -53,7 +53,8 @@ public final class Questlines {
 
 	@FunctionalInterface
 	interface StepFactory {
-		Quest create(ServerPlayer player, Lineage lineage, String title);
+		/** {@code title} is the act's title; {@code task} is the step's text from the language file. */
+		Quest create(ServerPlayer player, Lineage lineage, Component title, Component task);
 	}
 
 	@FunctionalInterface
@@ -69,87 +70,107 @@ public final class Questlines {
 	}
 
 	/** The renown each act needs to begin is set in the config (see Renown.forAct). */
-	record Act(String name, String intro, List<Step> steps) {
+	/** Text is in the language file as bloodline.oath.<oath>.act<n>.name, .intro and .step<n>. */
+	record Act(List<Step> steps) {
 	}
 
 	/** Optional groundwork before a champion fight; {@code effect} is what it does to the champion. */
-	record Preparation(String effect, String title, String task, Goal goal, List<String> targets, int required) {
+	/** Title and task are in the language file as bloodline.prep.<key> and .task. */
+	record Preparation(String effect, String key, Goal goal, List<String> targets, int required) {
 	}
 
 	public static final String STANDS_ALONE = "alone";
 	public static final String WEAKENED = "weakened";
 	public static final String EXPOSED = "exposed";
 
-	private static final Preparation SHARPEN = new Preparation(WEAKENED, "Sharpen your edge", "Enchant an item", Goal.CUSTOM_STAT, List.of("enchant_item"), 1);
-	private static final Preparation SPYGLASS = new Preparation(EXPOSED, "Watch from afar", "Craft a spyglass", Goal.CRAFT, List.of("spyglass"), 1);
+	private static final Preparation SHARPEN = new Preparation(WEAKENED, "sharpen", Goal.CUSTOM_STAT, List.of("enchant_item"), 1);
+	private static final Preparation SPYGLASS = new Preparation(EXPOSED, "spyglass", Goal.CRAFT, List.of("spyglass"), 1);
 
 	/** Preparations offered before each champion, by champion kind. */
 	private static final Map<String, List<Preparation>> PREPARATIONS = Map.of(
 		Champions.FORTRESS_CAPTAIN.id(), List.of(
-			new Preparation(STANDS_ALONE, "Thin their ranks", "Slay Wither Skeletons", Goal.KILL, List.of("minecraft:wither_skeleton"), 8),
+			new Preparation(STANDS_ALONE, "thin_ranks", Goal.KILL, List.of("minecraft:wither_skeleton"), 8),
 			SHARPEN, SPYGLASS),
 		Champions.LOST_DELVER.id(), List.of(
-			new Preparation(STANDS_ALONE, "Light the dark", "Craft torches", Goal.CRAFT, List.of("torch"), 32),
+			new Preparation(STANDS_ALONE, "light_dark", Goal.CRAFT, List.of("torch"), 32),
 			SHARPEN,
-			new Preparation(EXPOSED, "Muffle your steps", "Craft wool", Goal.CRAFT, List.of("white_wool"), 4)),
+			new Preparation(EXPOSED, "muffle", Goal.CRAFT, List.of("white_wool"), 4)),
 		Champions.WARLORD.id(), List.of(
-			new Preparation(STANDS_ALONE, "Warn the villages", "Trade with villagers", Goal.CUSTOM_STAT, List.of("traded_with_villager"), 10),
+			new Preparation(STANDS_ALONE, "warn_villages", Goal.CUSTOM_STAT, List.of("traded_with_villager"), 10),
 			SHARPEN, SPYGLASS)
 	);
 
-	public static String describeEffect(String effect) {
+	public static MutableComponent describeEffect(String effect) {
 		return switch (effect) {
-			case STANDS_ALONE -> "the champion faces you without bodyguards";
-			case WEAKENED -> "the champion has 30% less health";
-			case EXPOSED -> "the champion glows and moves slowly";
-			default -> effect;
+			case STANDS_ALONE, WEAKENED, EXPOSED -> Text.t("prep.effect." + effect);
+			default -> Component.literal(effect);
 		};
 	}
 
-	record Oath(String id, String name, String vow, String legacy, List<Act> acts) {
+	/** Text is in the language file as bloodline.oath.<id>.name and .vow. */
+	record Oath(String id, String legacy, List<Act> acts) {
+		MutableComponent name() {
+			return Text.t("oath." + id + ".name");
+		}
+
+		MutableComponent vow() {
+			return Text.t("oath." + id + ".vow");
+		}
+
+		MutableComponent actName(int act) {
+			return Text.t("oath." + id + ".act" + (act + 1) + ".name");
+		}
+
+		MutableComponent actIntro(int act) {
+			return Text.t("oath." + id + ".act" + (act + 1) + ".intro");
+		}
+
+		MutableComponent stepTask(int act, int step) {
+			return Text.t("oath." + id + ".act" + (act + 1) + ".step" + (step + 1));
+		}
 	}
 
 	private static final List<Oath> OATHS = List.of(
-		new Oath("sword", "Oath of the Sword", "We will carry one blade through every generation, until it fells the Wither.", "oathbound", List.of(
-			new Act("The First Blade", "Every oath begins with a blade. Prove your arm, then forge the sword your family will carry.", List.of(
-				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Slay monsters", Goal.CUSTOM_STAT, List.of("mob_kills"), 30, Reward.levels(3))),
-				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Craft an iron sword to swear upon", Goal.CRAFT, List.of("iron_sword"), 1, Reward.none()),
+		new Oath("sword", "oathbound", List.of(
+			new Act(List.of(
+				new Step((p, l, t, k) -> Quest.of(Type.QUESTLINE, t, k, Goal.CUSTOM_STAT, List.of("mob_kills"), 30, Reward.levels(3))),
+				new Step((p, l, t, k) -> Quest.of(Type.QUESTLINE, t, k, Goal.CRAFT, List.of("iron_sword"), 1, Reward.none()),
 					Questlines::swearBlade))),
-			new Act("Trial by Fire", "The Oathblade must be tempered where the world burns.", List.of(
-				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Carry the Oathblade into the Nether", Goal.DIMENSION, List.of("minecraft:the_nether"), 1, Reward.levels(2))),
-				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Slay Blazes with the Oathblade", Goal.KILL_WITH_OATHBLADE, List.of("minecraft:blaze"), 3, Reward.levels(4))))),
-			new Act("The Fortress Captain", "A captain of the wither-bones holds a fortress in the Nether. It must fall to the Oathblade.", List.of(
-				new Step((p, l, t) -> championQuest(p, t, "Defeat the Captain of the Fortress", Champions.FORTRESS_CAPTAIN, "oath_sword",
+			new Act(List.of(
+				new Step((p, l, t, k) -> Quest.of(Type.QUESTLINE, t, k, Goal.DIMENSION, List.of("minecraft:the_nether"), 1, Reward.levels(2))),
+				new Step((p, l, t, k) -> Quest.of(Type.QUESTLINE, t, k, Goal.KILL_WITH_OATHBLADE, List.of("minecraft:blaze"), 3, Reward.levels(4))))),
+			new Act(List.of(
+				new Step((p, l, t, k) -> championQuest(p, t, k, Champions.FORTRESS_CAPTAIN, "oath_sword",
 					Level.NETHER, BuiltinStructures.FORTRESS, false, Reward.item(5, "netherite_scrap", 2))))),
-			new Act("Oathfulfilled", "Only the Wither remains. Let the Oathblade strike the final blow.", List.of(
-				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Slay the Wither with the Oathblade", Goal.KILL_WITH_OATHBLADE, List.of("minecraft:wither"), 1, Reward.levels(10)))))
+			new Act(List.of(
+				new Step((p, l, t, k) -> Quest.of(Type.QUESTLINE, t, k, Goal.KILL_WITH_OATHBLADE, List.of("minecraft:wither"), 1, Reward.levels(10)))))
 		)),
-		new Oath("deep", "Oath of the Deep", "We will dig until we find what the old ones buried, and silence the Warden.", "deepborn", List.of(
-			new Act("Strike the Earth", "The family's fortune lies below. Dig deep.", List.of(
-				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Descend below Y -32", Goal.DEPTH, List.of("-32"), 1, Reward.levels(2))),
-				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Mine diamond ore", Goal.MINE, List.of("diamond_ore", "deepslate_diamond_ore"), 3, Reward.levels(4))))),
-			new Act("The Silent City", "Somewhere in the deep dark lies a city of the old ones. Walk its halls without waking the Warden.", List.of(
-				new Step((p, l, t) -> structureQuest(p, t, "Find the ancient city", Level.OVERWORLD, BuiltinStructures.ANCIENT_CITY, true, Reward.levels(3))),
-				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Break sculk catalysts", Goal.MINE, List.of("sculk_catalyst"), 2, Reward.levels(4))))),
-			new Act("The Lost Delver", "A delver of another house never came home from the deep. What is left of them still guards the city.", List.of(
-				new Step((p, l, t) -> championQuest(p, t, "Defeat the Lost Delver in the ancient city", Champions.LOST_DELVER, "oath_deep",
+		new Oath("deep", "deepborn", List.of(
+			new Act(List.of(
+				new Step((p, l, t, k) -> Quest.of(Type.QUESTLINE, t, k, Goal.DEPTH, List.of("-32"), 1, Reward.levels(2))),
+				new Step((p, l, t, k) -> Quest.of(Type.QUESTLINE, t, k, Goal.MINE, List.of("diamond_ore", "deepslate_diamond_ore"), 3, Reward.levels(4))))),
+			new Act(List.of(
+				new Step((p, l, t, k) -> structureQuest(p, t, k, Level.OVERWORLD, BuiltinStructures.ANCIENT_CITY, true, Reward.levels(3))),
+				new Step((p, l, t, k) -> Quest.of(Type.QUESTLINE, t, k, Goal.MINE, List.of("sculk_catalyst"), 2, Reward.levels(4))))),
+			new Act(List.of(
+				new Step((p, l, t, k) -> championQuest(p, t, k, Champions.LOST_DELVER, "oath_deep",
 					Level.OVERWORLD, BuiltinStructures.ANCIENT_CITY, true, Reward.item(5, "echo_shard", 3))))),
-			new Act("Echoes", "Gather the echoes of the deep, then face the thing that guards them.", List.of(
-				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Craft a recovery compass", Goal.CRAFT, List.of("recovery_compass"), 1, Reward.levels(3))),
-				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Slay a Warden", Goal.KILL, List.of("minecraft:warden"), 1, Reward.levels(10)))))
+			new Act(List.of(
+				new Step((p, l, t, k) -> Quest.of(Type.QUESTLINE, t, k, Goal.CRAFT, List.of("recovery_compass"), 1, Reward.levels(3))),
+				new Step((p, l, t, k) -> Quest.of(Type.QUESTLINE, t, k, Goal.KILL, List.of("minecraft:warden"), 1, Reward.levels(10)))))
 		)),
-		new Oath("hearth", "Oath of the Hearth", "We will stand between the villages and those who would burn them.", "beloved", List.of(
-			new Act("Friend of the Village", "A house is nothing without neighbours.", List.of(
-				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Trade with villagers", Goal.CUSTOM_STAT, List.of("traded_with_villager"), 15, Reward.levels(3))),
-				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Breed animals", Goal.CUSTOM_STAT, List.of("animals_bred"), 10, Reward.item(2, "emerald", 8))))),
-			new Act("Defender", "Pillagers threaten the villages. Stand between them and the innocent.", List.of(
-				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Slay pillagers or vindicators", Goal.KILL, List.of("minecraft:pillager", "minecraft:vindicator"), 8, Reward.levels(3))),
-				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Win a raid", Goal.CUSTOM_STAT, List.of("raid_win"), 1, Reward.levels(5))))),
-			new Act("The Warlord", "The raids are led from an outpost. Its warlord must answer to your house.", List.of(
-				new Step((p, l, t) -> championQuest(p, t, "Defeat the Warlord of the Outpost", Champions.WARLORD, "oath_hearth",
+		new Oath("hearth", "beloved", List.of(
+			new Act(List.of(
+				new Step((p, l, t, k) -> Quest.of(Type.QUESTLINE, t, k, Goal.CUSTOM_STAT, List.of("traded_with_villager"), 15, Reward.levels(3))),
+				new Step((p, l, t, k) -> Quest.of(Type.QUESTLINE, t, k, Goal.CUSTOM_STAT, List.of("animals_bred"), 10, Reward.item(2, "emerald", 8))))),
+			new Act(List.of(
+				new Step((p, l, t, k) -> Quest.of(Type.QUESTLINE, t, k, Goal.KILL, List.of("minecraft:pillager", "minecraft:vindicator"), 8, Reward.levels(3))),
+				new Step((p, l, t, k) -> Quest.of(Type.QUESTLINE, t, k, Goal.CUSTOM_STAT, List.of("raid_win"), 1, Reward.levels(5))))),
+			new Act(List.of(
+				new Step((p, l, t, k) -> championQuest(p, t, k, Champions.WARLORD, "oath_hearth",
 					Level.OVERWORLD, BuiltinStructures.PILLAGER_OUTPOST, false, Reward.item(5, "totem_of_undying", 1))))),
-			new Act("Hero of the Realm", "Become the shield the realm remembers.", List.of(
-				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Win two more raids", Goal.CUSTOM_STAT, List.of("raid_win"), 2, Reward.levels(10)))))
+			new Act(List.of(
+				new Step((p, l, t, k) -> Quest.of(Type.QUESTLINE, t, k, Goal.CUSTOM_STAT, List.of("raid_win"), 2, Reward.levels(10)))))
 		))
 	);
 
@@ -167,13 +188,13 @@ public final class Questlines {
 
 	/** Asks a family that hasn't sworn an oath yet to choose one. */
 	public static void offerOath(ServerPlayer player, Lineage lineage) {
-		MutableComponent message = Component.literal("House " + lineage.house.name + " has sworn no oath. Choose one: ").withStyle(ChatFormatting.GRAY);
+		MutableComponent message = Text.t("oath.offer", lineage.house.name).withStyle(ChatFormatting.GRAY).append(" ");
 		for (Oath oath : OATHS) {
-			message.append(Component.literal("[" + oath.name() + "]").withStyle(s -> s.withColor(ChatFormatting.GOLD)
+			message.append(Component.literal("[").append(oath.name()).append("]").withStyle(s -> s.withColor(ChatFormatting.GOLD)
 				.withClickEvent(new ClickEvent.SuggestCommand("/bloodline oath " + oath.id()))
-				.withHoverEvent(new HoverEvent.ShowText(Component.literal("\"" + oath.vow() + "\"\n\n").withStyle(ChatFormatting.ITALIC)
-					.append(Component.literal("Four acts, at most one per generation.\nReward: the legendary trait ").withStyle(s2 -> s2.withItalic(false)))
-					.append(Traits.get(oath.legacy()).displayName())))));
+				.withHoverEvent(new HoverEvent.ShowText(Text.t("oath.quoted", oath.vow()).withStyle(ChatFormatting.ITALIC)
+					.append("\n\n")
+					.append(Text.t("oath.offer_hover", Traits.get(oath.legacy()).displayName()).withStyle(s2 -> s2.withItalic(false)))))));
 			message.append(" ");
 		}
 		player.sendSystemMessage(message);
@@ -183,11 +204,11 @@ public final class Questlines {
 	public static void nudgeOath(ServerPlayer player, Lineage lineage) {
 		Chronicle.ensure(player);
 		if (!lineage.isHead(player.getUUID())) {
-			player.sendSystemMessage(Component.literal("House " + lineage.house.name + " has sworn no oath yet. The head of the house can choose one in the Chronicle.")
+			player.sendSystemMessage(Text.t("oath.nudge_member", lineage.house.name)
 				.withStyle(ChatFormatting.GRAY));
 			return;
 		}
-		player.sendSystemMessage(Component.literal("House " + lineage.house.name + " has sworn no oath. Open your Chronicle to choose one.")
+		player.sendSystemMessage(Text.t("oath.nudge_head", lineage.house.name)
 			.withStyle(ChatFormatting.GOLD));
 	}
 
@@ -196,9 +217,9 @@ public final class Questlines {
 		if (oath.isEmpty() || lineage.house.oath.isPresent()) return false;
 		lineage.house.oath = Optional.of(id);
 		lineage.house.oathActs = 0;
-		Lineages.record(player.level().getServer(), lineage, Component.literal(lineage.current.name() + " swore the " + oath.get().name()
-			+ " on behalf of House " + lineage.house.name + ": \"" + oath.get().vow() + "\""));
-		titleHouse(player, lineage, oath.get().name(), "\"" + oath.get().vow() + "\"");
+		Lineages.record(player.level().getServer(), lineage, Text.t("chronicle.oath_sworn", lineage.current.name(), oath.get().name(),
+			lineage.house.name, oath.get().vow()));
+		titleHouse(player, lineage, oath.get().name(), Text.t("oath.quoted", oath.get().vow()));
 		startAct(player, lineage, oath.get(), 0);
 		return true;
 	}
@@ -209,23 +230,22 @@ public final class Questlines {
 		Oath oath = oath(lineage.house.oath.get()).orElse(null);
 		if (oath == null || lineage.house.oathActs >= oath.acts().size()) return;
 		if (lineage.house.actPending) return;
-		Act next = oath.acts().get(lineage.house.oathActs);
 		if (lineage.house.renown < Renown.forAct(lineage.house.oathActs)) return;
 		startAct(player, lineage, oath, lineage.house.oathActs);
 	}
 
 	private static void startAct(ServerPlayer player, Lineage lineage, Oath oath, int act) {
-		tell(player, lineage, Component.literal(oath.name() + ", Act " + Names.numeral(act + 1) + ": " + oath.acts().get(act).name())
+		tell(player, lineage, Text.t("oath.act_header", oath.name(), Names.numeral(act + 1), oath.actName(act))
 			.withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
-		tell(player, lineage, Component.literal(oath.acts().get(act).intro()).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+		tell(player, lineage, oath.actIntro(act).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
 		startStep(player, lineage, oath, act, 0);
 	}
 
 	private static void startStep(ServerPlayer player, Lineage lineage, Oath oath, int act, int step) {
-		String title = oath.name() + " " + Names.numeral(act + 1) + ": " + oath.acts().get(act).name();
-		Quest quest = oath.acts().get(act).steps().get(step).factory().create(player, lineage, title).inLine(OATH, act, step);
+		Component title = Text.t("oath.step_title", oath.name(), Names.numeral(act + 1), oath.actName(act));
+		Quest quest = oath.acts().get(act).steps().get(step).factory().create(player, lineage, title, oath.stepTask(act, step)).inLine(OATH, act, step);
 		Quests.add(player, lineage, quest);
-		tell(player, lineage, Component.literal("New objective: ").withStyle(ChatFormatting.GRAY).append(Quests.line(quest, true)));
+		tell(player, lineage, Text.t("quest.new_objective").withStyle(ChatFormatting.GRAY).append(" ").append(Quests.line(quest, true)));
 		if (quest.goal == Goal.KILL_CHAMPION) addPreparations(player, lineage, quest.targets.get(1));
 		Lineages.markDirty(player.level().getServer());
 	}
@@ -235,7 +255,7 @@ public final class Questlines {
 		if (line.startsWith(PREP_PREFIX)) {
 			String effect = line.substring(PREP_PREFIX.length());
 			if (!lineage.house.preparations.contains(effect)) lineage.house.preparations.add(effect);
-			tell(player, lineage, Component.literal("Preparation complete: " + describeEffect(effect) + ".").withStyle(ChatFormatting.GRAY));
+			tell(player, lineage, Text.t("prep.complete", describeEffect(effect)).withStyle(ChatFormatting.GRAY));
 			return;
 		}
 		if (line.equals(RECLAIM)) {
@@ -262,25 +282,24 @@ public final class Questlines {
 		lineage.house.actPending = true;
 		// Finishing an act is what earns a family member the right to give their life for the house.
 		lineage.fulfilledAct = true;
-		Renown.change(player, lineage, Renown.actCompleted(), "for fulfilling Act " + Names.numeral(quest.act + 1));
-		Lineages.record(server, lineage, Component.literal(lineage.current.name() + " fulfilled Act " + Names.numeral(quest.act + 1)
-			+ " of the " + oath.name() + ": " + act.name() + "."));
+		Renown.change(player, lineage, Renown.actCompleted(), Text.t("renown.reason.act", Names.numeral(quest.act + 1)));
+		Lineages.record(server, lineage, Text.t("chronicle.act_fulfilled", lineage.current.name(), Names.numeral(quest.act + 1), oath.name(),
+			oath.actName(quest.act)));
 		if (lineage.house.oathActs < oath.acts().size()) {
-			titleHouse(player, lineage, "Act " + Names.numeral(quest.act + 1) + " fulfilled", act.name());
-			tell(player, lineage, Component.literal("The next act must wait for a new generation: it begins when any member's heir takes over.").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+			titleHouse(player, lineage, Text.t("oath.act_fulfilled_title", Names.numeral(quest.act + 1)), oath.actName(quest.act));
+			tell(player, lineage, Text.t("oath.next_act_waits").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
 			return;
 		}
 
 		Trait legacy = Traits.get(oath.legacy());
 		lineage.house.legacies.add(legacy.id());
 		Traits.apply(player, lineage.allTraits());
-		Lineages.record(server, lineage, Component.literal("After " + (lineage.current.generation()) + " generations, House " + lineage.house.name
-			+ " fulfilled the " + oath.name() + ". Every child of the house will be born " + legacy.name() + "."));
-		titleHouse(player, lineage, "Oath fulfilled", "House " + lineage.house.name + " is " + legacy.name());
-		server.getPlayerList().broadcastSystemMessage(Component.literal("House " + lineage.house.name + " has fulfilled the " + oath.name() + "!")
+		Lineages.record(server, lineage, Text.t("chronicle.oath_fulfilled", lineage.current.generation(), lineage.house.name, oath.name(), legacy.name()));
+		titleHouse(player, lineage, Text.t("oath.fulfilled_title"), Text.t("oath.fulfilled_subtitle", lineage.house.name, legacy.name()));
+		server.getPlayerList().broadcastSystemMessage(Text.t("broadcast.oath_fulfilled", lineage.house.name, oath.name())
 			.withStyle(ChatFormatting.GOLD), false);
-		tell(player, lineage, Component.literal("Legendary trait: ").append(legacy.displayName())
-			.append(Component.literal(" (every heir is born with it)").withStyle(ChatFormatting.DARK_GRAY)));
+		tell(player, lineage, Text.t("oath.legacy_gained", legacy.displayName())
+			.append(" ").append(Text.t("oath.legacy_gained.note").withStyle(ChatFormatting.DARK_GRAY)));
 		player.level().playSound(null, player.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 1f, 0.8f);
 	}
 
@@ -289,14 +308,15 @@ public final class Questlines {
 	private static void addPreparations(ServerPlayer player, Lineage lineage, String championKind) {
 		List<Preparation> preparations = PREPARATIONS.getOrDefault(championKind, List.of());
 		if (preparations.isEmpty()) return;
-		tell(player, lineage, Component.literal("Before the fight, you can prepare. Each preparation weakens the champion:")
+		tell(player, lineage, Text.t("prep.intro")
 			.withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
 		for (Preparation prep : preparations) {
-			Quest quest = Quest.of(Type.PREPARATION, prep.title(), prep.task(), prep.goal(), prep.targets(), prep.required(), Reward.none());
+			Quest quest = Quest.of(Type.PREPARATION, Text.t("prep." + prep.key()), Text.t("prep." + prep.key() + ".task"),
+				prep.goal(), prep.targets(), prep.required(), Reward.none());
 			quest.line = Optional.of(PREP_PREFIX + prep.effect());
 			Quests.add(player, lineage, quest);
 			tell(player, lineage, Component.literal("  ⚒ ").withStyle(ChatFormatting.DARK_GRAY).append(Quests.line(quest, true))
-				.append(Component.literal(" - " + describeEffect(prep.effect())).withStyle(ChatFormatting.DARK_GRAY)));
+				.append(Component.literal(" - ").append(describeEffect(prep.effect())).withStyle(ChatFormatting.DARK_GRAY)));
 		}
 	}
 
@@ -306,10 +326,8 @@ public final class Questlines {
 
 	private static void swearBlade(ServerPlayer player, Lineage lineage) {
 		Heirlooms.swearBlade(player, lineage);
-		player.sendSystemMessage(Component.literal("You swear the oath upon the blade. It is now the ").withStyle(ChatFormatting.GRAY)
-			.append(Component.literal("Oathblade").withStyle(ChatFormatting.GOLD))
-			.append(Component.literal(", and will stay with the family through every death.").withStyle(ChatFormatting.GRAY)));
-		Lineages.record(player.level().getServer(), lineage, Component.literal(lineage.current.name() + " forged the Oathblade."));
+		player.sendSystemMessage(Text.t("oathblade.sworn", Text.t("oathblade.name").withStyle(ChatFormatting.GOLD)).withStyle(ChatFormatting.GRAY));
+		Lineages.record(player.level().getServer(), lineage, Text.t("chronicle.oathblade", lineage.current.name()));
 	}
 
 	public static boolean isOathStep(Quest quest) {
@@ -324,21 +342,23 @@ public final class Questlines {
 		List<Component> pages = new java.util.ArrayList<>();
 		Oath sworn = lineage.house.oath.flatMap(Questlines::oath).orElse(null);
 		if (sworn == null) {
-			MutableComponent intro = Chronicle.heading("The Founder's Oath")
-				.append(Chronicle.body("Every great house is bound by an oath. Choose one, and your bloodline will carry it until it is fulfilled.\n\n"));
+			MutableComponent intro = Chronicle.heading(Text.t("book.oath.title"))
+				.append(Chronicle.body(Text.t("book.oath.intro"))).append("\n\n");
 			for (int i = 0; i < OATHS.size(); i++) intro.append(Chronicle.link(OATHS.get(i).name(), firstPage + 1 + i));
 			pages.add(intro);
 			for (Oath oath : OATHS) {
-				MutableComponent page = Component.literal(oath.name() + "\n").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD)
-					.append(Component.literal("\"" + oath.vow() + "\"\n").withStyle(s -> s.withColor(ChatFormatting.DARK_GRAY).withItalic(true).withBold(false)));
+				MutableComponent page = Component.empty().append(oath.name()).append("\n").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD)
+					.append(Text.t("oath.quoted", oath.vow()).withStyle(s -> s.withColor(ChatFormatting.DARK_GRAY).withItalic(true).withBold(false)))
+					.append("\n");
 				for (int i = 0; i < oath.acts().size(); i++) {
-					page.append(Chronicle.body(Names.numeral(i + 1) + ". " + oath.acts().get(i).name() + "\n"));
+					page.append(Chronicle.body(Component.literal(Names.numeral(i + 1) + ". ").append(oath.actName(i)))).append("\n");
 				}
-				page.append(Chronicle.faint("Reward: ")).append(Traits.get(oath.legacy()).displayName().withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(false)))
+				page.append(Chronicle.faint(Text.t("book.oath.reward"))).append(" ")
+					.append(Traits.get(oath.legacy()).displayName().withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(false)))
 					.append("\n\n")
 					.append(viewerIsHead
-						? Chronicle.button("Swear this oath", "/bloodline oath " + oath.id(), Component.literal("Swear the " + oath.name() + ". This can't be undone."))
-						: Chronicle.faint("Only the head of the house can swear an oath."));
+						? Chronicle.button(Text.t("button.swear"), "/bloodline oath " + oath.id(), Text.t("book.oath.swear_hover", oath.name()))
+						: Chronicle.faint(Text.t("book.oath.head_only")));
 				pages.add(page);
 			}
 			return pages;
@@ -348,28 +368,28 @@ public final class Questlines {
 		for (int i = 0; i < sworn.acts().size(); i++) {
 			String mark = i < lineage.house.oathActs ? "✔ " : i == lineage.house.oathActs ? "▶ " : "○ ";
 			ChatFormatting color = i < lineage.house.oathActs ? ChatFormatting.DARK_GREEN : i == lineage.house.oathActs ? ChatFormatting.BLACK : ChatFormatting.GRAY;
-			overview.append(Component.literal(mark + Names.numeral(i + 1) + ". " + sworn.acts().get(i).name() + "\n")
+			overview.append(Component.literal(mark + Names.numeral(i + 1) + ". ").append(sworn.actName(i)).append("\n")
 				.withStyle(s -> s.withColor(color).withBold(false)));
 		}
-		overview.append(Chronicle.faint("\nOne act per generation.\nRenown: " + lineage.house.renown + "\nReward: "))
+		overview.append("\n").append(Chronicle.faint(Text.t("book.oath.pace", lineage.house.renown))).append(" ")
 			.append(Traits.get(sworn.legacy()).displayName().withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(false)));
 		pages.add(overview);
 
 		if (lineage.house.oathActs >= sworn.acts().size()) {
-			pages.add(Chronicle.heading("Fulfilled").append(Chronicle.body("House " + lineage.house.name + " kept its oath. Every child of the house is born "
-				+ Traits.get(sworn.legacy()).name() + ".")));
+			pages.add(Chronicle.heading(Text.t("book.oath.fulfilled")).append(Chronicle.body(Text.t("book.oath.fulfilled_text", lineage.house.name,
+				Traits.get(sworn.legacy()).name()))));
 			return pages;
 		}
-		Act act = sworn.acts().get(lineage.house.oathActs);
-		pages.add(Chronicle.heading("Act " + Names.numeral(lineage.house.oathActs + 1) + ": " + act.name())
-			.append(Component.literal(act.intro()).withStyle(s -> s.withColor(ChatFormatting.DARK_GRAY).withItalic(true).withBold(false))));
-		Quest step = lineage.allQuests().stream().filter(Questlines::isOathStep).findFirst().orElse(null);
-		MutableComponent objective = Chronicle.heading("Objective");
 		int currentAct = lineage.house.oathActs;
+		Act act = sworn.acts().get(currentAct);
+		pages.add(Chronicle.heading(Text.t("book.oath.act", Names.numeral(currentAct + 1), sworn.actName(currentAct)))
+			.append(sworn.actIntro(currentAct).withStyle(s -> s.withColor(ChatFormatting.DARK_GRAY).withItalic(true).withBold(false))));
+		Quest step = lineage.allQuests().stream().filter(Questlines::isOathStep).findFirst().orElse(null);
+		MutableComponent objective = Chronicle.heading(Text.t("book.oath.objective"));
 		for (var done : lineage.completed) {
 			if (done.line().filter(OATH::equals).isPresent() && done.act() == currentAct) {
 				objective.append(Component.literal("✔ ").withStyle(s -> s.withColor(ChatFormatting.DARK_GREEN).withBold(false)))
-					.append(Chronicle.struck(done.task().getString()))
+					.append(Chronicle.struck(done.task()))
 					.append("\n\n");
 			}
 		}
@@ -378,40 +398,41 @@ public final class Questlines {
 			if (step.required > 1) {
 				objective.append(Chronicle.faint("\n\n" + step.progress / step.displayScale + " / " + step.required / step.displayScale));
 			}
-			String reward = Quests.describe(step.reward);
-			objective.append(Chronicle.faint("\n\nStep " + (step.step + 1) + " of " + act.steps().size() + (reward.isEmpty() ? "" : "\nReward: " + reward)));
+			objective.append("\n\n").append(Chronicle.faint(Text.t("book.oath.step", step.step + 1, act.steps().size())));
+			Component reward = Quests.describe(step.reward);
+			if (!reward.getString().isEmpty()) objective.append("\n").append(Chronicle.faint(Text.t("quest.reward", reward)));
 		} else if (lineage.house.actPending) {
-			objective.append(Chronicle.body("This generation has done its part. The next act falls to your heir."));
+			objective.append(Chronicle.body(Text.t("book.oath.wait_heir")));
 		} else {
-			objective.append(Chronicle.body("The house is not yet renowned enough to begin this act.\n\n"))
-				.append(Component.literal("Renown: " + lineage.house.renown + " / " + Renown.forAct(lineage.house.oathActs)).withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(false)))
-				.append(Chronicle.faint("\n\nFulfil duties, settle blood debts and reclaim heirlooms to earn renown."));
+			objective.append(Chronicle.body(Text.t("book.oath.need_renown"))).append("\n\n")
+				.append(Text.t("book.oath.renown_progress", lineage.house.renown, Renown.forAct(currentAct)).withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(false)))
+				.append("\n\n").append(Chronicle.faint(Text.t("book.oath.renown_hint")));
 		}
 		pages.add(objective);
 
 		List<Quest> preparations = lineage.allQuests().stream().filter(q -> q.type == Type.PREPARATION).toList();
 		if (!preparations.isEmpty() || !lineage.house.preparations.isEmpty()) {
-			MutableComponent prep = Chronicle.heading("Preparations");
+			MutableComponent prep = Chronicle.heading(Text.t("book.prep.title"));
 			for (String effect : lineage.house.preparations) {
-				prep.append(Component.literal("✔ " + describeEffect(effect) + "\n").withStyle(s -> s.withColor(ChatFormatting.DARK_GREEN).withBold(false)));
+				prep.append(Component.literal("✔ ").append(describeEffect(effect)).append("\n").withStyle(s -> s.withColor(ChatFormatting.DARK_GREEN).withBold(false)));
 			}
 			for (Quest q : preparations) {
 				String progress = q.required > 1 ? " " + q.progress + "/" + q.required : "";
-				prep.append(Component.literal("○ " + q.task.getString() + progress + "\n").withStyle(s -> s.withColor(ChatFormatting.BLACK).withBold(false)
-					.withHoverEvent(new HoverEvent.ShowText(Component.literal(describeEffect(effectOf(q)))))));
+				prep.append(Component.literal("○ ").append(q.task).append(progress + "\n").withStyle(s -> s.withColor(ChatFormatting.BLACK).withBold(false)
+					.withHoverEvent(new HoverEvent.ShowText(describeEffect(effectOf(q))))));
 			}
-			prep.append(Chronicle.faint("\nOptional. Each one weakens the champion."));
+			prep.append("\n").append(Chronicle.faint(Text.t("book.prep.optional")));
 			pages.add(prep);
 		}
 		return pages;
 	}
 
-	public static String oathSummary(Lineage lineage) {
-		if (lineage.house.oath.isEmpty()) return "";
-		Oath oath = oath(lineage.house.oath.get()).orElse(null);
-		if (oath == null) return "";
-		if (lineage.house.oathActs >= oath.acts().size()) return "\n" + oath.name() + ": fulfilled";
-		return "\n" + oath.name() + ": act " + (lineage.house.oathActs + 1) + " of " + oath.acts().size();
+	/** "Oath of the Sword: act 2 of 4", or empty if the house has sworn no oath. */
+	public static MutableComponent oathSummary(Lineage lineage) {
+		Oath oath = lineage.house.oath.flatMap(Questlines::oath).orElse(null);
+		if (oath == null) return Component.empty();
+		if (lineage.house.oathActs >= oath.acts().size()) return Text.t("oath.summary.done", oath.name());
+		return Text.t("oath.summary", oath.name(), lineage.house.oathActs + 1, oath.acts().size());
 	}
 
 	// --- The Stolen Heirloom ------------------------------------------------------------------
@@ -422,14 +443,12 @@ public final class Questlines {
 		if (lineage.allQuests().stream().anyMatch(q -> q.line.filter(RECLAIM::equals).isPresent())) return;
 		ItemStack lost = lineage.house.lostHeirlooms.getFirst();
 		String name = Heirlooms.nameOf(lost);
-		tell(player, lineage, Component.literal("Rumours reach House " + lineage.house.name + ": ").withStyle(ChatFormatting.GRAY)
-			.append(Component.literal(name).withStyle(ChatFormatting.GOLD))
-			.append(Component.literal(" was not destroyed. Pillagers were seen carrying a weapon with the family's mark...").withStyle(ChatFormatting.GRAY)));
-		Quest quest = championQuest(player, "The Stolen Heirloom: " + name, "Take " + name + " back from the thief", Champions.THIEF,
+		tell(player, lineage, Text.t("reclaim.rumour", lineage.house.name, Component.literal(name).withStyle(ChatFormatting.GOLD)).withStyle(ChatFormatting.GRAY));
+		Quest quest = championQuest(player, Text.t("reclaim.title", name), Text.t("reclaim.task", name), Champions.THIEF,
 			"reclaim_" + player.getRandom().nextInt(1_000_000), Level.OVERWORLD, BuiltinStructures.PILLAGER_OUTPOST, false, Reward.levels(3))
 			.inLine(RECLAIM, 0, 0);
 		Quests.add(player, lineage, quest);
-		tell(player, lineage, Component.literal("New objective: ").withStyle(ChatFormatting.GRAY).append(Quests.line(quest, true)));
+		tell(player, lineage, Text.t("quest.new_objective").withStyle(ChatFormatting.GRAY).append(" ").append(Quests.line(quest, true)));
 		Lineages.markDirty(player.level().getServer());
 	}
 
@@ -438,9 +457,8 @@ public final class Questlines {
 		ItemStack heirloom = Heirlooms.reclaimed(lineage.house.lostHeirlooms.removeFirst(), lineage);
 		if (!player.getInventory().add(heirloom)) player.spawnAtLocation(player.level(), heirloom);
 		String name = Heirlooms.nameOf(heirloom);
-		player.sendSystemMessage(Component.literal("You take back ").append(Component.literal(name).withStyle(ChatFormatting.GOLD))
-			.append(". It is home again."));
-		Lineages.record(player.level().getServer(), lineage, Component.literal(lineage.current.name() + " took " + name + " back from the thieves."));
+		player.sendSystemMessage(Text.t("reclaim.done", Component.literal(name).withStyle(ChatFormatting.GOLD)));
+		Lineages.record(player.level().getServer(), lineage, Text.t("chronicle.reclaimed", lineage.current.name(), name));
 	}
 
 	/** Remembers a destroyed heirloom so the Stolen Heirloom questline can bring it back. */
@@ -459,16 +477,16 @@ public final class Questlines {
 	 * A quest to go to a real structure. If none can be found nearby, the quest falls back to just
 	 * being in the right dimension. Overworld structures come with a map.
 	 */
-	private static Quest structureQuest(ServerPlayer player, String title, String task, ResourceKey<Level> dimension,
+	private static Quest structureQuest(ServerPlayer player, Component title, Component task, ResourceKey<Level> dimension,
 										ResourceKey<Structure> structure, boolean underground, Reward reward) {
 		Optional<GlobalPos> place = locate(player, dimension, structure);
 		List<String> targets = underground ? List.of("underground") : List.of();
 		if (place.isEmpty()) {
-			return Quest.of(Type.QUESTLINE, title, task + " (search " + dimensionName(dimension) + ")", Goal.DIMENSION,
+			return Quest.of(Type.QUESTLINE, title, Text.t("place.search", task, dimensionName(dimension)), Goal.DIMENSION,
 				List.of(dimension.identifier().toString()), 1, reward);
 		}
 		giveMap(player, place.get(), task);
-		return Quest.of(Type.QUESTLINE, title, task + " near " + coordinates(place.get(), underground), Goal.VISIT, targets, 1, reward)
+		return Quest.of(Type.QUESTLINE, title, Text.t("place.near", task, coordinates(place.get(), underground)), Goal.VISIT, targets, 1, reward)
 			.at(place.get(), STRUCTURE_RADIUS);
 	}
 
@@ -477,15 +495,16 @@ public final class Questlines {
 	 * if none could be found, anywhere in the right dimension), and again if they come back
 	 * after it was lost.
 	 */
-	private static Quest championQuest(ServerPlayer player, String title, String task, Champions.Kind kind, String key,
+	private static Quest championQuest(ServerPlayer player, Component title, Component task, Champions.Kind kind, String key,
 									   ResourceKey<Level> dimension, ResourceKey<Structure> structure, boolean underground, Reward reward) {
 		Optional<GlobalPos> place = locate(player, dimension, structure);
 		List<String> targets = underground
 			? List.of(key, kind.id(), dimension.identifier().toString(), "underground")
 			: List.of(key, kind.id(), dimension.identifier().toString());
-		String where = place.map(p -> " near " + coordinates(p, underground)).orElse(" (search " + dimensionName(dimension) + ")");
+		Component full = place.<Component>map(p -> Text.t("place.near", task, coordinates(p, underground)))
+			.orElseGet(() -> Text.t("place.search", task, dimensionName(dimension)));
 		place.ifPresent(p -> giveMap(player, p, task));
-		Quest quest = Quest.of(Type.QUESTLINE, title, task + where, Goal.KILL_CHAMPION, targets, 1, reward);
+		Quest quest = Quest.of(Type.QUESTLINE, title, full, Goal.KILL_CHAMPION, targets, 1, reward);
 		return place.map(p -> quest.at(p, STRUCTURE_RADIUS)).orElse(quest);
 	}
 
@@ -508,7 +527,7 @@ public final class Questlines {
 		List<String> preparations = isOathStep(quest) ? List.copyOf(lineage.house.preparations) : List.of();
 		Champions.spawn(player, kind, key, weapon, preparations);
 		for (String effect : preparations) {
-			player.sendSystemMessage(Component.literal("Your preparation pays off: " + describeEffect(effect) + ".").withStyle(ChatFormatting.GREEN));
+			player.sendSystemMessage(Text.t("prep.pays_off", describeEffect(effect)).withStyle(ChatFormatting.GREEN));
 		}
 	}
 
@@ -533,26 +552,26 @@ public final class Questlines {
 		return StructureSearch.find(level, structure, origin, radius, skipKnown).map(pos -> GlobalPos.of(dimension, pos));
 	}
 
-	static void giveMap(ServerPlayer player, GlobalPos place, String purpose) {
+	static void giveMap(ServerPlayer player, GlobalPos place, Component purpose) {
 		if (place.dimension() != Level.OVERWORLD) return;
 		ServerLevel level = player.level().getServer().overworld();
 		ItemStack map = MapItem.create(level, place.pos().getX(), place.pos().getZ(), (byte) 2, true, true);
 		MapItem.renderBiomePreviewMap(level, map);
 		MapItemSavedData.addTargetDecoration(map, place.pos(), "+", MapDecorationTypes.RED_X);
-		map.set(DataComponents.ITEM_NAME, Component.literal("Map: " + purpose));
+		map.set(DataComponents.ITEM_NAME, Text.t("map.name", purpose));
 		if (!player.getInventory().add(map)) player.spawnAtLocation(player.level(), map);
 	}
 
-	private static String coordinates(GlobalPos place, boolean underground) {
+	private static Component coordinates(GlobalPos place, boolean underground) {
 		String where = place.pos().getX() + ", " + place.pos().getZ();
-		if (place.dimension() == Level.NETHER) where += " in the Nether";
-		return underground ? where + ", deep below" : where;
+		MutableComponent text = place.dimension() == Level.NETHER ? Text.t("place.nether", where) : Component.literal(where);
+		return underground ? Text.t("place.deep", text) : text;
 	}
 
-	private static String dimensionName(ResourceKey<Level> dimension) {
-		if (dimension == Level.NETHER) return "the Nether";
-		if (dimension == Level.END) return "the End";
-		return "the Overworld";
+	private static Component dimensionName(ResourceKey<Level> dimension) {
+		if (dimension == Level.NETHER) return Text.t("dimension.nether");
+		if (dimension == Level.END) return Text.t("dimension.end");
+		return Text.t("dimension.overworld");
 	}
 
 	/** Oath news concerns the whole house, so it goes to every online member. */
@@ -560,13 +579,13 @@ public final class Questlines {
 		Lineages.tellHouse(player.level().getServer(), lineage.house, message);
 	}
 
-	private static void titleHouse(ServerPlayer player, Lineage lineage, String title, String subtitle) {
+	private static void titleHouse(ServerPlayer player, Lineage lineage, Component title, Component subtitle) {
 		Lineages.onlineMembers(player.level().getServer(), lineage.house).forEach(member -> title(member, title, subtitle));
 	}
 
-	private static void title(ServerPlayer player, String title, String subtitle) {
+	private static void title(ServerPlayer player, Component title, Component subtitle) {
 		player.connection.send(new ClientboundSetTitlesAnimationPacket(10, 80, 20));
-		player.connection.send(new ClientboundSetTitleTextPacket(Component.literal(title).withStyle(ChatFormatting.GOLD)));
-		player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(subtitle).withStyle(ChatFormatting.GRAY)));
+		player.connection.send(new ClientboundSetTitleTextPacket(title.copy().withStyle(ChatFormatting.GOLD)));
+		player.connection.send(new ClientboundSetSubtitleTextPacket(subtitle.copy().withStyle(ChatFormatting.GRAY)));
 	}
 }
