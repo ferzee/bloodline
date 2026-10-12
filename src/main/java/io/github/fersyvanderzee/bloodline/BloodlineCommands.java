@@ -6,6 +6,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.fersyvanderzee.bloodline.data.Ancestor;
+import io.github.fersyvanderzee.bloodline.data.BloodlineState;
 import io.github.fersyvanderzee.bloodline.data.Lineage;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -123,8 +124,39 @@ final class BloodlineCommands {
 						Chronicle.reopen(player);
 						return 1;
 					})))
+			.then(Commands.literal("admin")
+				.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+				.then(Commands.literal("reset")
+					.then(Commands.argument("player", EntityArgument.player())
+						.executes(ctx -> {
+							ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+							Lineage lineage = Lineages.get(target);
+							if (lineage == null) return 0;
+							// Their branch is forgotten and they found a brand-new house, as if joining for the first time.
+							var server = target.level().getServer();
+							Houses.detach(server, lineage.house, target.getUUID(), lineage.current.name());
+							BloodlineState.get(server).remove(target.getUUID());
+							Lineages.onJoin(target);
+							ctx.getSource().sendSuccess(() -> Component.literal("Reset the family of " + target.getGameProfile().name() + "."), true);
+							return 1;
+						}))))
 			.then(Commands.literal("debug")
 				.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+				.then(Commands.literal("age")
+					.executes(ctx -> {
+						ServerPlayer player = ctx.getSource().getPlayerOrException();
+						Lineage lineage = lineageOf(ctx.getSource(), player);
+						if (lineage == null) return 0;
+						// Pretend the current family member has lived a full life, so their children inherit normally.
+						var stats = new java.util.HashMap<>(lineage.current.statsAtBirth());
+						int lived = BloodlineConfig.get().families.briefLifeMinutes * 1200 + 1;
+						stats.put("play_time", Epithets.snapshot(player).getOrDefault("play_time", 0) - lived);
+						var m = lineage.current;
+						lineage.current = new io.github.fersyvanderzee.bloodline.data.Member(m.name(), m.generation(), m.traits(), m.bornDay(), stats);
+						Lineages.markDirty(player.level().getServer());
+						ctx.getSource().sendSuccess(() -> Component.literal(m.name() + " has now lived a full life."), false);
+						return 1;
+					}))
 				.then(Commands.literal("complete")
 					.executes(ctx -> {
 						ServerPlayer player = ctx.getSource().getPlayerOrException();

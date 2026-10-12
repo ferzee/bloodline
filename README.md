@@ -55,7 +55,11 @@ It runs entirely on the server, so players can join a Bloodline server with a va
 | `/bloodline chronicle` | A new copy of the family chronicle |
 | `/bloodline house <name>` | Rename your house |
 
-Operators can use `/bloodline debug complete` to finish the newest quest and `/bloodline debug champion` to spawn a test champion.
+## Configuration
+
+Server owners can tune Bloodline in `config/bloodline.json`, which is created with the defaults on first start (and gains any new settings after updates). It covers trait inheritance chances, how many children to choose from, how short a life counts as "the Brief", renown rewards and the renown each act needs, the Sacrifice, steward costs and vault tiers, inn job limits, whether player-placed bells attract innkeepers, the house size limit, heirloom ranks and how far to search for structures. Changes apply the next time a world starts.
+
+Operators can use `/bloodline debug complete` to finish the newest quest, `/bloodline debug champion` to spawn a test champion, `/bloodline debug age` to make the current family member count as having lived a full life, and `/bloodline admin reset <player>` to wipe a player's family so they start over.
 
 ## Testing multiplayer on one computer
 

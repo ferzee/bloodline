@@ -17,10 +17,17 @@ import java.util.UUID;
 
 /** Every house in the world, and every player's branch of one. */
 public class BloodlineState extends SavedData {
+	/**
+	 * Version of the save format. 1 was one family per player (read by {@link #LEGACY_CODEC});
+	 * 2 added houses. Bump it whenever the format changes in a way that needs converting.
+	 */
+	public static final int DATA_VERSION = 2;
+
 	private static final Codec<BloodlineState> CURRENT_CODEC = RecordCodecBuilder.create(i -> i.group(
+		Codec.INT.optionalFieldOf("version", DATA_VERSION).forGetter(s -> DATA_VERSION),
 		Codec.unboundedMap(UUIDUtil.STRING_CODEC, House.CODEC).fieldOf("houses").forGetter(s -> s.houses),
 		Codec.unboundedMap(UUIDUtil.STRING_CODEC, Lineage.CODEC).fieldOf("lineages").forGetter(s -> s.lineages)
-	).apply(i, BloodlineState::new));
+	).apply(i, (version, houses, lineages) -> new BloodlineState(houses, lineages)));
 
 	/** Worlds saved before houses could have several members: one family per player. */
 	private static final Codec<BloodlineState> LEGACY_CODEC = Codec.unboundedMap(UUIDUtil.STRING_CODEC, LegacyLineage.CODEC)
@@ -80,6 +87,12 @@ public class BloodlineState extends SavedData {
 	public void put(UUID player, Lineage lineage) {
 		lineages.put(player, lineage);
 		houses.put(lineage.house.id, lineage.house);
+		setDirty();
+	}
+
+	/** Forgets a player's branch entirely (used by the admin reset command). */
+	public void remove(UUID player) {
+		lineages.remove(player);
 		setDirty();
 	}
 

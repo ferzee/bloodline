@@ -36,7 +36,7 @@ final class Epithets {
 	private Epithets() {
 	}
 
-	static Map<String, Integer> snapshot(ServerPlayer player) {
+	public static Map<String, Integer> snapshot(ServerPlayer player) {
 		ServerStatsCounter stats = player.getStats();
 		Map<String, Integer> out = new HashMap<>();
 		out.put("kills", custom(stats, Stats.MOB_KILLS));

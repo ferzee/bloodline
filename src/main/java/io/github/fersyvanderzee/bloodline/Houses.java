@@ -194,7 +194,7 @@ public final class Houses {
 	}
 
 	/** Takes a player out of a house, passing on leadership or ending the house if they were the last. */
-	private static void detach(MinecraftServer server, House house, UUID player, String name) {
+	static void detach(MinecraftServer server, House house, UUID player, String name) {
 		house.members.remove(player);
 		if (house.members.isEmpty()) {
 			BloodlineState.get(server).removeHouse(house);

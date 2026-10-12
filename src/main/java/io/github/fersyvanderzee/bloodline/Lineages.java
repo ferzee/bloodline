@@ -118,6 +118,7 @@ public final class Lineages {
 		Quests.onDeath(player, lineage, ancestor, source, sacrificed);
 		if (sacrificed) Sacrifice.honour(player, lineage, ancestor);
 		Heirs.roll(player, lineage);
+		refreshName(player);
 	}
 
 	/** Called when a player respawns. After a death, their heir takes over. */
@@ -211,7 +212,9 @@ public final class Lineages {
 	/** Display name used in chat, death messages and the tab list, e.g. "Bram Ashford". */
 	public static Component displayName(ServerPlayer player, Component fallback) {
 		Lineage lineage = get(player);
-		return lineage == null ? fallback : Component.literal(lineage.fullName());
+		if (lineage == null) return fallback;
+		// While choosing an heir the old name no longer fits, and the new one isn't known yet.
+		return Component.literal(lineage.awaitingHeir ? "Heir of House " + lineage.house.name : lineage.fullName());
 	}
 
 	public static void refreshName(ServerPlayer player) {
