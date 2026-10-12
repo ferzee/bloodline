@@ -25,8 +25,8 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * The Sacrifice: under a full moon, at the resting place of an ancestor, a member of the house
- * may give their life for it. It is a real death (their belongings fall where they knelt), but
+ * The Sacrifice: under a full moon, at the resting place of an ancestor (or, for a founder with
+ * no graves yet, at the steward's home), a member of the house may give their life for it. It is a real death (their belongings fall where they knelt), but
  * their heir inherits every boon, the house gains renown, and the next act of the oath can begin.
  * Three sacrifices make the house Blood-Sworn.
  */
@@ -44,10 +44,13 @@ public final class Sacrifice {
 	private Sacrifice() {
 	}
 
-	/** Which of the ritual's conditions hold right now, and whose grave the player stands at. */
-	public record Conditions(boolean night, boolean fullMoon, Optional<String> grave, int nightsUntilFullMoon) {
+	/**
+	 * Which of the ritual's conditions hold right now. {@code place} describes where the player
+	 * kneels ("Elske the Bold's grave", or "the family seat"); {@code atSeat} is true for the latter.
+	 */
+	public record Conditions(boolean night, boolean fullMoon, Optional<String> place, boolean atSeat, boolean founder, int nightsUntilFullMoon) {
 		public boolean met() {
-			return night && fullMoon && grave.isPresent();
+			return night && fullMoon && place.isPresent();
 		}
 	}
 
@@ -58,7 +61,17 @@ public final class Sacrifice {
 		boolean fullMoon = overworld && level.environmentAttributes().getDimensionValue(EnvironmentAttributes.MOON_PHASE) == MoonPhase.FULL_MOON;
 		int day = Lineages.today(level.getServer()) - 1;
 		int nightsUntil = (MoonPhase.COUNT - day % MoonPhase.COUNT) % MoonPhase.COUNT;
-		return new Conditions(night, fullMoon, graveNear(player, lineage), nightsUntil);
+		Optional<String> grave = graveNear(player, lineage).map(name -> name + "'s grave");
+		// Founders have no graves to kneel at yet, so they may perform the ritual at the steward's home instead.
+		boolean founder = lineage.ancestors.stream().noneMatch(a -> a.place().isPresent());
+		boolean atSeat = grave.isEmpty() && founder && atStewardsHome(player, lineage);
+		return new Conditions(night, fullMoon, atSeat ? Optional.of("the family seat") : grave, atSeat, founder, nightsUntil);
+	}
+
+	private static boolean atStewardsHome(ServerPlayer player, Lineage lineage) {
+		return lineage.house.steward
+			.filter(s -> s.home.dimension() == player.level().dimension() && s.home.pos().closerToCenterThan(player.position(), RITUAL_RADIUS))
+			.isPresent();
 	}
 
 	/** The name of an ancestor of any branch of the house whose resting place the player stands at. */
@@ -88,12 +101,13 @@ public final class Sacrifice {
 			if (!conditions.night()) player.sendSystemMessage(Component.literal(" - It must be night.").withStyle(ChatFormatting.GRAY));
 			if (!conditions.fullMoon()) player.sendSystemMessage(Component.literal(" - The moon must be full (in "
 				+ conditions.nightsUntilFullMoon() + " nights).").withStyle(ChatFormatting.GRAY));
-			if (conditions.grave().isEmpty()) player.sendSystemMessage(Component.literal(" - You must stand at an ancestor's resting place.")
-				.withStyle(ChatFormatting.GRAY));
+			if (conditions.place().isEmpty()) player.sendSystemMessage(Component.literal(conditions.founder()
+				? " - You must stand at an ancestor's resting place, or (as a founder) at your steward's home."
+				: " - You must stand at an ancestor's resting place.").withStyle(ChatFormatting.GRAY));
 			return;
 		}
 		AWAITING_CONFIRMATION.put(player.getUUID(), player.level().getGameTime() + CONFIRM_TICKS);
-		player.sendSystemMessage(Component.literal("You kneel at the grave of " + conditions.grave().get() + ". ").withStyle(ChatFormatting.GRAY)
+		player.sendSystemMessage(Component.literal("You kneel at " + conditions.place().get() + ". ").withStyle(ChatFormatting.GRAY)
 			.append(Component.literal("Will " + lineage.current.name() + " give their life for House " + lineage.house.name + "? ")
 				.withStyle(ChatFormatting.WHITE))
 			.append(Component.literal("[I give my life]").withStyle(s -> s.withColor(ChatFormatting.DARK_RED).withBold(true)
@@ -107,7 +121,7 @@ public final class Sacrifice {
 		Lineage lineage = Lineages.get(player);
 		Long until = AWAITING_CONFIRMATION.remove(player.getUUID());
 		if (lineage == null || until == null || player.level().getGameTime() > until) {
-			player.sendSystemMessage(Component.literal("Kneel at the grave first: open your Chronicle or use /bloodline sacrifice.")
+			player.sendSystemMessage(Component.literal("Kneel first: open your Chronicle or use /bloodline sacrifice.")
 				.withStyle(ChatFormatting.RED));
 			return;
 		}

@@ -258,7 +258,8 @@ public final class Chronicle {
 			.append(body("Under a full moon, at the resting place of an ancestor, you may give your life for the house.\n\n"));
 		page.append(condition(now.night(), "It is night"));
 		page.append(condition(now.fullMoon(), now.fullMoon() ? "The moon is full" : "Full moon in " + now.nightsUntilFullMoon() + " nights"));
-		page.append(condition(now.grave().isPresent(), now.grave().map(g -> "At " + g + "'s grave").orElse("At an ancestor's grave")));
+		page.append(condition(now.place().isPresent(), now.place().map(p -> "At " + p)
+			.orElse(now.founder() ? "At a grave or your steward's home" : "At an ancestor's grave")));
 		page.append(faint("\nHeir keeps every boon, +" + Sacrifice.RENOWN + " renown. Sacrifices: "
 			+ lineage.house.sacrifices + "/" + Sacrifice.FOR_BLOOD_SWORN + "\n\n"));
 		page.append(now.met()
