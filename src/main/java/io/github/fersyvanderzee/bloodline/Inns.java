@@ -290,6 +290,30 @@ public final class Inns {
 			line("Renown: " + lineage.house.renown, ChatFormatting.YELLOW),
 			line("New jobs are posted every morning.", ChatFormatting.DARK_GRAY))));
 		board.setItem(8, info);
+		board.setItem(STEWARD_SLOT, stewardOffer(lineage));
+	}
+
+	private static final int STEWARD_SLOT = 6;
+
+	/** The board's last job: hiring a steward, or sending yours to your current home. */
+	private static ItemStack stewardOffer(Lineage lineage) {
+		ItemStack icon = new ItemStack(Items.LECTERN);
+		List<Component> lore = new ArrayList<>();
+		if (lineage.house.steward.isEmpty()) {
+			icon.set(DataComponents.CUSTOM_NAME, name("Hire a steward", ChatFormatting.GOLD));
+			lore.add(line("A loyal servant who waits at your home", ChatFormatting.GRAY));
+			lore.add(line("and keeps the family vault for the house.", ChatFormatting.GRAY));
+			lore.add(line("Vault: " + Stewards.vaultSlots(lineage.house.renown) + " slots (6 at 25 renown, 9 at 50)", ChatFormatting.YELLOW));
+			lore.add(line("Costs " + Stewards.HIRE_COST + " emeralds. They go to your bed.", ChatFormatting.GOLD));
+		} else {
+			String name = lineage.house.steward.get().name;
+			icon.set(DataComponents.CUSTOM_NAME, name("Send " + name + " to your home", ChatFormatting.GOLD));
+			lore.add(line("Your steward moves to your current bed.", ChatFormatting.GRAY));
+			lore.add(line("Costs " + Stewards.MOVE_COST + " emeralds.", ChatFormatting.GOLD));
+		}
+		lore.add(line("Click to agree", ChatFormatting.WHITE));
+		icon.set(DataComponents.LORE, new ItemLore(lore));
+		return icon;
 	}
 
 	/** A one-row chest menu whose items can't be taken; clicking a job accepts it. */
@@ -309,12 +333,13 @@ public final class Inns {
 
 		@Override
 		public void clicked(int slotIndex, int buttonNum, ContainerInput input, Player player) {
-			if (slotIndex >= 0 && slotIndex < offers.size()) {
-				Lineage lineage = Lineages.get(viewer);
-				if (lineage != null) {
-					accept(viewer, lineage, offers.get(slotIndex));
-					fill(board, viewer, lineage, offers);
-				}
+			Lineage lineage = Lineages.get(viewer);
+			if (lineage != null && slotIndex >= 0 && slotIndex < offers.size()) {
+				accept(viewer, lineage, offers.get(slotIndex));
+				fill(board, viewer, lineage, offers);
+			} else if (lineage != null && slotIndex == STEWARD_SLOT) {
+				Stewards.hire(viewer, lineage);
+				fill(board, viewer, lineage, offers);
 			}
 			// Nothing on the board can be picked up, so always resend the real contents.
 			sendAllDataToRemote();
@@ -394,7 +419,7 @@ public final class Inns {
 		}
 	}
 
-	private static int count(ServerPlayer player, Item item) {
+	static int count(ServerPlayer player, Item item) {
 		int total = 0;
 		Inventory inventory = player.getInventory();
 		for (int i = 0; i < inventory.getContainerSize(); i++) {
@@ -404,7 +429,7 @@ public final class Inns {
 		return total;
 	}
 
-	private static void take(ServerPlayer player, Item item, int amount) {
+	static void take(ServerPlayer player, Item item, int amount) {
 		Inventory inventory = player.getInventory();
 		for (int i = 0; i < inventory.getContainerSize() && amount > 0; i++) {
 			ItemStack stack = inventory.getItem(i);

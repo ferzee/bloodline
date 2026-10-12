@@ -78,6 +78,8 @@ public final class Traits {
 			e(Attributes.ATTACK_DAMAGE, 2, ADD_VALUE), e(Attributes.MAX_HEALTH, 4, ADD_VALUE));
 		add("deepborn", Kind.LEGENDARY, "legacy_deepborn", "Deepborn", "The deep knows this family. Breaks blocks 25% faster, +2 luck.",
 			e(Attributes.BLOCK_BREAK_SPEED, 0.25, ADD_MULTIPLIED_BASE), e(Attributes.LUCK, 2, ADD_VALUE));
+		add("blood_sworn", Kind.LEGENDARY, "legacy_blood_sworn", "Blood-Sworn", "Three gave their lives for this house. +1 attack damage, +2 armor, +1 heart.",
+			e(Attributes.ATTACK_DAMAGE, 1, ADD_VALUE), e(Attributes.ARMOR, 2, ADD_VALUE), e(Attributes.MAX_HEALTH, 2, ADD_VALUE));
 		add("beloved", Kind.LEGENDARY, "legacy_beloved", "Beloved", "Friend to every village. +2 hearts, +2 luck, 5% faster.",
 			e(Attributes.MAX_HEALTH, 4, ADD_VALUE), e(Attributes.LUCK, 2, ADD_VALUE), e(Attributes.MOVEMENT_SPEED, 0.05, ADD_MULTIPLIED_BASE));
 	}
@@ -107,10 +109,19 @@ public final class Traits {
 
 	/** Traits for an heir: some of the parent's traits pass on, plus one new mutation. */
 	public static List<String> rollHeir(List<String> parentTraits, RandomSource random) {
+		return rollHeir(parentTraits, random, false);
+	}
+
+	/** With {@code allBoons} (after a sacrifice) every boon passes on; flaws and quirks still roll as usual. */
+	public static List<String> rollHeir(List<String> parentTraits, RandomSource random, boolean allBoons) {
 		List<String> traits = new ArrayList<>();
 		for (String id : parentTraits) {
 			Trait trait = get(id);
 			if (trait == null) continue;
+			if (allBoons && trait.kind() == Kind.BOON) {
+				traits.add(id);
+				continue;
+			}
 			double chance = trait.kind() == Kind.FLAW ? PASS_ON_FLAW : PASS_ON_BOON;
 			if (random.nextDouble() < chance && traits.size() < MAX_TRAITS - 1) {
 				traits.add(id);
@@ -119,6 +130,7 @@ public final class Traits {
 		float roll = random.nextFloat();
 		Kind kind = roll < QUIRK_CHANCE ? Kind.QUIRK : roll < QUIRK_CHANCE + FLAW_CHANCE ? Kind.FLAW : Kind.BOON;
 		// The mutation is always something the parent didn't have, so every heir brings something new.
+		if (traits.size() >= MAX_TRAITS) return traits;
 		if (!addRandom(traits, random, kind, parentTraits)) {
 			addRandom(traits, random, Kind.BOON, parentTraits);
 		}

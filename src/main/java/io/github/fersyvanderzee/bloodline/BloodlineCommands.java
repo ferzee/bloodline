@@ -65,6 +65,15 @@ final class BloodlineCommands {
 						Houses.makeHead(ctx.getSource().getPlayerOrException(), EntityArgument.getPlayer(ctx, "player"));
 						return 1;
 					})))
+			.then(Commands.literal("sacrifice")
+				.executes(ctx -> {
+					Sacrifice.request(ctx.getSource().getPlayerOrException());
+					return 1;
+				})
+				.then(Commands.literal("confirm").executes(ctx -> {
+					Sacrifice.confirm(ctx.getSource().getPlayerOrException());
+					return 1;
+				})))
 			.then(Commands.literal("quests")
 				.executes(ctx -> {
 					ServerPlayer player = ctx.getSource().getPlayerOrException();

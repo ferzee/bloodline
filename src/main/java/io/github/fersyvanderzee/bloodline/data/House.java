@@ -32,7 +32,9 @@ public class House {
 		Codec.STRING.listOf().optionalFieldOf("legacies", List.of()).forGetter(h -> h.legacies),
 		ItemStack.CODEC.listOf().optionalFieldOf("lost_heirlooms", List.of()).forGetter(h -> h.lostHeirlooms),
 		Codec.INT.optionalFieldOf("renown", 0).forGetter(h -> h.renown),
-		Codec.STRING.listOf().optionalFieldOf("preparations", List.of()).forGetter(h -> h.preparations)
+		Codec.STRING.listOf().optionalFieldOf("preparations", List.of()).forGetter(h -> h.preparations),
+		Codec.INT.optionalFieldOf("sacrifices", 0).forGetter(h -> h.sacrifices),
+		Steward.CODEC.optionalFieldOf("steward").forGetter(h -> h.steward)
 	).apply(i, House::new));
 
 	public final UUID id;
@@ -59,10 +61,14 @@ public class House {
 	public int renown;
 	/** Preparations finished for the coming champion fight. */
 	public final List<String> preparations;
+	/** How many members have given their lives for the house (see Sacrifice). */
+	public int sacrifices;
+	/** The steward the house hired at an inn, if any. */
+	public Optional<Steward> steward;
 
 	public House(UUID id, String name, UUID head, List<UUID> members, List<ChronicleEntry> chronicle, List<String> milestones,
 				 List<Quest> quests, Optional<String> oath, int oathActs, boolean actPending, List<String> legacies,
-				 List<ItemStack> lostHeirlooms, int renown, List<String> preparations) {
+				 List<ItemStack> lostHeirlooms, int renown, List<String> preparations, int sacrifices, Optional<Steward> steward) {
 		this.id = id;
 		this.name = name;
 		this.head = head;
@@ -77,11 +83,13 @@ public class House {
 		this.lostHeirlooms = new ArrayList<>(lostHeirlooms);
 		this.renown = renown;
 		this.preparations = new ArrayList<>(preparations);
+		this.sacrifices = sacrifices;
+		this.steward = steward;
 	}
 
 	public static House found(String name, UUID head) {
 		return new House(UUID.randomUUID(), name, head, List.of(head), List.of(), List.of(), List.of(), Optional.empty(), 0, false,
-			List.of(), List.of(), 0, List.of());
+			List.of(), List.of(), 0, List.of(), 0, Optional.empty());
 	}
 
 	/** Whether a quest of this type belongs to the whole house rather than one member. */

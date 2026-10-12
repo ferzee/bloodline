@@ -19,7 +19,8 @@ public class Lineage {
 		Codec.BOOL.optionalFieldOf("awaiting_heir", false).forGetter(l -> l.awaitingHeir),
 		Ancestor.CODEC.listOf().optionalFieldOf("ancestors", List.of()).forGetter(l -> l.ancestors),
 		Quest.CODEC.listOf().optionalFieldOf("quests", List.of()).forGetter(l -> l.ownQuests),
-		CompletedQuest.CODEC.listOf().optionalFieldOf("completed", List.of()).forGetter(l -> l.completed)
+		CompletedQuest.CODEC.listOf().optionalFieldOf("completed", List.of()).forGetter(l -> l.completed),
+		Codec.BOOL.optionalFieldOf("inherit_all", false).forGetter(l -> l.inheritAll)
 	).apply(i, Lineage::new));
 
 	/** The house this branch belongs to. Linked by {@link BloodlineState} after loading. */
@@ -34,18 +35,22 @@ public class Lineage {
 	public final List<Quest> ownQuests;
 	/** Quests this branch's current family member has finished, shown crossed out. */
 	public final List<CompletedQuest> completed;
+	/** Set when this branch's family member gave their life: their heir inherits every boon. */
+	public boolean inheritAll;
 
-	Lineage(UUID houseId, Member current, boolean awaitingHeir, List<Ancestor> ancestors, List<Quest> ownQuests, List<CompletedQuest> completed) {
+	Lineage(UUID houseId, Member current, boolean awaitingHeir, List<Ancestor> ancestors, List<Quest> ownQuests, List<CompletedQuest> completed,
+			boolean inheritAll) {
 		this.houseId = houseId;
 		this.current = current;
 		this.awaitingHeir = awaitingHeir;
 		this.ancestors = new ArrayList<>(ancestors);
 		this.ownQuests = new ArrayList<>(ownQuests);
 		this.completed = new ArrayList<>(completed);
+		this.inheritAll = inheritAll;
 	}
 
 	public Lineage(House house, Member current) {
-		this(house.id, current, false, List.of(), List.of(), List.of());
+		this(house.id, current, false, List.of(), List.of(), List.of(), false);
 		this.house = house;
 	}
 

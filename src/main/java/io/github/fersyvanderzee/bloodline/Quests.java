@@ -117,7 +117,7 @@ public final class Quests {
 	 * Called when the head of the family dies. Their own unfinished duties die with them, except
 	 * blood debts, which pass on. Then the heir's new duties are added.
 	 */
-	public static void onDeath(ServerPlayer player, Lineage lineage, Ancestor ancestor, DamageSource source) {
+	public static void onDeath(ServerPlayer player, Lineage lineage, Ancestor ancestor, DamageSource source, boolean sacrificed) {
 		// This branch's own duties die with them; house quests (blood debts, the oath) carry on.
 		lineage.ownQuests.clear();
 		// Debts nobody settled in this life pass to the heir, and the house's standing suffers for it.
@@ -126,7 +126,8 @@ public final class Quests {
 		if (inherited > 0) Renown.change(player, lineage, (int) inherited * Renown.DEBT_INHERITED, "for leaving blood debts unpaid");
 
 		LivingEntity killer = source.getEntity() instanceof LivingEntity living ? living : player.getKillCredit();
-		if (killer != null && killer != player) {
+		// A sacrifice is given, not taken: nobody owes a blood debt for it.
+		if (killer != null && killer != player && !sacrificed) {
 			Reward reward = Reward.newTrait(8);
 			Quest debt;
 			if (killer instanceof ServerPlayer otherPlayer) {

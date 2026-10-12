@@ -7,6 +7,7 @@ import io.github.fersyvanderzee.bloodline.data.House;
 import io.github.fersyvanderzee.bloodline.data.Lineage;
 import io.github.fersyvanderzee.bloodline.data.Member;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
@@ -20,6 +21,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 
 import java.util.List;
+import java.util.Optional;
 
 /** Founding families, recording deaths and passing the family on to an heir. */
 public final class Lineages {
@@ -100,13 +102,21 @@ public final class Lineages {
 		if (lineage == null || lineage.awaitingHeir) return;
 		MinecraftServer server = player.level().getServer();
 		Member dead = lineage.current;
-		String epithet = Epithets.choose(dead.statsAtBirth(), Epithets.snapshot(player), player.getRandom());
-		Component deathMessage = player.getCombatTracker().getDeathMessage();
-		Ancestor ancestor = new Ancestor(dead.name(), epithet, dead.generation(), dead.traits(), dead.bornDay(), today(server), deathMessage);
+		boolean sacrificed = Sacrifice.consume(player);
+		String epithet = sacrificed ? "the Devoted" : Epithets.choose(dead.statsAtBirth(), Epithets.snapshot(player), player.getRandom());
+		Component deathMessage = sacrificed
+			? Component.literal(dead.name() + " gave their life for House " + lineage.house.name)
+			: player.getCombatTracker().getDeathMessage();
+		GlobalPos place = GlobalPos.of(player.level().dimension(), player.blockPosition());
+		Ancestor ancestor = new Ancestor(dead.name(), epithet, dead.generation(), dead.traits(), dead.bornDay(), today(server), deathMessage,
+			Optional.of(place));
 		lineage.ancestors.add(ancestor);
 		lineage.awaitingHeir = true;
-		record(server, lineage, Component.literal(ancestor.fullName() + " died. ").append(deathMessage.copy()));
-		Quests.onDeath(player, lineage, ancestor, source);
+		record(server, lineage, sacrificed
+			? Component.literal(ancestor.fullName() + " gave their life for the house under the full moon.")
+			: Component.literal(ancestor.fullName() + " died. ").append(deathMessage.copy()));
+		Quests.onDeath(player, lineage, ancestor, source, sacrificed);
+		if (sacrificed) Sacrifice.honour(player, lineage, ancestor);
 	}
 
 	/** Called when a player respawns. After a death, their heir takes over. */
@@ -124,7 +134,9 @@ public final class Lineages {
 	private static void succeed(ServerPlayer player, Lineage lineage) {
 		MinecraftServer server = player.level().getServer();
 		Ancestor parent = lineage.parent();
-		List<String> traits = Traits.rollHeir(parent.traits(), player.getRandom());
+		boolean inheritAll = lineage.inheritAll;
+		lineage.inheritAll = false;
+		List<String> traits = Traits.rollHeir(parent.traits(), player.getRandom(), inheritAll);
 		Member heir = new Member(Names.given(player.getRandom(), parent.name()), parent.generation() + 1, traits,
 			today(server), Epithets.snapshot(player));
 		lineage.current = heir;
@@ -138,6 +150,10 @@ public final class Lineages {
 		Questlines.resume(player, lineage);
 		Inns.addIntroQuest(player, lineage);
 		announceBirth(player, lineage, parent);
+		if (inheritAll) {
+			player.sendSystemMessage(Component.literal("Because " + parent.name() + " gave their life, every one of their boons lives on in "
+				+ heir.name() + ".").withStyle(ChatFormatting.GOLD));
+		}
 	}
 
 	private static void announceBirth(ServerPlayer player, Lineage lineage, Ancestor parent) {

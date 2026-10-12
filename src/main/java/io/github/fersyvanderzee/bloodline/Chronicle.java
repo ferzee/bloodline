@@ -93,7 +93,7 @@ public final class Chronicle {
 	static WrittenBookContent build(ServerPlayer viewer, Lineage lineage) {
 		List<Component> mainQuest = Questlines.bookPages(lineage, 2, lineage.isHead(viewer.getUUID()));
 		List<Component> duties = duties(lineage);
-		List<Component> head = List.of(head(lineage), members(viewer.level().getServer(), lineage));
+		List<Component> head = List.of(head(lineage), members(viewer.level().getServer(), lineage), sacrifice(viewer, lineage));
 		List<Component> tree = familyTree(lineage);
 		List<Component> history = entries(lineage);
 		int room = MAX_PAGES - 1 - mainQuest.size() - duties.size() - head.size() - tree.size();
@@ -242,10 +242,34 @@ public final class Chronicle {
 				.withHoverEvent(new HoverEvent.ShowText(Component.literal(member.fullName() + (head ? ", head of the house" : ""))))));
 			page.append(faint("   generation " + Names.numeral(member.current.generation()) + "\n"));
 		}
-		if (lineage.house.members.size() == 1) {
+		if (lineage.house.steward.isPresent()) {
+			var steward = lineage.house.steward.get();
+			page.append(faint("\nSteward: " + steward.name + "\n   at " + steward.home.pos().getX() + ", " + steward.home.pos().getZ()
+				+ "\n   vault: " + Stewards.vaultSlots(lineage.house.renown) + " slots"));
+		} else if (lineage.house.members.size() == 1) {
 			page.append(faint("\nThe head of the house can invite others with /bloodline invite <player>."));
 		}
 		return page;
+	}
+
+	private static Component sacrifice(ServerPlayer viewer, Lineage lineage) {
+		Sacrifice.Conditions now = Sacrifice.check(viewer, lineage);
+		MutableComponent page = heading("The Sacrifice")
+			.append(body("Under a full moon, at the resting place of an ancestor, you may give your life for the house.\n\n"));
+		page.append(condition(now.night(), "It is night"));
+		page.append(condition(now.fullMoon(), now.fullMoon() ? "The moon is full" : "Full moon in " + now.nightsUntilFullMoon() + " nights"));
+		page.append(condition(now.grave().isPresent(), now.grave().map(g -> "At " + g + "'s grave").orElse("At an ancestor's grave")));
+		page.append(faint("\nHeir keeps every boon, +" + Sacrifice.RENOWN + " renown. Sacrifices: "
+			+ lineage.house.sacrifices + "/" + Sacrifice.FOR_BLOOD_SWORN + "\n\n"));
+		page.append(now.met()
+			? button("Offer your life", "/bloodline sacrifice", Component.literal("You'll be asked to confirm. Your belongings fall where you kneel."))
+			: faint("Not possible here and now."));
+		return page;
+	}
+
+	private static Component condition(boolean met, String text) {
+		return Component.literal((met ? "✔ " : "✘ ") + text + "\n")
+			.withStyle(s -> s.withColor(met ? ChatFormatting.DARK_GREEN : ChatFormatting.DARK_RED).withBold(false));
 	}
 
 	private static Component head(Lineage lineage) {

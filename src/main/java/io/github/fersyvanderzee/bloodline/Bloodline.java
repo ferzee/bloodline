@@ -62,7 +62,10 @@ public class Bloodline implements ModInitializer {
 				if (questTick && lineage != null && !lineage.awaitingHeir) {
 					Quests.tick(player, lineage);
 					Questlines.tickReclaim(player, lineage);
-					if (server.getTickCount() % INN_TICK_INTERVAL == 0) Inns.tick(player);
+					if (server.getTickCount() % INN_TICK_INTERVAL == 0) {
+						Inns.tick(player);
+						Stewards.tick(player, lineage);
+					}
 				}
 			}
 		});
@@ -106,9 +109,11 @@ public class Bloodline implements ModInitializer {
 		});
 
 		UseEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
-			if (!Inns.isInnkeeper(entity)) return InteractionResult.PASS;
-			if (player instanceof ServerPlayer serverPlayer && entity instanceof Villager innkeeper && hand == InteractionHand.MAIN_HAND) {
-				Inns.onInteract(serverPlayer, innkeeper);
+			boolean innkeeper = Inns.isInnkeeper(entity);
+			if (!innkeeper && !Stewards.isSteward(entity)) return InteractionResult.PASS;
+			if (player instanceof ServerPlayer serverPlayer && entity instanceof Villager villager && hand == InteractionHand.MAIN_HAND) {
+				if (innkeeper) Inns.onInteract(serverPlayer, villager);
+				else Stewards.onInteract(serverPlayer, villager);
 			}
 			return InteractionResult.SUCCESS;
 		});
