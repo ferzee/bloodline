@@ -263,6 +263,8 @@ public final class Questlines {
 		MinecraftServer server = player.level().getServer();
 		lineage.house.oathActs = quest.act + 1;
 		lineage.house.actPending = true;
+		// Finishing an act is what earns a family member the right to give their life for the house.
+		lineage.fulfilledAct = true;
 		Renown.change(player, lineage, Renown.ACT_COMPLETED, "for fulfilling Act " + Names.numeral(quest.act + 1));
 		Lineages.record(server, lineage, Component.literal(lineage.current.name() + " fulfilled Act " + Names.numeral(quest.act + 1)
 			+ " of the " + oath.name() + ": " + act.name() + "."));

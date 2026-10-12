@@ -104,8 +104,9 @@ public final class Quests {
 	/** Goals for the founder of a new house. */
 	public static void addFounding(ServerPlayer player, Lineage lineage) {
 		List<String> banners = Arrays.stream(DyeColor.values()).map(c -> c.getSerializedName() + "_banner").toList();
-		add(player, lineage, Quest.of(Type.FOUNDING, "Raise the banner of House " + lineage.house.name, "Craft a banner",
-			Goal.CRAFT, banners, 1, Reward.levels(3)));
+		// Placing counts however the banner was obtained, so this works in creative mode too.
+		add(player, lineage, Quest.of(Type.FOUNDING, "Raise the banner of House " + lineage.house.name, "Place your house banner",
+			Goal.USE, banners, 1, Reward.levels(3)));
 		add(player, lineage, Quest.of(Type.FOUNDING, "A roof for the family", "Sleep in a bed",
 			Goal.CUSTOM_STAT, List.of("sleep_in_bed"), 1, Reward.item(2, "bread", 8)));
 		add(player, lineage, Quest.of(Type.FOUNDING, "Make a name for the house", "Slay monsters",
@@ -276,6 +277,7 @@ public final class Quests {
 				case KILL -> BuiltInRegistries.ENTITY_TYPE.getOptional(id).map(t -> stats.getValue(Stats.ENTITY_KILLED.get(t))).orElse(0);
 				case MINE -> BuiltInRegistries.BLOCK.getOptional(id).map(b -> stats.getValue(Stats.BLOCK_MINED.get(b))).orElse(0);
 				case CRAFT -> BuiltInRegistries.ITEM.getOptional(id).map(i -> stats.getValue(Stats.ITEM_CRAFTED.get(i))).orElse(0);
+				case USE -> BuiltInRegistries.ITEM.getOptional(id).map(i -> stats.getValue(Stats.ITEM_USED.get(i))).orElse(0);
 				// Custom stats must be looked up through the registry: Stats.CUSTOM only accepts the registered instance.
 				case CUSTOM_STAT -> BuiltInRegistries.CUSTOM_STAT.getOptional(id).map(stat -> stats.getValue(Stats.CUSTOM.get(stat))).orElse(0);
 				default -> 0;

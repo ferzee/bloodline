@@ -147,6 +147,7 @@ public final class Lineages {
 		lineage.current = heir;
 		lineage.awaitingHeir = false;
 		lineage.candidates.clear();
+		lineage.fulfilledAct = false;
 		// A new generation has come: the house may begin its next act of the oath.
 		lineage.house.actPending = false;
 		markDirty(server);

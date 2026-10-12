@@ -21,7 +21,8 @@ public class Lineage {
 		Quest.CODEC.listOf().optionalFieldOf("quests", List.of()).forGetter(l -> l.ownQuests),
 		CompletedQuest.CODEC.listOf().optionalFieldOf("completed", List.of()).forGetter(l -> l.completed),
 		Codec.BOOL.optionalFieldOf("inherit_all", false).forGetter(l -> l.inheritAll),
-		Member.CODEC.listOf().optionalFieldOf("heir_candidates", List.of()).forGetter(l -> l.candidates)
+		Member.CODEC.listOf().optionalFieldOf("heir_candidates", List.of()).forGetter(l -> l.candidates),
+		Codec.BOOL.optionalFieldOf("fulfilled_act", false).forGetter(l -> l.fulfilledAct)
 	).apply(i, Lineage::new));
 
 	/** The house this branch belongs to. Linked by {@link BloodlineState} after loading. */
@@ -40,9 +41,11 @@ public class Lineage {
 	public boolean inheritAll;
 	/** The dead family member's children, one of whom the player chooses to carry on (see Heirs). */
 	public final List<Member> candidates;
+	/** Whether this branch's current family member finished an act of the oath; only they may perform the Sacrifice. */
+	public boolean fulfilledAct;
 
 	Lineage(UUID houseId, Member current, boolean awaitingHeir, List<Ancestor> ancestors, List<Quest> ownQuests, List<CompletedQuest> completed,
-			boolean inheritAll, List<Member> candidates) {
+			boolean inheritAll, List<Member> candidates, boolean fulfilledAct) {
 		this.houseId = houseId;
 		this.current = current;
 		this.awaitingHeir = awaitingHeir;
@@ -51,10 +54,11 @@ public class Lineage {
 		this.completed = new ArrayList<>(completed);
 		this.inheritAll = inheritAll;
 		this.candidates = new ArrayList<>(candidates);
+		this.fulfilledAct = fulfilledAct;
 	}
 
 	public Lineage(House house, Member current) {
-		this(house.id, current, false, List.of(), List.of(), List.of(), false, List.of());
+		this(house.id, current, false, List.of(), List.of(), List.of(), false, List.of(), false);
 		this.house = house;
 	}
 

@@ -262,16 +262,18 @@ public final class Chronicle {
 	private static Component sacrifice(ServerPlayer viewer, Lineage lineage) {
 		Sacrifice.Conditions now = Sacrifice.check(viewer, lineage);
 		MutableComponent page = heading("The Sacrifice")
-			.append(body("Under a full moon, at the resting place of an ancestor, you may give your life for the house.\n\n"));
+			.append(body("One who fulfilled an act of the oath may give their life for the house, under a full moon at an ancestor's grave.\n\n"));
+		page.append(condition(now.actDone(), "You fulfilled an act"));
 		page.append(condition(now.night(), "It is night"));
 		page.append(condition(now.fullMoon(), now.fullMoon() ? "The moon is full" : "Full moon in " + now.nightsUntilFullMoon() + " nights"));
 		page.append(condition(now.place().isPresent(), now.place().map(p -> "At " + p)
 			.orElse(now.founder() ? "At a grave or your steward's home" : "At an ancestor's grave")));
 		page.append(faint("\nHeir keeps every boon, +" + Sacrifice.RENOWN + " renown. Sacrifices: "
 			+ lineage.house.sacrifices + "/" + Sacrifice.FOR_BLOOD_SWORN + "\n\n"));
-		page.append(now.met()
-			? button("Offer your life", "/bloodline sacrifice", Component.literal("You'll be asked to confirm. Your belongings fall where you kneel."))
-			: faint("Not possible here and now."));
+		// Always offer the button: if something is missing, the command says exactly what.
+		page.append(button("Offer your life", "/bloodline sacrifice", Component.literal(now.met()
+			? "You'll be asked to confirm. Your belongings fall where you kneel."
+			: "Not possible yet: click to see what's missing.")));
 		return page;
 	}
 

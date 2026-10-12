@@ -48,7 +48,9 @@ public class Quest {
 	}
 
 	public enum Goal implements StringRepresentable {
-		KILL("kill"), MINE("mine"), CRAFT("craft"), CUSTOM_STAT("custom_stat"), KILL_PLAYER("kill_player"), VISIT("visit"),
+		KILL("kill"), MINE("mine"), CRAFT("craft"),
+		/** Use (or place) one of the target items, however the player got it. */
+		USE("use"), CUSTOM_STAT("custom_stat"), KILL_PLAYER("kill_player"), VISIT("visit"),
 		/** Be in the dimension named by the first target. */
 		DIMENSION("dimension"),
 		/** Be at or below the Y level given by the first target. */

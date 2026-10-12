@@ -28,7 +28,8 @@ import java.util.UUID;
  * The Sacrifice: under a full moon, at the resting place of an ancestor (or, for a founder with
  * no graves yet, at the steward's home), a member of the house may give their life for it. It is a real death (their belongings fall where they knelt), but
  * their heir inherits every boon, the house gains renown, and the next act of the oath can begin.
- * Three sacrifices make the house Blood-Sworn.
+ * Only a family member who fulfilled an act of the oath may do it, so it can't be used to churn
+ * through generations. Three sacrifices make the house Blood-Sworn.
  */
 public final class Sacrifice {
 	public static final int RENOWN = 10;
@@ -48,9 +49,10 @@ public final class Sacrifice {
 	 * Which of the ritual's conditions hold right now. {@code place} describes where the player
 	 * kneels ("Elske the Bold's grave", or "the family seat"); {@code atSeat} is true for the latter.
 	 */
-	public record Conditions(boolean night, boolean fullMoon, Optional<String> place, boolean atSeat, boolean founder, int nightsUntilFullMoon) {
+	public record Conditions(boolean actDone, boolean night, boolean fullMoon, Optional<String> place, boolean atSeat, boolean founder,
+							 int nightsUntilFullMoon) {
 		public boolean met() {
-			return night && fullMoon && place.isPresent();
+			return actDone && night && fullMoon && place.isPresent();
 		}
 	}
 
@@ -65,7 +67,7 @@ public final class Sacrifice {
 		// Founders have no graves to kneel at yet, so they may perform the ritual at the steward's home instead.
 		boolean founder = lineage.ancestors.stream().noneMatch(a -> a.place().isPresent());
 		boolean atSeat = grave.isEmpty() && founder && atStewardsHome(player, lineage);
-		return new Conditions(night, fullMoon, atSeat ? Optional.of("the family seat") : grave, atSeat, founder, nightsUntil);
+		return new Conditions(lineage.fulfilledAct, night, fullMoon, atSeat ? Optional.of("the family seat") : grave, atSeat, founder, nightsUntil);
 	}
 
 	private static boolean atStewardsHome(ServerPlayer player, Lineage lineage) {
@@ -98,6 +100,8 @@ public final class Sacrifice {
 		Conditions conditions = check(player, lineage);
 		if (!conditions.met()) {
 			player.sendSystemMessage(Component.literal("The ritual can't be performed here and now.").withStyle(ChatFormatting.RED));
+			if (!conditions.actDone()) player.sendSystemMessage(Component.literal(" - " + lineage.current.name()
+				+ " must first fulfil an act of the oath.").withStyle(ChatFormatting.GRAY));
 			if (!conditions.night()) player.sendSystemMessage(Component.literal(" - It must be night.").withStyle(ChatFormatting.GRAY));
 			if (!conditions.fullMoon()) player.sendSystemMessage(Component.literal(" - The moon must be full (in "
 				+ conditions.nightsUntilFullMoon() + " nights).").withStyle(ChatFormatting.GRAY));
