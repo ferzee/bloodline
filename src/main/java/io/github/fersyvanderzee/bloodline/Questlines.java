@@ -50,7 +50,6 @@ import java.util.Optional;
 public final class Questlines {
 	private static final String OATH = "oath";
 	private static final String RECLAIM = "reclaim";
-	private static final int SEARCH_RADIUS_CHUNKS = 100;
 	private static final int STRUCTURE_RADIUS = 48;
 	private static final double CHAMPION_SEARCH_RANGE = 64;
 
@@ -71,8 +70,8 @@ public final class Questlines {
 		}
 	}
 
-	/** {@code renown} is how much renown the house needs before the act can begin. */
-	record Act(int renown, String name, String intro, List<Step> steps) {
+	/** The renown each act needs to begin is set in the config (see Renown.forAct). */
+	record Act(String name, String intro, List<Step> steps) {
 	}
 
 	/** Optional groundwork before a champion fight; {@code effect} is what it does to the champion. */
@@ -114,44 +113,44 @@ public final class Questlines {
 
 	private static final List<Oath> OATHS = List.of(
 		new Oath("sword", "Oath of the Sword", "We will carry one blade through every generation, until it fells the Wither.", "oathbound", List.of(
-			new Act(0, "The First Blade", "Every oath begins with a blade. Prove your arm, then forge the sword your family will carry.", List.of(
+			new Act("The First Blade", "Every oath begins with a blade. Prove your arm, then forge the sword your family will carry.", List.of(
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Slay monsters", Goal.CUSTOM_STAT, List.of("mob_kills"), 30, Reward.levels(3))),
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Craft an iron sword to swear upon", Goal.CRAFT, List.of("iron_sword"), 1, Reward.none()),
 					Questlines::swearBlade))),
-			new Act(10, "Trial by Fire", "The Oathblade must be tempered where the world burns.", List.of(
+			new Act("Trial by Fire", "The Oathblade must be tempered where the world burns.", List.of(
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Carry the Oathblade into the Nether", Goal.DIMENSION, List.of("minecraft:the_nether"), 1, Reward.levels(2))),
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Slay Blazes with the Oathblade", Goal.KILL_WITH_OATHBLADE, List.of("minecraft:blaze"), 3, Reward.levels(4))))),
-			new Act(25, "The Fortress Captain", "A captain of the wither-bones holds a fortress in the Nether. It must fall to the Oathblade.", List.of(
+			new Act("The Fortress Captain", "A captain of the wither-bones holds a fortress in the Nether. It must fall to the Oathblade.", List.of(
 				new Step((p, l, t) -> championQuest(p, t, "Defeat the Captain of the Fortress", Champions.FORTRESS_CAPTAIN, "oath_sword",
 					Level.NETHER, BuiltinStructures.FORTRESS, false, Reward.item(5, "netherite_scrap", 2))))),
-			new Act(45, "Oathfulfilled", "Only the Wither remains. Let the Oathblade strike the final blow.", List.of(
+			new Act("Oathfulfilled", "Only the Wither remains. Let the Oathblade strike the final blow.", List.of(
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Slay the Wither with the Oathblade", Goal.KILL_WITH_OATHBLADE, List.of("minecraft:wither"), 1, Reward.levels(10)))))
 		)),
 		new Oath("deep", "Oath of the Deep", "We will dig until we find what the old ones buried, and silence the Warden.", "deepborn", List.of(
-			new Act(0, "Strike the Earth", "The family's fortune lies below. Dig deep.", List.of(
+			new Act("Strike the Earth", "The family's fortune lies below. Dig deep.", List.of(
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Descend below Y -32", Goal.DEPTH, List.of("-32"), 1, Reward.levels(2))),
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Mine diamond ore", Goal.MINE, List.of("diamond_ore", "deepslate_diamond_ore"), 3, Reward.levels(4))))),
-			new Act(10, "The Silent City", "Somewhere in the deep dark lies a city of the old ones. Walk its halls without waking the Warden.", List.of(
+			new Act("The Silent City", "Somewhere in the deep dark lies a city of the old ones. Walk its halls without waking the Warden.", List.of(
 				new Step((p, l, t) -> structureQuest(p, t, "Find the ancient city", Level.OVERWORLD, BuiltinStructures.ANCIENT_CITY, true, Reward.levels(3))),
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Break sculk catalysts", Goal.MINE, List.of("sculk_catalyst"), 2, Reward.levels(4))))),
-			new Act(25, "The Lost Delver", "A delver of another house never came home from the deep. What is left of them still guards the city.", List.of(
+			new Act("The Lost Delver", "A delver of another house never came home from the deep. What is left of them still guards the city.", List.of(
 				new Step((p, l, t) -> championQuest(p, t, "Defeat the Lost Delver in the ancient city", Champions.LOST_DELVER, "oath_deep",
 					Level.OVERWORLD, BuiltinStructures.ANCIENT_CITY, true, Reward.item(5, "echo_shard", 3))))),
-			new Act(45, "Echoes", "Gather the echoes of the deep, then face the thing that guards them.", List.of(
+			new Act("Echoes", "Gather the echoes of the deep, then face the thing that guards them.", List.of(
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Craft a recovery compass", Goal.CRAFT, List.of("recovery_compass"), 1, Reward.levels(3))),
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Slay a Warden", Goal.KILL, List.of("minecraft:warden"), 1, Reward.levels(10)))))
 		)),
 		new Oath("hearth", "Oath of the Hearth", "We will stand between the villages and those who would burn them.", "beloved", List.of(
-			new Act(0, "Friend of the Village", "A house is nothing without neighbours.", List.of(
+			new Act("Friend of the Village", "A house is nothing without neighbours.", List.of(
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Trade with villagers", Goal.CUSTOM_STAT, List.of("traded_with_villager"), 15, Reward.levels(3))),
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Breed animals", Goal.CUSTOM_STAT, List.of("animals_bred"), 10, Reward.item(2, "emerald", 8))))),
-			new Act(10, "Defender", "Pillagers threaten the villages. Stand between them and the innocent.", List.of(
+			new Act("Defender", "Pillagers threaten the villages. Stand between them and the innocent.", List.of(
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Slay pillagers or vindicators", Goal.KILL, List.of("minecraft:pillager", "minecraft:vindicator"), 8, Reward.levels(3))),
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Win a raid", Goal.CUSTOM_STAT, List.of("raid_win"), 1, Reward.levels(5))))),
-			new Act(25, "The Warlord", "The raids are led from an outpost. Its warlord must answer to your house.", List.of(
+			new Act("The Warlord", "The raids are led from an outpost. Its warlord must answer to your house.", List.of(
 				new Step((p, l, t) -> championQuest(p, t, "Defeat the Warlord of the Outpost", Champions.WARLORD, "oath_hearth",
 					Level.OVERWORLD, BuiltinStructures.PILLAGER_OUTPOST, false, Reward.item(5, "totem_of_undying", 1))))),
-			new Act(45, "Hero of the Realm", "Become the shield the realm remembers.", List.of(
+			new Act("Hero of the Realm", "Become the shield the realm remembers.", List.of(
 				new Step((p, l, t) -> Quest.of(Type.QUESTLINE, t, "Win two more raids", Goal.CUSTOM_STAT, List.of("raid_win"), 2, Reward.levels(10)))))
 		))
 	);
@@ -213,7 +212,7 @@ public final class Questlines {
 		if (oath == null || lineage.house.oathActs >= oath.acts().size()) return;
 		if (lineage.house.actPending) return;
 		Act next = oath.acts().get(lineage.house.oathActs);
-		if (lineage.house.renown < next.renown()) return;
+		if (lineage.house.renown < Renown.forAct(lineage.house.oathActs)) return;
 		startAct(player, lineage, oath, lineage.house.oathActs);
 	}
 
@@ -265,7 +264,7 @@ public final class Questlines {
 		lineage.house.actPending = true;
 		// Finishing an act is what earns a family member the right to give their life for the house.
 		lineage.fulfilledAct = true;
-		Renown.change(player, lineage, Renown.ACT_COMPLETED, "for fulfilling Act " + Names.numeral(quest.act + 1));
+		Renown.change(player, lineage, Renown.actCompleted(), "for fulfilling Act " + Names.numeral(quest.act + 1));
 		Lineages.record(server, lineage, Component.literal(lineage.current.name() + " fulfilled Act " + Names.numeral(quest.act + 1)
 			+ " of the " + oath.name() + ": " + act.name() + "."));
 		if (lineage.house.oathActs < oath.acts().size()) {
@@ -387,7 +386,7 @@ public final class Questlines {
 			objective.append(Chronicle.body("This generation has done its part. The next act falls to your heir."));
 		} else {
 			objective.append(Chronicle.body("The house is not yet renowned enough to begin this act.\n\n"))
-				.append(Component.literal("Renown: " + lineage.house.renown + " / " + act.renown()).withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(false)))
+				.append(Component.literal("Renown: " + lineage.house.renown + " / " + Renown.forAct(lineage.house.oathActs)).withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(false)))
 				.append(Chronicle.faint("\n\nFulfil duties, settle blood debts and reclaim heirlooms to earn renown."));
 		}
 		pages.add(objective);
@@ -534,7 +533,8 @@ public final class Questlines {
 		}
 		var holder = level.registryAccess().lookupOrThrow(Registries.STRUCTURE).get(structure);
 		if (holder.isEmpty()) return Optional.empty();
-		BlockPos found = level.findNearestMapStructure(HolderSet.direct(holder.get()), origin, SEARCH_RADIUS_CHUNKS, skipKnown);
+		int radius = skipKnown ? BloodlineConfig.get().structures.rumourSearchRadiusChunks : BloodlineConfig.get().structures.searchRadiusChunks;
+		BlockPos found = level.findNearestMapStructure(HolderSet.direct(holder.get()), origin, radius, skipKnown);
 		return Optional.ofNullable(found).map(pos -> GlobalPos.of(dimension, pos));
 	}
 

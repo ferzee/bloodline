@@ -60,7 +60,7 @@ final class Epithets {
 
 	static String choose(Map<String, Integer> atBirth, Map<String, Integer> atDeath, RandomSource random) {
 		int played = delta(atBirth, atDeath, "play_time");
-		if (played < TICKS_PER_DAY) {
+		if (played < BloodlineConfig.get().families.briefLifeMinutes * 1200) {
 			return BRIEF;
 		}
 		Deed best = null;

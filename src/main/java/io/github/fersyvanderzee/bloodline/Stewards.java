@@ -43,25 +43,38 @@ import java.util.UUID;
  * renown.
  */
 public final class Stewards {
-	public static final int HIRE_COST = 10;
-	public static final int MOVE_COST = 2;
+	public static int hireCost() {
+		return BloodlineConfig.get().steward.hireCost;
+	}
+
+	public static int moveCost() {
+		return BloodlineConfig.get().steward.moveCost;
+	}
 	private static final String TAG = "bloodline_steward";
 	private static final String HOUSE_TAG = "bloodline_house=";
 	private static final int NEAR_HOME = 32;
 	private static final double MAX_TALK_DISTANCE = 8;
 	private static final long RESPAWN_COOLDOWN = 600;
 
-	/** Vault slots by renown: 3 to start, 6 at 25 renown, 9 at 50. */
+	/** Vault slots by renown (by default 3 to start, 6 at 25 renown, 9 at 50). */
 	public static int vaultSlots(int renown) {
-		if (renown >= 50) return 9;
-		if (renown >= 25) return 6;
-		return 3;
+		BloodlineConfig.Steward settings = BloodlineConfig.get().steward;
+		int slots = 0;
+		for (int tier = 0; tier < settings.vaultSlots.length; tier++) {
+			if (renown >= settings.vaultRenown[tier]) slots = Math.max(slots, settings.vaultSlots[tier]);
+		}
+		return Math.max(0, Math.min(Steward.VAULT_SIZE, slots));
 	}
 
+	/** The renown at which the next vault slots unlock, or -1 if they all are. */
 	public static int nextTier(int renown) {
-		if (renown < 25) return 25;
-		if (renown < 50) return 50;
-		return -1;
+		BloodlineConfig.Steward settings = BloodlineConfig.get().steward;
+		int next = -1;
+		for (int tier = 0; tier < settings.vaultRenown.length; tier++) {
+			int needed = settings.vaultRenown[tier];
+			if (needed > renown && settings.vaultSlots[tier] > vaultSlots(renown) && (next < 0 || needed < next)) next = needed;
+		}
+		return next;
 	}
 
 	private static final Map<UUID, Long> LAST_SPAWN = new HashMap<>();
@@ -91,7 +104,7 @@ public final class Stewards {
 		}
 		GlobalPos home = respawn.respawnData().globalPos();
 		House house = lineage.house;
-		int cost = house.steward.isPresent() ? MOVE_COST : HIRE_COST;
+		int cost = house.steward.isPresent() ? moveCost() : hireCost();
 		if (Inns.count(player, Items.EMERALD) < cost) {
 			player.sendSystemMessage(Component.literal("That costs " + cost + " emeralds.").withStyle(ChatFormatting.RED));
 			return;

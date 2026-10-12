@@ -40,7 +40,6 @@ import java.util.UUID;
  */
 public final class Heirlooms {
 	private static final String KEY = "bloodline_heirloom";
-	private static final int MAX_RANK = 3;
 	private static final EquipmentSlot[] SLOTS = {
 		EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND, EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
 	};
@@ -83,7 +82,7 @@ public final class Heirlooms {
 		}
 
 		int rank() {
-			return Math.max(0, Math.min(keys().size() - 1, MAX_RANK));
+			return Math.max(0, Math.min(keys().size() - 1, BloodlineConfig.get().heirlooms.maxRank));
 		}
 	}
 

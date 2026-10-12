@@ -268,8 +268,8 @@ public final class Chronicle {
 		page.append(condition(now.fullMoon(), now.fullMoon() ? "The moon is full" : "Full moon in " + now.nightsUntilFullMoon() + " nights"));
 		page.append(condition(now.place().isPresent(), now.place().map(p -> "At " + p)
 			.orElse(now.founder() ? "At a grave or your steward's home" : "At an ancestor's grave")));
-		page.append(faint("\nHeir keeps every boon, +" + Sacrifice.RENOWN + " renown. Sacrifices: "
-			+ lineage.house.sacrifices + "/" + Sacrifice.FOR_BLOOD_SWORN + "\n\n"));
+		page.append(faint("\nHeir keeps every boon, +" + Sacrifice.renown() + " renown. Sacrifices: "
+			+ lineage.house.sacrifices + "/" + Sacrifice.forBloodSworn() + "\n\n"));
 		// Always offer the button: if something is missing, the command says exactly what.
 		page.append(button("Offer your life", "/bloodline sacrifice", Component.literal(now.met()
 			? "You'll be asked to confirm. Your belongings fall where you kneel."

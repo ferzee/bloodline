@@ -56,7 +56,6 @@ public final class Inns {
 	private static final String TAG = "bloodline_innkeeper";
 	private static final String INN_TAG = "bloodline_inn=";
 	private static final String LINE_PREFIX = "inn:";
-	private static final int MAX_JOBS = 2;
 	private static final int OFFERS = 5;
 	private static final int VILLAGE_RADIUS = 48;
 	private static final long RESPAWN_COOLDOWN = 24000;
@@ -156,6 +155,9 @@ public final class Inns {
 		Optional<BlockPos> bell = level.getPoiManager().findClosest(type -> type.is(PoiTypes.MEETING), player.blockPosition(),
 			VILLAGE_RADIUS, PoiManager.Occupancy.ANY);
 		if (bell.isEmpty()) return;
+		// Optionally only bells that are part of a generated village attract an innkeeper.
+		if (!BloodlineConfig.get().inns.innkeepersAtPlayerBells
+			&& !level.structureManager().getStructureWithPieceAt(bell.get(), StructureTags.VILLAGE).isValid()) return;
 		boolean hasInnkeeper = !level.getEntitiesOfClass(Villager.class, new AABB(bell.get()).inflate(VILLAGE_RADIUS), Inns::isInnkeeper).isEmpty();
 		if (hasInnkeeper) return;
 		long now = level.getGameTime();
@@ -244,7 +246,7 @@ public final class Inns {
 	}
 
 	private static void fill(SimpleContainer board, ServerPlayer player, Lineage lineage, List<Offer> offers) {
-		boolean full = activeJobs(lineage) >= MAX_JOBS;
+		boolean full = activeJobs(lineage) >= BloodlineConfig.get().inns.maxJobsPerPlayer;
 		for (int slot = 0; slot < offers.size(); slot++) {
 			Offer offer = offers.get(slot);
 			boolean taken = taken(lineage, offer);
@@ -276,7 +278,7 @@ public final class Inns {
 				lore.add(line("✔ Accepted", ChatFormatting.DARK_GREEN));
 				icon.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
 			} else if (full) {
-				lore.add(line("You already have " + MAX_JOBS + " inn jobs.", ChatFormatting.DARK_RED));
+				lore.add(line("You already have " + BloodlineConfig.get().inns.maxJobsPerPlayer + " inn jobs.", ChatFormatting.DARK_RED));
 			} else {
 				lore.add(line("Click to accept", ChatFormatting.WHITE));
 			}
@@ -286,7 +288,7 @@ public final class Inns {
 		ItemStack info = new ItemStack(Items.PAPER);
 		info.set(DataComponents.CUSTOM_NAME, name("House " + lineage.house.name, ChatFormatting.GOLD));
 		info.set(DataComponents.LORE, new ItemLore(List.of(
-			line("Inn jobs: " + activeJobs(lineage) + " / " + MAX_JOBS, ChatFormatting.GRAY),
+			line("Inn jobs: " + activeJobs(lineage) + " / " + BloodlineConfig.get().inns.maxJobsPerPlayer, ChatFormatting.GRAY),
 			line("Renown: " + lineage.house.renown, ChatFormatting.YELLOW),
 			line("New jobs are posted every morning.", ChatFormatting.DARK_GRAY))));
 		board.setItem(8, info);
@@ -303,13 +305,13 @@ public final class Inns {
 			icon.set(DataComponents.CUSTOM_NAME, name("Hire a steward", ChatFormatting.GOLD));
 			lore.add(line("A loyal servant who waits at your home", ChatFormatting.GRAY));
 			lore.add(line("and keeps the family vault for the house.", ChatFormatting.GRAY));
-			lore.add(line("Vault: " + Stewards.vaultSlots(lineage.house.renown) + " slots (6 at 25 renown, 9 at 50)", ChatFormatting.YELLOW));
-			lore.add(line("Costs " + Stewards.HIRE_COST + " emeralds. They go to your bed.", ChatFormatting.GOLD));
+			lore.add(line("Vault: " + Stewards.vaultSlots(lineage.house.renown) + " slots for now, more with renown", ChatFormatting.YELLOW));
+			lore.add(line("Costs " + Stewards.hireCost() + " emeralds. They go to your bed.", ChatFormatting.GOLD));
 		} else {
 			String name = lineage.house.steward.get().name;
 			icon.set(DataComponents.CUSTOM_NAME, name("Send " + name + " to your home", ChatFormatting.GOLD));
 			lore.add(line("Your steward moves to your current bed.", ChatFormatting.GRAY));
-			lore.add(line("Costs " + Stewards.MOVE_COST + " emeralds.", ChatFormatting.GOLD));
+			lore.add(line("Costs " + Stewards.moveCost() + " emeralds.", ChatFormatting.GOLD));
 		}
 		lore.add(line("Click to agree", ChatFormatting.WHITE));
 		icon.set(DataComponents.LORE, new ItemLore(lore));
@@ -360,7 +362,7 @@ public final class Inns {
 
 	private static void accept(ServerPlayer player, Lineage lineage, Offer offer) {
 		if (taken(lineage, offer)) return;
-		if (activeJobs(lineage) >= MAX_JOBS) {
+		if (activeJobs(lineage) >= BloodlineConfig.get().inns.maxJobsPerPlayer) {
 			player.sendSystemMessage(Component.literal("Finish one of your inn jobs before taking another.").withStyle(ChatFormatting.RED));
 			return;
 		}

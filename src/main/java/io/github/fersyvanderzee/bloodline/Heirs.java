@@ -28,8 +28,8 @@ import java.util.UUID;
  * they are in mourning. If they don't choose within a couple of minutes, the family picks for them.
  */
 public final class Heirs {
-	public static final int COUNT = 3;
-	private static final long AUTO_CHOOSE_TICKS = 20 * 120;
+	/** Most children a configuration may ask for; the command accepts numbers up to this. */
+	public static final int MAX_CHOICES = 5;
 	private static final int ATTEMPTS = 12;
 
 	/** When each mourning player's choice runs out. Not saved: after a relog the choice is offered again. */
@@ -52,7 +52,7 @@ public final class Heirs {
 		List<Member> children = new ArrayList<>();
 		Set<String> names = new HashSet<>();
 		Set<Set<String>> traitSets = new HashSet<>();
-		for (int i = 0; i < COUNT; i++) {
+		for (int i = 0; i < BloodlineConfig.get().families.heirChoices; i++) {
 			List<String> traits = Traits.rollHeir(inherited, random, lineage.inheritAll);
 			// Try for children who differ from their siblings, but don't insist forever.
 			for (int attempt = 0; attempt < ATTEMPTS && traitSets.contains(Set.copyOf(traits)); attempt++) {
@@ -73,7 +73,7 @@ public final class Heirs {
 		Ancestor parent = lineage.parent();
 		if (parent == null) return;
 		if (lineage.candidates.isEmpty()) roll(player, lineage);
-		DEADLINES.put(player.getUUID(), player.level().getGameTime() + AUTO_CHOOSE_TICKS);
+		DEADLINES.put(player.getUUID(), player.level().getGameTime() + 20L * BloodlineConfig.get().families.heirAutoChooseSeconds);
 
 		player.connection.send(new ClientboundSetTitlesAnimationPacket(10, 80, 20));
 		player.connection.send(new ClientboundSetTitleTextPacket(Component.literal("Choose your heir").withStyle(ChatFormatting.GOLD)));

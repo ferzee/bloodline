@@ -11,21 +11,41 @@ import net.minecraft.server.level.ServerPlayer;
  * each act of the Founder's Oath needs a certain amount before it can begin.
  */
 public final class Renown {
-	public static final int ACT_COMPLETED = 5;
-	public static final int DEBT_INHERITED = -2;
-	public static final int DEBT_FORGOTTEN = -3;
+	private static BloodlineConfig.Renown settings() {
+		return BloodlineConfig.get().renown;
+	}
+
+	public static int actCompleted() {
+		return settings().actCompleted;
+	}
+
+	public static int debtInherited() {
+		return settings().debtInherited;
+	}
+
+	public static int debtForgotten() {
+		return settings().debtForgotten;
+	}
+
+	/** Renown needed to begin an act of the oath (0-based). */
+	public static int forAct(int act) {
+		int[] thresholds = settings().actThresholds;
+		return thresholds[Math.min(act, thresholds.length - 1)];
+	}
 
 	private Renown() {
 	}
 
 	/** Renown for fulfilling a duty of this kind. */
 	public static int forDuty(Quest quest) {
-		if (quest.line.filter("reclaim"::equals).isPresent()) return 4;
+		if (quest.line.filter("reclaim"::equals).isPresent()) return settings().reclaimedHeirloom;
 		return switch (quest.type) {
-			case BLOOD_DEBT -> 5;
-			case UNFINISHED_BUSINESS -> 3;
-			case RESTING_PLACE, FOUNDING, PREPARATION -> 2;
-			case INN -> 3;
+			case BLOOD_DEBT -> settings().bloodDebt;
+			case UNFINISHED_BUSINESS -> settings().unfinishedBusiness;
+			case RESTING_PLACE -> settings().restingPlace;
+			case FOUNDING -> settings().foundingGoal;
+			case PREPARATION -> settings().preparation;
+			case INN -> settings().innJob;
 			case QUESTLINE -> 0;
 		};
 	}

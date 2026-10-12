@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
@@ -41,6 +42,9 @@ public class Bloodline implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		BloodlineConfig.load();
+		// Read the file again whenever a world starts, so edits apply without restarting the game.
+		ServerLifecycleEvents.SERVER_STARTING.register(server -> BloodlineConfig.load());
 		ServerPlayerEvents.JOIN.register(Lineages::onJoin);
 		ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
 			if (entity instanceof ServerPlayer player) Lineages.onDeath(player, source);

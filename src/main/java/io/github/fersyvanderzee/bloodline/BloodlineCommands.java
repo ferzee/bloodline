@@ -67,7 +67,7 @@ final class BloodlineCommands {
 						return 1;
 					})))
 			.then(Commands.literal("heir")
-				.then(Commands.argument("child", IntegerArgumentType.integer(1, Heirs.COUNT))
+				.then(Commands.argument("child", IntegerArgumentType.integer(1, Heirs.MAX_CHOICES))
 					.executes(ctx -> {
 						Heirs.choose(ctx.getSource().getPlayerOrException(), IntegerArgumentType.getInteger(ctx, "child"));
 						return 1;

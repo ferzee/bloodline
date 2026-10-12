@@ -42,7 +42,6 @@ import java.util.Optional;
  * visit where they fell, and finish something they cared about in life.
  */
 public final class Quests {
-	private static final int MAX_BLOOD_DEBTS = 3;
 	private static final int VISIT_RADIUS = 6;
 	private static final int MIN_TICKS_BEFORE_VISIT = 600;
 	/** Blood debts are marked with the branch whose ancestor they avenge. */
@@ -124,7 +123,7 @@ public final class Quests {
 		// Debts nobody settled in this life pass to the heir, and the house's standing suffers for it.
 		String origin = DEBT_PREFIX + player.getUUID();
 		long inherited = lineage.house.quests.stream().filter(q -> q.type == Type.BLOOD_DEBT && q.line.filter(origin::equals).isPresent()).count();
-		if (inherited > 0) Renown.change(player, lineage, (int) inherited * Renown.DEBT_INHERITED, "for leaving blood debts unpaid");
+		if (inherited > 0) Renown.change(player, lineage, (int) inherited * Renown.debtInherited(), "for leaving blood debts unpaid");
 
 		LivingEntity killer = source.getEntity() instanceof LivingEntity living ? living : player.getKillCredit();
 		// A sacrifice is given, not taken: nobody owes a blood debt for it.
@@ -145,9 +144,9 @@ public final class Quests {
 			debt.line = Optional.of(DEBT_PREFIX + player.getUUID());
 			add(player, lineage, debt);
 			List<Quest> debts = lineage.allQuests().stream().filter(q -> q.type == Type.BLOOD_DEBT).toList();
-			for (int i = 0; i < debts.size() - MAX_BLOOD_DEBTS; i++) {
+			for (int i = 0; i < debts.size() - BloodlineConfig.get().renown.maxBloodDebts; i++) {
 				lineage.removeQuest(debts.get(i));
-				Renown.change(player, lineage, Renown.DEBT_FORGOTTEN, "for forgetting the debt to " + debts.get(i).title.replace("Avenge ", ""));
+				Renown.change(player, lineage, Renown.debtForgotten(), "for forgetting the debt to " + debts.get(i).title.replace("Avenge ", ""));
 			}
 		}
 

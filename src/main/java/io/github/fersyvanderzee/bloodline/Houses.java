@@ -23,7 +23,6 @@ import java.util.UUID;
  */
 public final class Houses {
 	private static final long INVITE_TICKS = 20 * 60 * 5;
-	private static final int MAX_MEMBERS = 12;
 
 	private record Invite(UUID house, UUID from, long expires) {
 	}
@@ -50,8 +49,8 @@ public final class Houses {
 			head.sendSystemMessage(fail(theirs.fullName() + " is already part of House " + lineage.house.name + "."));
 			return;
 		}
-		if (lineage.house.members.size() >= MAX_MEMBERS) {
-			head.sendSystemMessage(fail("House " + lineage.house.name + " can't have more than " + MAX_MEMBERS + " members."));
+		if (lineage.house.members.size() >= BloodlineConfig.get().houses.maxMembers) {
+			head.sendSystemMessage(fail("House " + lineage.house.name + " can't have more than " + BloodlineConfig.get().houses.maxMembers + " members."));
 			return;
 		}
 		INVITES.put(target.getUUID(), new Invite(lineage.house.id, head.getUUID(), head.level().getGameTime() + INVITE_TICKS));

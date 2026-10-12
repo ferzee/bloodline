@@ -22,11 +22,9 @@ import static net.minecraft.world.entity.ai.attributes.AttributeModifier.Operati
 import static net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE;
 
 public final class Traits {
-	public static final int MAX_TRAITS = 4;
-	private static final double PASS_ON_BOON = 0.5;
-	private static final double PASS_ON_FLAW = 0.35;
-	private static final double QUIRK_CHANCE = 0.15;
-	private static final double FLAW_CHANCE = 0.25;
+	private static BloodlineConfig.Families settings() {
+		return BloodlineConfig.get().families;
+	}
 
 	private static final Map<String, Trait> ALL = new LinkedHashMap<>();
 
@@ -122,15 +120,16 @@ public final class Traits {
 				traits.add(id);
 				continue;
 			}
-			double chance = trait.kind() == Kind.FLAW ? PASS_ON_FLAW : PASS_ON_BOON;
-			if (random.nextDouble() < chance && traits.size() < MAX_TRAITS - 1) {
+			double chance = trait.kind() == Kind.FLAW ? settings().flawPassChance : settings().boonPassChance;
+			if (random.nextDouble() < chance && traits.size() < settings().maxTraits - 1) {
 				traits.add(id);
 			}
 		}
 		float roll = random.nextFloat();
-		Kind kind = roll < QUIRK_CHANCE ? Kind.QUIRK : roll < QUIRK_CHANCE + FLAW_CHANCE ? Kind.FLAW : Kind.BOON;
+		double quirk = settings().newTraitQuirkChance, flaw = settings().newTraitFlawChance;
+		Kind kind = roll < quirk ? Kind.QUIRK : roll < quirk + flaw ? Kind.FLAW : Kind.BOON;
 		// The mutation is always something the parent didn't have, so every heir brings something new.
-		if (traits.size() >= MAX_TRAITS) return traits;
+		if (traits.size() >= settings().maxTraits) return traits;
 		if (!addRandom(traits, random, kind, parentTraits)) {
 			addRandom(traits, random, Kind.BOON, parentTraits);
 		}
@@ -139,7 +138,7 @@ public final class Traits {
 
 	/** A boon earned during life, e.g. from settling a blood debt. Empty if there's no room for another trait. */
 	public static Optional<String> rollExtraBoon(List<String> current, RandomSource random) {
-		if (current.size() >= MAX_TRAITS) return Optional.empty();
+		if (current.size() >= settings().maxTraits) return Optional.empty();
 		List<String> traits = new ArrayList<>(current);
 		return addRandom(traits, random, Kind.BOON, List.of()) ? Optional.of(traits.getLast()) : Optional.empty();
 	}

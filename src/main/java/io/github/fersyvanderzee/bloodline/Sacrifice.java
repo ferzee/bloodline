@@ -32,8 +32,13 @@ import java.util.UUID;
  * through generations. Three sacrifices make the house Blood-Sworn.
  */
 public final class Sacrifice {
-	public static final int RENOWN = 10;
-	public static final int FOR_BLOOD_SWORN = 3;
+	public static int renown() {
+		return BloodlineConfig.get().sacrifice.renown;
+	}
+
+	public static int forBloodSworn() {
+		return BloodlineConfig.get().sacrifice.sacrificesForBloodSworn;
+	}
 	private static final int RITUAL_RADIUS = 6;
 	private static final long CONFIRM_TICKS = 20 * 30;
 
@@ -117,7 +122,7 @@ public final class Sacrifice {
 			.append(Component.literal("[I give my life]").withStyle(s -> s.withColor(ChatFormatting.DARK_RED).withBold(true)
 				.withClickEvent(new ClickEvent.RunCommand("/bloodline sacrifice confirm"))
 				.withHoverEvent(new HoverEvent.ShowText(Component.literal(lineage.current.name() + " dies. Everything they carry falls here.\n"
-					+ "Their heir inherits every boon, and the house gains " + RENOWN + " renown."))))));
+					+ "Their heir inherits every boon, and the house gains " + renown() + " renown."))))));
 	}
 
 	/** Second step: the player dies, and their death is recorded as a sacrifice. */
@@ -152,8 +157,8 @@ public final class Sacrifice {
 		lineage.house.sacrifices++;
 		server.getPlayerList().broadcastSystemMessage(Component.literal(ancestor.name() + " gave their life for House " + lineage.house.name + ".")
 			.withStyle(ChatFormatting.DARK_RED, ChatFormatting.ITALIC), false);
-		Renown.change(player, lineage, RENOWN, "for the sacrifice of " + ancestor.name());
-		if (lineage.house.sacrifices == FOR_BLOOD_SWORN && !lineage.house.legacies.contains("blood_sworn")) {
+		Renown.change(player, lineage, renown(), "for the sacrifice of " + ancestor.name());
+		if (lineage.house.sacrifices == forBloodSworn() && !lineage.house.legacies.contains("blood_sworn")) {
 			lineage.house.legacies.add("blood_sworn");
 			Lineages.record(server, lineage, Component.literal("Three have now given their lives for House " + lineage.house.name
 				+ ". The house is Blood-Sworn, and every child of it will be too."));
