@@ -381,6 +381,7 @@ public final class Quests {
 				case BLOOD_DEBT -> "  ⚔ ";
 				case QUESTLINE -> "  ✦ ";
 				case PREPARATION -> "  ⚒ ";
+				case EVENT -> "  ✧ ";
 				case INN -> "  ✉ ";
 				default -> "  • ";
 			};

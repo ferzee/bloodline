@@ -87,7 +87,15 @@ public final class Champions {
 		Map.of(EquipmentSlot.MAINHAND, Items.CROSSBOW, EquipmentSlot.HEAD, Items.LEATHER_HELMET),
 		EntityTypes.PILLAGER, 2, BossEvent.BossBarColor.PURPLE);
 
-	public static final List<Kind> ALL = List.of(FORTRESS_CAPTAIN, LOST_DELVER, WARLORD, THIEF, ROTGUT, OLD_BONES, BROODMOTHER, DESERTER);
+	// Family events.
+	public static final Kind RIVAL = new Kind("rival", EntityTypes.VINDICATOR, 100, 2,
+		Map.of(EquipmentSlot.MAINHAND, Items.IRON_AXE, EquipmentSlot.HEAD, Items.IRON_HELMET, EquipmentSlot.CHEST, Items.IRON_CHESTPLATE),
+		EntityTypes.VINDICATOR, 2, BossEvent.BossBarColor.RED);
+	public static final Kind SHADE = new Kind("shade", EntityTypes.STRAY, 80, 2,
+		Map.of(EquipmentSlot.MAINHAND, Items.BOW, EquipmentSlot.HEAD, Items.CHAINMAIL_HELMET),
+		EntityTypes.VEX, 2, BossEvent.BossBarColor.WHITE);
+
+	public static final List<Kind> ALL = List.of(FORTRESS_CAPTAIN, LOST_DELVER, WARLORD, THIEF, ROTGUT, OLD_BONES, BROODMOTHER, DESERTER, RIVAL, SHADE);
 	public static final List<Kind> BOUNTIES = List.of(ROTGUT, OLD_BONES, BROODMOTHER, DESERTER);
 
 	private static final Map<LivingEntity, ServerBossEvent> BARS = new IdentityHashMap<>();

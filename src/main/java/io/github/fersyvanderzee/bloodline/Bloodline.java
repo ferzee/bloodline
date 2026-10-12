@@ -64,6 +64,7 @@ public class Bloodline implements ModInitializer {
 					if (server.getTickCount() % INN_TICK_INTERVAL == 0) {
 						Inns.tick(player);
 						Stewards.tick(player, lineage);
+						FamilyEvents.tick(player, lineage);
 					}
 				}
 			}

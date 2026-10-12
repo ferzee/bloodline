@@ -1,5 +1,6 @@
 package io.github.fersyvanderzee.bloodline;
 
+import io.github.fersyvanderzee.bloodline.data.House;
 import io.github.fersyvanderzee.bloodline.data.Lineage;
 import io.github.fersyvanderzee.bloodline.data.Quest;
 import io.github.fersyvanderzee.bloodline.data.Quest.Goal;
@@ -189,7 +190,7 @@ public final class Questlines {
 	/** Asks a family that hasn't sworn an oath yet to choose one. */
 	public static void offerOath(ServerPlayer player, Lineage lineage) {
 		MutableComponent message = Text.t("oath.offer", lineage.house.name).withStyle(ChatFormatting.GRAY).append(" ");
-		for (Oath oath : OATHS) {
+		for (Oath oath : available(lineage.house)) {
 			message.append(Component.literal("[").append(oath.name()).append("]").withStyle(s -> s.withColor(ChatFormatting.GOLD)
 				.withClickEvent(new ClickEvent.SuggestCommand("/bloodline oath " + oath.id()))
 				.withHoverEvent(new HoverEvent.ShowText(Text.t("oath.quoted", oath.vow()).withStyle(ChatFormatting.ITALIC)
@@ -202,7 +203,13 @@ public final class Questlines {
 
 	/** Points a family without an oath to their chronicle, where the oath is chosen. */
 	public static void nudgeOath(ServerPlayer player, Lineage lineage) {
+		if (!canSwear(lineage.house)) return;
 		Chronicle.ensure(player);
+		if (lineage.house.oath.isPresent()) {
+			player.sendSystemMessage(Text.t(lineage.isHead(player.getUUID()) ? "oath.nudge_next_head" : "oath.nudge_next_member", lineage.house.name)
+				.withStyle(ChatFormatting.GOLD));
+			return;
+		}
 		if (!lineage.isHead(player.getUUID())) {
 			player.sendSystemMessage(Text.t("oath.nudge_member", lineage.house.name)
 				.withStyle(ChatFormatting.GRAY));
@@ -214,13 +221,18 @@ public final class Questlines {
 
 	public static boolean swear(ServerPlayer player, Lineage lineage, String id) {
 		Optional<Oath> oath = oath(id);
-		if (oath.isEmpty() || lineage.house.oath.isPresent()) return false;
+		if (oath.isEmpty() || !available(lineage.house).contains(oath.get())) return false;
 		lineage.house.oath = Optional.of(id);
 		lineage.house.oathActs = 0;
 		Lineages.record(player.level().getServer(), lineage, Text.t("chronicle.oath_sworn", lineage.current.name(), oath.get().name(),
 			lineage.house.name, oath.get().vow()));
 		titleHouse(player, lineage, oath.get().name(), Text.t("oath.quoted", oath.get().vow()));
-		startAct(player, lineage, oath.get(), 0);
+		if (lineage.house.actPending) {
+			// Sworn by the generation that just finished an oath: its first act falls to the next one.
+			tell(player, lineage, Text.t("oath.waits_generation").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+		} else {
+			startAct(player, lineage, oath.get(), 0);
+		}
 		return true;
 	}
 
@@ -230,7 +242,7 @@ public final class Questlines {
 		Oath oath = oath(lineage.house.oath.get()).orElse(null);
 		if (oath == null || lineage.house.oathActs >= oath.acts().size()) return;
 		if (lineage.house.actPending) return;
-		if (lineage.house.renown < Renown.forAct(lineage.house.oathActs)) return;
+		if (lineage.house.renown < Renown.forAct(lineage.house, lineage.house.oathActs)) return;
 		startAct(player, lineage, oath, lineage.house.oathActs);
 	}
 
@@ -252,6 +264,10 @@ public final class Questlines {
 
 	public static void onStepComplete(ServerPlayer player, Lineage lineage, Quest quest) {
 		String line = quest.line.orElse("");
+		if (line.startsWith(FamilyEvents.LINE_PREFIX)) {
+			FamilyEvents.onQuestComplete(player, lineage, line);
+			return;
+		}
 		if (line.startsWith(PREP_PREFIX)) {
 			String effect = line.substring(PREP_PREFIX.length());
 			if (!lineage.house.preparations.contains(effect)) lineage.house.preparations.add(effect);
@@ -292,7 +308,8 @@ public final class Questlines {
 		}
 
 		Trait legacy = Traits.get(oath.legacy());
-		lineage.house.legacies.add(legacy.id());
+		if (!lineage.house.legacies.contains(legacy.id())) lineage.house.legacies.add(legacy.id());
+		if (!lineage.house.fulfilledOaths.contains(oath.id())) lineage.house.fulfilledOaths.add(oath.id());
 		Traits.apply(player, lineage.allTraits());
 		Lineages.record(server, lineage, Text.t("chronicle.oath_fulfilled", lineage.current.generation(), lineage.house.name, oath.name(), legacy.name()));
 		titleHouse(player, lineage, Text.t("oath.fulfilled_title"), Text.t("oath.fulfilled_subtitle", lineage.house.name, legacy.name()));
@@ -300,6 +317,7 @@ public final class Questlines {
 			.withStyle(ChatFormatting.GOLD), false);
 		tell(player, lineage, Text.t("oath.legacy_gained", legacy.displayName())
 			.append(" ").append(Text.t("oath.legacy_gained.note").withStyle(ChatFormatting.DARK_GRAY)));
+		if (canSwear(lineage.house)) tell(player, lineage, Text.t("oath.next_available", Renown.settingsPerOath()).withStyle(ChatFormatting.GOLD));
 		player.level().playSound(null, player.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 1f, 0.8f);
 	}
 
@@ -342,11 +360,37 @@ public final class Questlines {
 		List<Component> pages = new java.util.ArrayList<>();
 		Oath sworn = lineage.house.oath.flatMap(Questlines::oath).orElse(null);
 		if (sworn == null) {
-			MutableComponent intro = Chronicle.heading(Text.t("book.oath.title"))
-				.append(Chronicle.body(Text.t("book.oath.intro"))).append("\n\n");
-			for (int i = 0; i < OATHS.size(); i++) intro.append(Chronicle.link(OATHS.get(i).name(), firstPage + 1 + i));
+			pages.addAll(choosePages(OATHS, firstPage, viewerIsHead, false));
+			return pages;
+		}
+		pages.addAll(swornPages(lineage, sworn));
+		if (lineage.house.oathActs >= sworn.acts().size() && !available(lineage.house).isEmpty()) {
+			pages.addAll(choosePages(available(lineage.house), firstPage + pages.size(), viewerIsHead, true));
+		}
+		return pages;
+	}
+
+	/** Oaths the house may still swear: none while one is in progress, otherwise every one not yet fulfilled. */
+	static List<Oath> available(House house) {
+		Oath current = house.oath.flatMap(Questlines::oath).orElse(null);
+		if (current != null && house.oathActs < current.acts().size()) return List.of();
+		return OATHS.stream().filter(o -> !house.fulfilledOaths.contains(o.id())).toList();
+	}
+
+	/** Whether the house can swear an oath now: it has none, or has fulfilled its current one and others remain. */
+	public static boolean canSwear(House house) {
+		return !available(house).isEmpty();
+	}
+
+	/** An introduction page linking to one page per oath, each with a button to swear it. */
+	private static List<Component> choosePages(List<Oath> options, int firstPage, boolean viewerIsHead, boolean next) {
+		List<Component> pages = new java.util.ArrayList<>();
+		{
+			MutableComponent intro = Chronicle.heading(Text.t(next ? "book.oath.next_title" : "book.oath.title"))
+				.append(Chronicle.body(Text.t(next ? "book.oath.next_intro" : "book.oath.intro"))).append("\n\n");
+			for (int i = 0; i < options.size(); i++) intro.append(Chronicle.link(options.get(i).name(), firstPage + 1 + i));
 			pages.add(intro);
-			for (Oath oath : OATHS) {
+			for (Oath oath : options) {
 				MutableComponent page = Component.empty().append(oath.name()).append("\n").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD)
 					.append(Text.t("oath.quoted", oath.vow()).withStyle(s -> s.withColor(ChatFormatting.DARK_GRAY).withItalic(true).withBold(false)))
 					.append("\n");
@@ -361,9 +405,13 @@ public final class Questlines {
 						: Chronicle.faint(Text.t("book.oath.head_only")));
 				pages.add(page);
 			}
-			return pages;
 		}
+		return pages;
+	}
 
+	/** The sworn oath: its acts, then either the current act and objective, or that it is fulfilled. */
+	private static List<Component> swornPages(Lineage lineage, Oath sworn) {
+		List<Component> pages = new java.util.ArrayList<>();
 		MutableComponent overview = Chronicle.heading(sworn.name());
 		for (int i = 0; i < sworn.acts().size(); i++) {
 			String mark = i < lineage.house.oathActs ? "✔ " : i == lineage.house.oathActs ? "▶ " : "○ ";
@@ -405,7 +453,7 @@ public final class Questlines {
 			objective.append(Chronicle.body(Text.t("book.oath.wait_heir")));
 		} else {
 			objective.append(Chronicle.body(Text.t("book.oath.need_renown"))).append("\n\n")
-				.append(Text.t("book.oath.renown_progress", lineage.house.renown, Renown.forAct(currentAct)).withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(false)))
+				.append(Text.t("book.oath.renown_progress", lineage.house.renown, Renown.forAct(lineage.house, currentAct)).withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(false)))
 				.append("\n\n").append(Chronicle.faint(Text.t("book.oath.renown_hint")));
 		}
 		pages.add(objective);
@@ -515,6 +563,8 @@ public final class Questlines {
 		Champions.Kind kind = CHAMPIONS.get(quest.targets.get(1));
 		if (kind == null || !player.level().dimension().identifier().toString().equals(quest.targets.get(2))) return;
 		if (quest.place.isPresent() ? !Quests.isAt(player, quest) : (quest.targets.contains("underground") && player.getBlockY() >= 0)) return;
+		// Some champions (a rival's, a restless shade) only come at night.
+		if (quest.targets.contains("night") && !player.level().isDarkOutside()) return;
 		boolean present = !player.level().getEntitiesOfClass(Mob.class, player.getBoundingBox().inflate(CHAMPION_SEARCH_RANGE),
 			m -> m.entityTags().contains("bloodline_key=" + key)).isEmpty();
 		if (present) return;

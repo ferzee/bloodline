@@ -22,7 +22,8 @@ It runs entirely on the server, so players can join a Bloodline server with a va
   - **Oath of the Deep:** dig deep, find a real Ancient City, defeat the Lost Delver who haunts it, and slay a Warden.
   - **Oath of the Hearth:** befriend villagers, win raids, and defeat the Warlord at a real Pillager Outpost.
 
-  Finishing an oath gives the family a **legendary trait** that every later heir is born with.
+  Finishing an oath gives the family a **legendary trait** that every later heir is born with. After that, the house may swear one of the other oaths, whose acts need more renown, until it has fulfilled all three.
+- **Family events.** Every few days something happens to the house: a member falls ill, a rival house declares a feud, a village family proposes a match, a long-lost cousin arrives with an heirloom, or an ancestor's restless spirit walks their grave. Some need a choice, answered with clickable buttons by any member.
 - **Renown.** Fulfilling duties earns your house renown (blood debts are worth the most); leaving debts unpaid costs it. Each act of the oath needs more renown to begin (Act II: 10, Act III: 25, Act IV: 45), so side duties drive the main quest.
 - **Preparations.** Before each champion fight the family gets three optional preparation duties. Each one weakens the champion: no bodyguards, 30% less health, or glowing and slowed.
 - **Champions.** Named bosses with extra health, gear, bodyguards and a boss bar. They wait at real structures in your world, and quests give you a map to find them.
@@ -51,6 +52,7 @@ It runs entirely on the server, so players can join a Bloodline server with a va
 | `/bloodline remove <player>` | Send a member away (head only) |
 | `/bloodline head <player>` | Pass leadership to another member (head only) |
 | `/bloodline heir <1-3>` | Choose which child carries on after a death |
+| `/bloodline event [accept\|decline]` | See or answer a family event waiting for a choice |
 | `/bloodline sacrifice` | Give your life for the house (full moon, at an ancestor's grave) |
 | `/bloodline chronicle` | A new copy of the family chronicle |
 | `/bloodline house <name>` | Rename your house |
@@ -59,7 +61,7 @@ It runs entirely on the server, so players can join a Bloodline server with a va
 
 Server owners can tune Bloodline in `config/bloodline.json`, which is created with the defaults on first start (and gains any new settings after updates). It covers trait inheritance chances, how many children to choose from, how short a life counts as "the Brief", renown rewards and the renown each act needs, the Sacrifice, steward costs and vault tiers, inn job limits, whether player-placed bells attract innkeepers, the house size limit, heirloom ranks and how far to search for structures. Changes apply the next time a world starts.
 
-Operators can use `/bloodline debug complete` to finish the newest quest, `/bloodline debug champion` to spawn a test champion, `/bloodline debug age` to make the current family member count as having lived a full life, and `/bloodline admin reset <player>` to wipe a player's family so they start over.
+Operators can use `/bloodline debug complete` to finish the newest quest, `/bloodline debug champion` to spawn a test champion, `/bloodline debug event <type>` to start a family event, `/bloodline debug age` to make the current family member count as having lived a full life, and `/bloodline admin reset <player>` to wipe a player's family so they start over.
 
 ## Translations
 

@@ -22,7 +22,9 @@ public class Lineage {
 		CompletedQuest.CODEC.listOf().optionalFieldOf("completed", List.of()).forGetter(l -> l.completed),
 		Codec.BOOL.optionalFieldOf("inherit_all", false).forGetter(l -> l.inheritAll),
 		Member.CODEC.listOf().optionalFieldOf("heir_candidates", List.of()).forGetter(l -> l.candidates),
-		Codec.BOOL.optionalFieldOf("fulfilled_act", false).forGetter(l -> l.fulfilledAct)
+		Codec.BOOL.optionalFieldOf("fulfilled_act", false).forGetter(l -> l.fulfilledAct),
+		Codec.BOOL.optionalFieldOf("blessed_match", false).forGetter(l -> l.blessedMatch),
+		Codec.BOOL.optionalFieldOf("sick", false).forGetter(l -> l.sick)
 	).apply(i, Lineage::new));
 
 	/** The house this branch belongs to. Linked by {@link BloodlineState} after loading. */
@@ -43,9 +45,13 @@ public class Lineage {
 	public final List<Member> candidates;
 	/** Whether this branch's current family member finished an act of the oath; only they may perform the Sacrifice. */
 	public boolean fulfilledAct;
+	/** Set by a wedding event: this branch's next children are each born with an extra boon. */
+	public boolean blessedMatch;
+	/** Set by a sickness event until it is cured. */
+	public boolean sick;
 
 	Lineage(UUID houseId, Member current, boolean awaitingHeir, List<Ancestor> ancestors, List<Quest> ownQuests, List<CompletedQuest> completed,
-			boolean inheritAll, List<Member> candidates, boolean fulfilledAct) {
+			boolean inheritAll, List<Member> candidates, boolean fulfilledAct, boolean blessedMatch, boolean sick) {
 		this.houseId = houseId;
 		this.current = current;
 		this.awaitingHeir = awaitingHeir;
@@ -55,10 +61,12 @@ public class Lineage {
 		this.inheritAll = inheritAll;
 		this.candidates = new ArrayList<>(candidates);
 		this.fulfilledAct = fulfilledAct;
+		this.blessedMatch = blessedMatch;
+		this.sick = sick;
 	}
 
 	public Lineage(House house, Member current) {
-		this(house.id, current, false, List.of(), List.of(), List.of(), false, List.of(), false);
+		this(house.id, current, false, List.of(), List.of(), List.of(), false, List.of(), false, false, false);
 		this.house = house;
 	}
 

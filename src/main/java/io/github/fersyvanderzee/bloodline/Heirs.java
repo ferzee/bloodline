@@ -64,6 +64,17 @@ public final class Heirs {
 			names.add(name);
 			children.add(new Member(name, parent.generation() + 1, traits, 0, Map.of()));
 		}
+		// A wedding blessed this branch: every child is born with one extra boon.
+		if (lineage.blessedMatch) {
+			lineage.blessedMatch = false;
+			children.replaceAll(child -> Traits.rollExtraBoon(child.traits(), random)
+				.map(extra -> {
+					List<String> traits = new ArrayList<>(child.traits());
+					traits.add(extra);
+					return new Member(child.name(), child.generation(), traits, child.bornDay(), child.statsAtBirth());
+				})
+				.orElse(child));
+		}
 		lineage.candidates.clear();
 		lineage.candidates.addAll(children);
 	}

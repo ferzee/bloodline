@@ -215,6 +215,6 @@ public final class Houses {
 		Inns.addIntroQuest(player, lineage);
 		Questlines.resume(player, lineage);
 		player.sendSystemMessage(Text.t("house.you_are", Component.literal(lineage.fullName()).withStyle(ChatFormatting.GOLD), lineage.house.name));
-		if (lineage.house.oath.isEmpty()) Questlines.nudgeOath(player, lineage);
+		Questlines.nudgeOath(player, lineage);
 	}
 }

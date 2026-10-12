@@ -32,7 +32,9 @@ public class Quest {
 		/** Optional groundwork before a champion fight that weakens the champion. Survives death. */
 		PREPARATION("preparation"),
 		/** A job taken from an inn's quest board. */
-		INN("inn");
+		INN("inn"),
+		/** Something a family event asks of the house, such as curing a sickness. Shared by the house. */
+		EVENT("event");
 
 		public static final Codec<Type> CODEC = StringRepresentable.fromEnum(Type::values);
 		private final String name;

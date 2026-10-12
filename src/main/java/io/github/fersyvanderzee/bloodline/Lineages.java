@@ -98,7 +98,7 @@ public final class Lineages {
 		}
 		applyTraits(player, lineage);
 		refreshName(player);
-		if (lineage.house.oath.isEmpty() && !lineage.awaitingHeir) Questlines.nudgeOath(player, lineage);
+		if (!lineage.awaitingHeir) Questlines.nudgeOath(player, lineage);
 	}
 
 	/** Called when a player dies: the current family member becomes an ancestor. */
@@ -166,7 +166,7 @@ public final class Lineages {
 		applyTraits(player, lineage);
 		player.setHealth(player.getMaxHealth());
 		refreshName(player);
-		if (lineage.house.oath.isEmpty()) Questlines.nudgeOath(player, lineage);
+		Questlines.nudgeOath(player, lineage);
 		if (inheritAll) {
 			player.sendSystemMessage(Text.t("heir.after_sacrifice", parent.name(), heir.name()).withStyle(ChatFormatting.GOLD));
 		}

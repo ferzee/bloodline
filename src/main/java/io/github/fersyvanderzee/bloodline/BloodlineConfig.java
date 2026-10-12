@@ -50,6 +50,17 @@ public final class BloodlineConfig {
 		public int debtForgotten = -3;
 		/** Most unpaid blood debts a house can carry. */
 		public int maxBloodDebts = 3;
+		/** For a family event's duty, such as defeating a rival champion. */
+		public int familyEvent = 4;
+		/** Extra renown every act needs for each oath the house has already fulfilled. */
+		public int perFulfilledOath = 50;
+	}
+
+	public static final class Events {
+		/** Whether family events (sickness, rivals, weddings, cousins, restless spirits) happen at all. */
+		public boolean enabled = true;
+		/** Minecraft days between family events, plus up to two days of chance. */
+		public int intervalDays = 3;
 	}
 
 	public static final class Sacrifice {
@@ -99,6 +110,7 @@ public final class BloodlineConfig {
 	public Houses houses = new Houses();
 	public Heirlooms heirlooms = new Heirlooms();
 	public Structures structures = new Structures();
+	public Events events = new Events();
 
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static BloodlineConfig current = new BloodlineConfig();
@@ -138,6 +150,8 @@ public final class BloodlineConfig {
 		if (houses == null) houses = new Houses();
 		if (heirlooms == null) heirlooms = new Heirlooms();
 		if (structures == null) structures = new Structures();
+		if (events == null) events = new Events();
+		events.intervalDays = Math.max(1, events.intervalDays);
 		if (renown.actThresholds == null || renown.actThresholds.length < 4) renown.actThresholds = new Renown().actThresholds;
 		if (steward.vaultSlots == null || steward.vaultRenown == null || steward.vaultSlots.length == 0
 			|| steward.vaultSlots.length != steward.vaultRenown.length) {

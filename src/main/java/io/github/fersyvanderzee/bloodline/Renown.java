@@ -16,6 +16,11 @@ public final class Renown {
 		return BloodlineConfig.get().renown;
 	}
 
+	/** How much more renown each act needs per oath already fulfilled. */
+	public static int settingsPerOath() {
+		return settings().perFulfilledOath;
+	}
+
 	public static int actCompleted() {
 		return settings().actCompleted;
 	}
@@ -28,10 +33,10 @@ public final class Renown {
 		return settings().debtForgotten;
 	}
 
-	/** Renown needed to begin an act of the oath (0-based). */
-	public static int forAct(int act) {
+	/** Renown the house needs to begin an act (0-based) of its current oath; later oaths need more. */
+	public static int forAct(io.github.fersyvanderzee.bloodline.data.House house, int act) {
 		int[] thresholds = settings().actThresholds;
-		return thresholds[Math.min(act, thresholds.length - 1)];
+		return thresholds[Math.min(act, thresholds.length - 1)] + house.fulfilledOaths.size() * settings().perFulfilledOath;
 	}
 
 	private Renown() {
@@ -47,6 +52,7 @@ public final class Renown {
 			case FOUNDING -> settings().foundingGoal;
 			case PREPARATION -> settings().preparation;
 			case INN -> settings().innJob;
+			case EVENT -> settings().familyEvent;
 			case QUESTLINE -> 0;
 		};
 	}

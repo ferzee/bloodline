@@ -1,6 +1,7 @@
 package io.github.fersyvanderzee.bloodline.data;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.world.item.ItemStack;
@@ -33,9 +34,29 @@ public class House {
 		ItemStack.CODEC.listOf().optionalFieldOf("lost_heirlooms", List.of()).forGetter(h -> h.lostHeirlooms),
 		Codec.INT.optionalFieldOf("renown", 0).forGetter(h -> h.renown),
 		Codec.STRING.listOf().optionalFieldOf("preparations", List.of()).forGetter(h -> h.preparations),
-		Codec.INT.optionalFieldOf("sacrifices", 0).forGetter(h -> h.sacrifices),
-		Steward.CODEC.optionalFieldOf("steward").forGetter(h -> h.steward)
-	).apply(i, House::new));
+		Extras.MAP_CODEC.forGetter(House::extras)
+	).apply(i, (id, name, head, members, chronicle, milestones, quests, oath, oathActs, actPending, legacies, lostHeirlooms, renown,
+				 preparations, extras) -> new House(id, name, head, members, chronicle, milestones, quests, oath, oathActs, actPending, legacies,
+		lostHeirlooms, renown, preparations, extras.sacrifices(), extras.steward(), extras.fulfilledOaths(), extras.nextEventDay(), extras.pendingEvent())));
+
+	/**
+	 * Fields saved alongside the others, grouped only because a codec can hold at most 16 fields.
+	 * They are stored at the same level as the rest, so older saves read the same.
+	 */
+	private record Extras(int sacrifices, Optional<Steward> steward, List<String> fulfilledOaths, int nextEventDay,
+						  Optional<PendingEvent> pendingEvent) {
+		static final MapCodec<Extras> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+			Codec.INT.optionalFieldOf("sacrifices", 0).forGetter(Extras::sacrifices),
+			Steward.CODEC.optionalFieldOf("steward").forGetter(Extras::steward),
+			Codec.STRING.listOf().optionalFieldOf("fulfilled_oaths", List.of()).forGetter(Extras::fulfilledOaths),
+			Codec.INT.optionalFieldOf("next_event_day", 0).forGetter(Extras::nextEventDay),
+			PendingEvent.CODEC.optionalFieldOf("pending_event").forGetter(Extras::pendingEvent)
+		).apply(i, Extras::new));
+	}
+
+	private Extras extras() {
+		return new Extras(sacrifices, steward, List.copyOf(fulfilledOaths), nextEventDay, pendingEvent);
+	}
 
 	public final UUID id;
 	public String name;
@@ -65,10 +86,16 @@ public class House {
 	public int sacrifices;
 	/** The steward the house hired at an inn, if any. */
 	public Optional<Steward> steward;
+	/** Oaths the house has fulfilled; once one is, the house may swear another (see Questlines). */
+	public final List<String> fulfilledOaths;
+	/** The day the next family event may happen (0 = not scheduled yet), and one waiting for a choice. */
+	public int nextEventDay;
+	public Optional<PendingEvent> pendingEvent;
 
 	public House(UUID id, String name, UUID head, List<UUID> members, List<ChronicleEntry> chronicle, List<String> milestones,
 				 List<Quest> quests, Optional<String> oath, int oathActs, boolean actPending, List<String> legacies,
-				 List<ItemStack> lostHeirlooms, int renown, List<String> preparations, int sacrifices, Optional<Steward> steward) {
+				 List<ItemStack> lostHeirlooms, int renown, List<String> preparations, int sacrifices, Optional<Steward> steward,
+				 List<String> fulfilledOaths, int nextEventDay, Optional<PendingEvent> pendingEvent) {
 		this.id = id;
 		this.name = name;
 		this.head = head;
@@ -85,15 +112,18 @@ public class House {
 		this.preparations = new ArrayList<>(preparations);
 		this.sacrifices = sacrifices;
 		this.steward = steward;
+		this.fulfilledOaths = new ArrayList<>(fulfilledOaths);
+		this.nextEventDay = nextEventDay;
+		this.pendingEvent = pendingEvent;
 	}
 
 	public static House found(String name, UUID head) {
 		return new House(UUID.randomUUID(), name, head, List.of(head), List.of(), List.of(), List.of(), Optional.empty(), 0, false,
-			List.of(), List.of(), 0, List.of(), 0, Optional.empty());
+			List.of(), List.of(), 0, List.of(), 0, Optional.empty(), List.of(), 0, Optional.empty());
 	}
 
 	/** Whether a quest of this type belongs to the whole house rather than one member. */
 	public static boolean isShared(Quest.Type type) {
-		return type == Quest.Type.BLOOD_DEBT || type == Quest.Type.QUESTLINE || type == Quest.Type.PREPARATION;
+		return type == Quest.Type.BLOOD_DEBT || type == Quest.Type.QUESTLINE || type == Quest.Type.PREPARATION || type == Quest.Type.EVENT;
 	}
 }

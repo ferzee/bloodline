@@ -240,6 +240,19 @@ public final class Heirlooms {
 		return read(stack).flatMap(Data::name).orElseGet(() -> stack.getHoverName().getString());
 	}
 
+	/** An heirloom a long-lost cousin brings to the family: already carried twice, so it is an heirloom from the start. */
+	public static ItemStack cousinGift(ServerPlayer player, Lineage lineage, net.minecraft.world.item.Item item, String cousin) {
+		ItemStack stack = new ItemStack(item);
+		String name = NAMES.get(player.getRandom().nextInt(NAMES.size()));
+		Data data = new Data(player.getUUID(), lineage.house.name, List.of(0, lineage.current.generation()),
+			List.of(cousin + " " + lineage.house.name, lineage.current.name()), Optional.of(name), false,
+			List.of("cousin:" + cousin, carrierKey(player, lineage)));
+		stack.set(DataComponents.CUSTOM_NAME, Component.literal(name).withStyle(s -> s.withItalic(false).withColor(ChatFormatting.GOLD)));
+		stack.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+		write(stack, data);
+		return stack;
+	}
+
 	/** Gives a recovered heirloom back to the family with a note of who reclaimed it. */
 	public static ItemStack reclaimed(ItemStack stack, Lineage lineage) {
 		ItemStack copy = stack.copy();

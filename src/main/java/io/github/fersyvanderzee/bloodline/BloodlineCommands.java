@@ -73,6 +73,20 @@ final class BloodlineCommands {
 						Heirs.choose(ctx.getSource().getPlayerOrException(), IntegerArgumentType.getInteger(ctx, "child"));
 						return 1;
 					})))
+			.then(Commands.literal("event")
+				.executes(ctx -> {
+					ServerPlayer player = ctx.getSource().getPlayerOrException();
+					FamilyEvents.show(player, Lineages.get(player));
+					return 1;
+				})
+				.then(Commands.literal("accept").executes(ctx -> {
+					FamilyEvents.answer(ctx.getSource().getPlayerOrException(), true);
+					return 1;
+				}))
+				.then(Commands.literal("decline").executes(ctx -> {
+					FamilyEvents.answer(ctx.getSource().getPlayerOrException(), false);
+					return 1;
+				})))
 			.then(Commands.literal("sacrifice")
 				.executes(ctx -> {
 					Sacrifice.request(ctx.getSource().getPlayerOrException());
@@ -95,7 +109,7 @@ final class BloodlineCommands {
 					ServerPlayer player = ctx.getSource().getPlayerOrException();
 					Lineage lineage = lineageOf(ctx.getSource(), player);
 					if (lineage == null) return 0;
-					if (lineage.house.oath.isEmpty()) Questlines.offerOath(player, lineage);
+					if (Questlines.canSwear(lineage.house)) Questlines.offerOath(player, lineage);
 					else ctx.getSource().sendSuccess(() -> Questlines.oathSummary(lineage).withStyle(ChatFormatting.GOLD), false);
 					return 1;
 				})
@@ -108,7 +122,7 @@ final class BloodlineCommands {
 						ServerPlayer player = ctx.getSource().getPlayerOrException();
 						Lineage lineage = lineageOf(ctx.getSource(), player);
 						if (lineage == null) return 0;
-						if (lineage.house.oath.isPresent()) {
+						if (!Questlines.canSwear(lineage.house)) {
 							ctx.getSource().sendFailure(Text.t("command.oath.already", lineage.house.name));
 							return 0;
 						}
@@ -117,7 +131,7 @@ final class BloodlineCommands {
 							return 0;
 						}
 						if (!Questlines.swear(player, lineage, StringArgumentType.getString(ctx, "oath"))) {
-							ctx.getSource().sendFailure(Text.t("command.oath.unknown"));
+							ctx.getSource().sendFailure(Text.t("command.oath.not_available", lineage.house.name));
 							return 0;
 						}
 						// Sworn from the book: show the updated Main Quest pages straight away.
@@ -167,6 +181,20 @@ final class BloodlineCommands {
 						quest.progress = quest.required;
 						return 1;
 					}))
+				.then(Commands.literal("event")
+					.then(Commands.argument("type", StringArgumentType.word())
+						.suggests((ctx, builder) -> {
+							for (String type : new String[]{"sickness", "restless", "feud", "wedding", "cousin"}) builder.suggest(type);
+							return builder.buildFuture();
+						})
+						.executes(ctx -> {
+							ServerPlayer player = ctx.getSource().getPlayerOrException();
+							Lineage lineage = lineageOf(ctx.getSource(), player);
+							String type = StringArgumentType.getString(ctx, "type");
+							if (lineage == null || !FamilyEvents.debugStart(player, lineage, type)) return 0;
+							ctx.getSource().sendSuccess(() -> Text.t("command.event_started", type), false);
+							return 1;
+						})))
 				.then(Commands.literal("champion")
 					.executes(ctx -> {
 						ServerPlayer player = ctx.getSource().getPlayerOrException();
