@@ -9,7 +9,7 @@ It runs entirely on the server, so players can join a Bloodline server with a va
 ## Features
 
 - **Families.** The first time you join, you found a house, e.g. *Elske Ashford, founder of House Ashford*. Your character's name is shown in chat, the tab list and death messages.
-- **Heirs.** When you die, your character becomes an ancestor and you respawn as their child, one generation later.
+- **Heirs.** When you die, your character becomes an ancestor and leaves three children, each with their own name and inherited traits. On respawn you choose which one carries on the line (in chat or in the Chronicle); if you take too long, the family chooses for you.
 - **Traits.** Each family member is born with traits such as *Stalwart*, *Swift*, *Long-Armed*, *Frail* or *Tall*. Heirs inherit some of their parent's traits and gain one new one.
 - **Epithets.** When someone dies they get a name based on how they lived: *the Wanderer*, *the Delver*, *the Slayer*, *the Brief*...
 - **Heirlooms.** Gear remembers who carried it. Once it has been carried by two generations it becomes a named heirloom (*"Oathkeeper"*). Heirlooms stay with the family when their bearer dies and grow stronger with each generation.
@@ -50,6 +50,7 @@ It runs entirely on the server, so players can join a Bloodline server with a va
 | `/bloodline leave` | Leave your house and found a new one |
 | `/bloodline remove <player>` | Send a member away (head only) |
 | `/bloodline head <player>` | Pass leadership to another member (head only) |
+| `/bloodline heir <1-3>` | Choose which child carries on after a death |
 | `/bloodline sacrifice` | Give your life for the house (full moon, at an ancestor's grave) |
 | `/bloodline chronicle` | A new copy of the family chronicle |
 | `/bloodline house <name>` | Rename your house |

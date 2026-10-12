@@ -1,6 +1,7 @@
 package io.github.fersyvanderzee.bloodline;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -63,6 +64,12 @@ final class BloodlineCommands {
 				.then(Commands.argument("player", EntityArgument.player())
 					.executes(ctx -> {
 						Houses.makeHead(ctx.getSource().getPlayerOrException(), EntityArgument.getPlayer(ctx, "player"));
+						return 1;
+					})))
+			.then(Commands.literal("heir")
+				.then(Commands.argument("child", IntegerArgumentType.integer(1, Heirs.COUNT))
+					.executes(ctx -> {
+						Heirs.choose(ctx.getSource().getPlayerOrException(), IntegerArgumentType.getInteger(ctx, "child"));
 						return 1;
 					})))
 			.then(Commands.literal("sacrifice")

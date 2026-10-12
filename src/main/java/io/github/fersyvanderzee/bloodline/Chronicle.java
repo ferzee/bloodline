@@ -91,7 +91,10 @@ public final class Chronicle {
 	}
 
 	static WrittenBookContent build(ServerPlayer viewer, Lineage lineage) {
-		List<Component> mainQuest = Questlines.bookPages(lineage, 2, lineage.isHead(viewer.getUUID()));
+		// While an heir is still to be chosen, the choice is the first thing in the book.
+		boolean choosing = lineage.awaitingHeir && !lineage.candidates.isEmpty();
+		int offset = choosing ? 1 : 0;
+		List<Component> mainQuest = Questlines.bookPages(lineage, 2 + offset, lineage.isHead(viewer.getUUID()));
 		List<Component> duties = duties(lineage);
 		List<Component> head = List.of(head(lineage), members(viewer.level().getServer(), lineage), sacrifice(viewer, lineage));
 		List<Component> tree = familyTree(lineage);
@@ -100,7 +103,7 @@ public final class Chronicle {
 		if (history.size() > room) history = history.subList(Math.max(0, history.size() - Math.max(room, 0)), history.size());
 
 		// Page numbers are 1-based; the cover is page 1 and the main quest always starts on page 2.
-		int mainPage = 2;
+		int mainPage = 2 + offset;
 		int dutiesPage = mainPage + mainQuest.size();
 		int headPage = dutiesPage + duties.size();
 		int treePage = headPage + head.size();
@@ -108,12 +111,16 @@ public final class Chronicle {
 		long dutyCount = lineage.allQuests().stream().filter(q -> !Questlines.isOathStep(q) && q.type != Quest.Type.PREPARATION).count();
 
 		List<Component> pages = new ArrayList<>();
-		pages.add(cover(lineage, List.of(
+		List<Component> contents = new ArrayList<>();
+		if (choosing) contents.add(link("Choose your Heir", 2));
+		contents.addAll(List.of(
 			link("Main Quest", mainPage),
 			link("Duties" + (dutyCount > 0 ? " (" + dutyCount + ")" : ""), dutiesPage),
 			link("You & the House", headPage),
 			link("Family Tree", treePage),
-			link("History", historyPage))));
+			link("History", historyPage)));
+		pages.add(cover(lineage, contents));
+		if (choosing) pages.add(Heirs.bookPage(lineage));
 		pages.addAll(mainQuest);
 		pages.addAll(duties);
 		pages.addAll(head);

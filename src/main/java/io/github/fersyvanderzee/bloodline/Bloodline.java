@@ -59,6 +59,7 @@ public class Bloodline implements ModInitializer {
 				if (!player.isAlive()) continue;
 				Heirlooms.tick(player);
 				var lineage = Lineages.get(player);
+				if (questTick && lineage != null && lineage.awaitingHeir) Heirs.tick(player, lineage);
 				if (questTick && lineage != null && !lineage.awaitingHeir) {
 					Quests.tick(player, lineage);
 					Questlines.tickReclaim(player, lineage);

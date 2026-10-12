@@ -85,15 +85,15 @@ public final class Lineages {
 			Chronicle.give(player);
 			announceBirth(player, lineage, null);
 		} else if (lineage.awaitingHeir && player.isAlive()) {
-			succeed(player, lineage);
+			Heirs.offer(player, lineage);
 		} else {
 			Questlines.resume(player, lineage);
 			Inns.addIntroQuest(player, lineage);
 			Quests.remind(player, lineage);
 		}
-		Traits.apply(player, lineage.allTraits());
+		applyTraits(player, lineage);
 		refreshName(player);
-		if (lineage.house.oath.isEmpty()) Questlines.nudgeOath(player, lineage);
+		if (lineage.house.oath.isEmpty() && !lineage.awaitingHeir) Questlines.nudgeOath(player, lineage);
 	}
 
 	/** Called when a player dies: the current family member becomes an ancestor. */
@@ -117,6 +117,7 @@ public final class Lineages {
 			: Component.literal(ancestor.fullName() + " died. ").append(deathMessage.copy()));
 		Quests.onDeath(player, lineage, ancestor, source, sacrificed);
 		if (sacrificed) Sacrifice.honour(player, lineage, ancestor);
+		Heirs.roll(player, lineage);
 	}
 
 	/** Called when a player respawns. After a death, their heir takes over. */
@@ -124,23 +125,28 @@ public final class Lineages {
 		Lineage lineage = get(player);
 		if (lineage == null) return;
 		if (!alive && lineage.awaitingHeir) {
-			succeed(player, lineage);
+			Heirs.offer(player, lineage);
 		}
-		Traits.apply(player, lineage.allTraits());
+		applyTraits(player, lineage);
 		player.setHealth(player.getMaxHealth());
 		refreshName(player);
 	}
 
-	private static void succeed(ServerPlayer player, Lineage lineage) {
+	/** While mourning (before an heir is chosen) only the house's legendary traits apply. */
+	private static void applyTraits(ServerPlayer player, Lineage lineage) {
+		Traits.apply(player, lineage.awaitingHeir ? lineage.house.legacies : lineage.allTraits());
+	}
+
+	/** The chosen child takes their dead parent's place in the house. */
+	public static void succeed(ServerPlayer player, Lineage lineage, Member chosen) {
 		MinecraftServer server = player.level().getServer();
 		Ancestor parent = lineage.parent();
 		boolean inheritAll = lineage.inheritAll;
 		lineage.inheritAll = false;
-		List<String> traits = Traits.rollHeir(parent.traits(), player.getRandom(), inheritAll);
-		Member heir = new Member(Names.given(player.getRandom(), parent.name()), parent.generation() + 1, traits,
-			today(server), Epithets.snapshot(player));
+		Member heir = new Member(chosen.name(), chosen.generation(), chosen.traits(), today(server), Epithets.snapshot(player));
 		lineage.current = heir;
 		lineage.awaitingHeir = false;
+		lineage.candidates.clear();
 		// A new generation has come: the house may begin its next act of the oath.
 		lineage.house.actPending = false;
 		markDirty(server);
@@ -150,6 +156,10 @@ public final class Lineages {
 		Questlines.resume(player, lineage);
 		Inns.addIntroQuest(player, lineage);
 		announceBirth(player, lineage, parent);
+		applyTraits(player, lineage);
+		player.setHealth(player.getMaxHealth());
+		refreshName(player);
+		if (lineage.house.oath.isEmpty()) Questlines.nudgeOath(player, lineage);
 		if (inheritAll) {
 			player.sendSystemMessage(Component.literal("Because " + parent.name() + " gave their life, every one of their boons lives on in "
 				+ heir.name() + ".").withStyle(ChatFormatting.GOLD));
