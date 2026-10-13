@@ -117,6 +117,8 @@ public final class Chronicle {
 			link(Text.t("book.contents.main"), mainPage),
 			link(dutyCount > 0 ? Text.t("book.contents.duties_count", dutyCount) : Text.t("book.contents.duties"), dutiesPage),
 			link(Text.t("book.contents.house"), headPage),
+			// The Sacrifice page is the last of the "You & the House" pages.
+			link(Text.t("book.contents.sacrifice"), headPage + head.size() - 1),
 			link(Text.t("book.contents.tree"), treePage),
 			link(Text.t("book.contents.history"), historyPage)));
 		pages.add(cover(lineage, contents));
@@ -188,7 +190,6 @@ public final class Chronicle {
 		MutableComponent page = Component.empty()
 			.append(faint(Text.t("book.cover.chronicle_of"))).append("\n")
 			.append(Text.t("book.cover.house", lineage.house.name).withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD)).append("\n\n")
-			.append(faint(Text.t(lineage.house.members.size() > 1 ? "book.cover.your_character" : "book.cover.head"))).append("\n")
 			.append(Component.literal(lineage.current.name() + "\n").withStyle(ChatFormatting.BLACK, ChatFormatting.BOLD))
 			.append(faint(Text.t("book.cover.generation", Names.numeral(lineage.current.generation()), lineage.house.renown))).append("\n\n")
 			.append(Text.t("book.cover.contents").withStyle(ChatFormatting.BLACK, ChatFormatting.BOLD)).append("\n");

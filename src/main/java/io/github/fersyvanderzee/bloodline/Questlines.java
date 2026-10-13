@@ -298,6 +298,11 @@ public final class Questlines {
 		lineage.house.actPending = true;
 		// Finishing an act is what earns a family member the right to give their life for the house.
 		lineage.fulfilledAct = true;
+		player.sendSystemMessage(Text.t("sacrifice.hint", lineage.current.name()).withStyle(ChatFormatting.GRAY)
+			.append(" ")
+			.append(Text.t("button.how").withStyle(s -> s.withColor(ChatFormatting.DARK_RED)
+				.withClickEvent(new ClickEvent.RunCommand("/bloodline sacrifice"))
+				.withHoverEvent(new HoverEvent.ShowText(Text.t("sacrifice.hint_hover"))))));
 		Renown.change(player, lineage, Renown.actCompleted(), Text.t("renown.reason.act", Names.numeral(quest.act + 1)));
 		Lineages.record(server, lineage, Text.t("chronicle.act_fulfilled", lineage.current.name(), Names.numeral(quest.act + 1), oath.name(),
 			oath.actName(quest.act)));

@@ -196,8 +196,6 @@
 	"bloodline.book.go_to_page": "Go to page %s",
 	"bloodline.book.cover.chronicle_of": "The Chronicle of",
 	"bloodline.book.cover.house": "House %s",
-	"bloodline.book.cover.your_character": "Your character:",
-	"bloodline.book.cover.head": "Head of the house:",
 	"bloodline.book.cover.generation": "Generation %s, renown %s",
 	"bloodline.book.cover.contents": "Contents",
 	"bloodline.book.duties.none": "The family owes nothing to anyone, for now.",
@@ -543,5 +541,9 @@
 	"bloodline.chronicle.cousin_away": "%s sent their cousin %s away.",
 	"bloodline.event.cousin.sent_away": "%s leaves without a word.",
 	"bloodline.command.event_started": "Started the %s event.",
-	"bloodline.renown.reason.debug": "from an operator"
+	"bloodline.renown.reason.debug": "from an operator",
+	"bloodline.book.contents.sacrifice": "The Sacrifice",
+	"bloodline.sacrifice.hint": "%s has fulfilled an act, and may now give their life for the house under a full moon.",
+	"bloodline.button.how": "[How?]",
+	"bloodline.sacrifice.hint_hover": "Shows what is still needed for the Sacrifice"
 }
