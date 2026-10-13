@@ -249,7 +249,15 @@ public final class FamilyEvents {
 			default -> 0;
 		};
 		if (Inns.count(player, Items.EMERALD) < cost) {
-			player.sendSystemMessage(Text.t("event.too_poor", cost).withStyle(ChatFormatting.RED));
+			if (event.type().equals(FEUD)) {
+				// A tribute that can't be paid is a refusal: the feud goes ahead now rather than waiting.
+				lineage.house.pendingEvent = Optional.empty();
+				Lineages.tellHouse(server, lineage.house, Text.t("event.feud.cannot_pay", cost, event.detail()).withStyle(ChatFormatting.RED));
+				acceptFeud(player, lineage, event.detail());
+				Lineages.markDirty(server);
+			} else {
+				player.sendSystemMessage(Text.t("event.too_poor", cost).withStyle(ChatFormatting.RED));
+			}
 			return;
 		}
 		Inns.take(player, Items.EMERALD, cost);

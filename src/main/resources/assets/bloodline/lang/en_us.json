@@ -552,5 +552,6 @@
 	"bloodline.event.cousin.window": "A Long-Lost Cousin",
 	"bloodline.house.invite.window": "An Invitation",
 	"bloodline.button.not_yet": "[Not yet]",
-	"bloodline.screen.choose_later": "You can also choose later in chat or in your Chronicle."
+	"bloodline.screen.choose_later": "You can also choose later in chat or in your Chronicle.",
+	"bloodline.event.feud.cannot_pay": "You can't pay the %s emeralds. House %s takes it as a refusal: their champion is coming for you at night."
 }
