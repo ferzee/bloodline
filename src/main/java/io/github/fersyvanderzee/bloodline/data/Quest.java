@@ -57,6 +57,8 @@ public class Quest {
 		DIMENSION("dimension"),
 		/** Be at or below the Y level given by the first target. */
 		DEPTH("depth"),
+		/** Be in the biome named by the first target. */
+		BIOME("biome"),
 		/** Kill the target entity types while holding the family's sworn heirloom. */
 		KILL_WITH_OATHBLADE("kill_with_oathblade"),
 		/** Kill the champion spawned for this quest; the first target is its key. */

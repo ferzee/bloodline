@@ -10,6 +10,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.component.CustomData;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
@@ -95,10 +97,47 @@ public final class Inns {
 		new Rumour(BuiltinStructures.OCEAN_MONUMENT, "monument", 6)
 	);
 
-	private enum Kind { BOUNTY, DELIVERY, RUMOUR }
+	private enum Kind { BOUNTY, DELIVERY, RUMOUR, COURIER, SATCHEL, HUNT, EXPEDITION }
+
+	/** How often each kind of job is posted, relative to the others. */
+	private static final Map<Kind, Integer> WEIGHTS = Map.of(Kind.BOUNTY, 2, Kind.DELIVERY, 3, Kind.RUMOUR, 2, Kind.COURIER, 2,
+		Kind.SATCHEL, 2, Kind.HUNT, 3, Kind.EXPEDITION, 2);
+
+	/** A creature to hunt: an entity id, how many, and the pay. */
+	private record Hunt(String entity, int count, int emeralds) {
+		Component name() {
+			return BuiltInRegistries.ENTITY_TYPE.getValue(Identifier.parse(entity)).getDescription();
+		}
+	}
+
+	private static final List<Hunt> HUNTS = List.of(
+		new Hunt("minecraft:spider", 8, 5), new Hunt("minecraft:rabbit", 5, 4), new Hunt("minecraft:zombie", 10, 4),
+		new Hunt("minecraft:skeleton", 8, 5), new Hunt("minecraft:creeper", 5, 6), new Hunt("minecraft:drowned", 5, 6),
+		new Hunt("minecraft:witch", 2, 7), new Hunt("minecraft:slime", 6, 5), new Hunt("minecraft:phantom", 3, 7),
+		new Hunt("minecraft:enderman", 3, 8), new Hunt("minecraft:pillager", 4, 6), new Hunt("minecraft:fox", 2, 5)
+	);
+
+	/** A biome to reach, and the pay. Its name comes from Minecraft's own biome names. */
+	private record Expedition(String biome, int emeralds) {
+		Component name() {
+			return Component.translatable("biome." + biome.replace(':', '.'));
+		}
+	}
+
+	private static final List<Expedition> EXPEDITIONS = List.of(
+		new Expedition("minecraft:mushroom_fields", 10), new Expedition("minecraft:cherry_grove", 5), new Expedition("minecraft:badlands", 6),
+		new Expedition("minecraft:ice_spikes", 7), new Expedition("minecraft:jungle", 5), new Expedition("minecraft:mangrove_swamp", 5),
+		new Expedition("minecraft:flower_forest", 4), new Expedition("minecraft:pale_garden", 6), new Expedition("minecraft:dark_forest", 4),
+		new Expedition("minecraft:snowy_slopes", 4), new Expedition("minecraft:savanna_plateau", 4), new Expedition("minecraft:desert", 3)
+	);
+
+	private static final String LETTER = "letter";
+	private static final String SATCHEL = "satchel";
+	private static final String ITEM_TAG = "bloodline_job";
 
 	/** One job on a board. Exactly one of bounty, delivery or rumour is set, depending on kind. */
-	private record Offer(String id, Kind kind, Champions.Kind bounty, BlockPos bountyPos, Delivery delivery, Rumour rumour, int emeralds) {
+	private record Offer(String id, Kind kind, Champions.Kind bounty, BlockPos bountyPos, Delivery delivery, Rumour rumour, Hunt hunt,
+						 Expedition expedition, int emeralds) {
 	}
 
 	/** When an innkeeper was last spawned at each bell, so a missing one isn't replaced every second. */
@@ -201,6 +240,7 @@ public final class Inns {
 		if (lineage == null || lineage.awaitingHeir) return;
 		handInDeliveries(player, lineage);
 		BlockPos inn = innOf(innkeeper);
+		handInJobItems(player, lineage, inn);
 		markMetInnkeeper(player, lineage, inn);
 		int day = Lineages.today(player.level().getServer());
 		List<Offer> offers = offers(inn, day);
@@ -214,29 +254,53 @@ public final class Inns {
 
 	private static List<Offer> offers(BlockPos inn, int day) {
 		RandomSource random = RandomSource.create(inn.asLong() * 31 + day);
-		Kind[] kinds = {Kind.BOUNTY, Kind.DELIVERY, Kind.DELIVERY, Kind.RUMOUR, random.nextBoolean() ? Kind.BOUNTY : Kind.RUMOUR};
 		List<Offer> offers = new ArrayList<>();
+		Map<Kind, Integer> posted = new java.util.EnumMap<>(Kind.class);
 		for (int slot = 0; slot < OFFERS; slot++) {
 			String id = inn.asLong() + ":" + day + ":" + slot;
-			switch (kinds[slot]) {
-				case BOUNTY -> {
-					Champions.Kind beast = Champions.BOUNTIES.get(random.nextInt(Champions.BOUNTIES.size()));
-					double angle = random.nextDouble() * Math.PI * 2;
-					int distance = 120 + random.nextInt(180);
-					BlockPos where = inn.offset((int) (Math.cos(angle) * distance), 0, (int) (Math.sin(angle) * distance));
-					offers.add(new Offer(id, Kind.BOUNTY, beast, where, null, null, 6 + random.nextInt(6)));
-				}
+			Kind kind = pickKind(random, posted);
+			posted.merge(kind, 1, Integer::sum);
+			BlockPos somewhere = awayFrom(inn, random, 100, 250);
+			offers.add(switch (kind) {
+				case BOUNTY -> new Offer(id, kind, Champions.BOUNTIES.get(random.nextInt(Champions.BOUNTIES.size())), awayFrom(inn, random, 120, 300),
+					null, null, null, null, 6 + random.nextInt(6));
 				case DELIVERY -> {
 					Delivery delivery = DELIVERIES.get(random.nextInt(DELIVERIES.size()));
-					offers.add(new Offer(id, Kind.DELIVERY, null, null, delivery, null, delivery.emeralds()));
+					yield new Offer(id, kind, null, null, delivery, null, null, null, delivery.emeralds());
 				}
 				case RUMOUR -> {
 					Rumour rumour = RUMOURS.get(random.nextInt(RUMOURS.size()));
-					offers.add(new Offer(id, Kind.RUMOUR, null, null, null, rumour, rumour.cost()));
+					yield new Offer(id, kind, null, null, null, rumour, null, null, rumour.cost());
 				}
-			}
+				case COURIER -> new Offer(id, kind, null, somewhere, null, null, null, null, 0);
+				case SATCHEL -> new Offer(id, kind, null, somewhere, null, null, null, null, 5 + random.nextInt(4));
+				case HUNT -> {
+					Hunt hunt = HUNTS.get(random.nextInt(HUNTS.size()));
+					yield new Offer(id, kind, null, null, null, null, hunt, null, hunt.emeralds());
+				}
+				case EXPEDITION -> {
+					Expedition expedition = EXPEDITIONS.get(random.nextInt(EXPEDITIONS.size()));
+					yield new Offer(id, kind, null, null, null, null, null, expedition, expedition.emeralds());
+				}
+			});
 		}
 		return offers;
+	}
+
+	/** A kind of job by weight, posting at most two of the same kind on one board. */
+	private static Kind pickKind(RandomSource random, Map<Kind, Integer> posted) {
+		List<Kind> pool = new ArrayList<>();
+		WEIGHTS.forEach((kind, weight) -> {
+			if (posted.getOrDefault(kind, 0) < 2) for (int i = 0; i < weight; i++) pool.add(kind);
+		});
+		pool.sort(java.util.Comparator.comparing(Enum::ordinal));
+		return pool.get(random.nextInt(pool.size()));
+	}
+
+	private static BlockPos awayFrom(BlockPos origin, RandomSource random, int min, int max) {
+		double angle = random.nextDouble() * Math.PI * 2;
+		int distance = min + random.nextInt(max - min);
+		return origin.offset((int) (Math.cos(angle) * distance), 0, (int) (Math.sin(angle) * distance));
 	}
 
 	private static boolean taken(Lineage lineage, Offer offer) {
@@ -252,7 +316,7 @@ public final class Inns {
 		for (int slot = 0; slot < offers.size(); slot++) {
 			Offer offer = offers.get(slot);
 			boolean taken = taken(lineage, offer);
-			ItemStack icon;
+			ItemStack icon = ItemStack.EMPTY;
 			List<Component> lore = new ArrayList<>();
 			switch (offer.kind()) {
 				case BOUNTY -> {
@@ -268,12 +332,37 @@ public final class Inns {
 					lore.add(line(Text.t("inn.delivery.where"), ChatFormatting.GRAY));
 					lore.add(line(Text.t("inn.delivery.reward", offer.emeralds(), BloodlineConfig.get().renown.innJob), ChatFormatting.GREEN));
 				}
-				default -> {
+				case RUMOUR -> {
 					icon = new ItemStack(Items.MAP);
 					icon.set(DataComponents.CUSTOM_NAME, name(Text.t("inn.rumour", offer.rumour().name()), ChatFormatting.AQUA));
 					lore.add(line(Text.t("inn.rumour.seen", offer.rumour().name()), ChatFormatting.GRAY));
 					lore.add(line(Text.t("inn.rumour.cost", offer.rumour().cost()), ChatFormatting.GOLD));
 					lore.add(line(Text.t("inn.rumour.reward", BloodlineConfig.get().renown.innJob), ChatFormatting.GREEN));
+				}
+				case COURIER -> {
+					icon = new ItemStack(Items.PAPER);
+					icon.set(DataComponents.CUSTOM_NAME, name(Text.t("inn.courier"), ChatFormatting.GOLD));
+					lore.add(line(Text.t("inn.courier.line"), ChatFormatting.GRAY));
+					lore.add(line(Text.t("inn.courier.reward", BloodlineConfig.get().renown.innJob), ChatFormatting.GREEN));
+				}
+				case SATCHEL -> {
+					icon = new ItemStack(Items.BUNDLE);
+					icon.set(DataComponents.CUSTOM_NAME, name(Text.t("inn.satchel"), ChatFormatting.GOLD));
+					lore.add(line(Text.t("inn.satchel.line", roughDistance(player, offer.bountyPos()), direction(player.blockPosition(), offer.bountyPos())),
+						ChatFormatting.GRAY));
+					lore.add(line(Text.t("inn.delivery.reward", offer.emeralds(), BloodlineConfig.get().renown.innJob), ChatFormatting.GREEN));
+				}
+				case HUNT -> {
+					icon = new ItemStack(Items.BOW);
+					icon.set(DataComponents.CUSTOM_NAME, name(Text.t("inn.hunt", offer.hunt().count(), offer.hunt().name()), ChatFormatting.RED));
+					lore.add(line(Text.t("inn.hunt.line"), ChatFormatting.GRAY));
+					lore.add(line(Text.t("inn.delivery.reward", offer.emeralds(), BloodlineConfig.get().renown.innJob), ChatFormatting.GREEN));
+				}
+				case EXPEDITION -> {
+					icon = new ItemStack(Items.COMPASS);
+					icon.set(DataComponents.CUSTOM_NAME, name(Text.t("inn.expedition", offer.expedition().name()), ChatFormatting.AQUA));
+					lore.add(line(Text.t("inn.expedition.line", offer.expedition().name()), ChatFormatting.GRAY));
+					lore.add(line(Text.t("inn.delivery.reward", offer.emeralds(), BloodlineConfig.get().renown.innJob), ChatFormatting.GREEN));
 				}
 			}
 			if (taken) {
@@ -384,6 +473,18 @@ public final class Inns {
 				List.of(BuiltInRegistries.ITEM.getKey(offer.delivery().item()).toString()), offer.delivery().count(),
 				Reward.item(2, "emerald", offer.emeralds()));
 			case RUMOUR -> rumour(player, offer);
+			case COURIER -> courier(player, lineage, offer);
+			case SATCHEL -> {
+				GlobalPos place = GlobalPos.of(player.level().dimension(), offer.bountyPos());
+				String where = offer.bountyPos().getX() + ", " + offer.bountyPos().getZ();
+				Questlines.giveMap(player, place, Text.t("inn.satchel"));
+				yield Quest.of(Type.INN, Text.t("inn.satchel"), Text.t("inn.satchel.task", where), Goal.MANUAL,
+					List.of(SATCHEL, offer.id()), 1, Reward.item(2, "emerald", offer.emeralds())).at(place, 24);
+			}
+			case HUNT -> Quest.of(Type.INN, Text.t("inn.hunt", offer.hunt().count(), offer.hunt().name()),
+				Text.t("inn.hunt.task", offer.hunt().count(), offer.hunt().name()), Goal.KILL, List.of(offer.hunt().entity()), offer.hunt().count(),
+				Reward.item(2, "emerald", offer.emeralds()));
+			case EXPEDITION -> expedition(player, offer);
 		};
 		if (quest == null) return;
 		quest.line = Optional.of(LINE_PREFIX + offer.id());
@@ -411,9 +512,116 @@ public final class Inns {
 			place.get().pos().getX() + ", " + place.get().pos().getZ()), Goal.VISIT, List.of(), 1, Reward.levels(4)).at(place.get(), 32);
 	}
 
+	// --- Courier, satchel and expedition jobs --------------------------------------------------
+
+	/** A letter for the innkeeper of another village, found in a random direction from here. */
+	private static Quest courier(ServerPlayer player, Lineage lineage, Offer offer) {
+		ServerLevel overworld = player.level().getServer().overworld();
+		BlockPos here = player.blockPosition();
+		RandomSource random = player.getRandom();
+		BlockPos target = null;
+		for (int attempt = 0; attempt < 3 && target == null; attempt++) {
+			BlockPos found = StructureSearch.find(overworld, StructureTags.VILLAGE, awayFrom(here, random, 400, 700), 40).orElse(null);
+			if (found != null && found.distSqr(here) > 200 * 200) target = found;
+		}
+		if (target == null || player.level().dimension() != Level.OVERWORLD) {
+			player.sendSystemMessage(Text.t("inn.courier.none").withStyle(ChatFormatting.GRAY));
+			return null;
+		}
+		int distance = (int) Math.sqrt(target.distSqr(here));
+		int emeralds = 4 + distance / 100;
+		String where = target.getX() + ", " + target.getZ();
+		ItemStack letter = new ItemStack(Items.PAPER);
+		letter.set(DataComponents.CUSTOM_NAME, name(Text.t("inn.courier.letter"), ChatFormatting.GOLD));
+		letter.set(DataComponents.LORE, new ItemLore(List.of(line(Text.t("inn.courier.letter_lore", where), ChatFormatting.GRAY))));
+		CompoundTag tag = new CompoundTag();
+		tag.putString(ITEM_TAG, offer.id());
+		letter.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+		if (!player.getInventory().add(letter)) player.spawnAtLocation(player.level(), letter);
+		Questlines.giveMap(player, GlobalPos.of(Level.OVERWORLD, target), Text.t("inn.courier"));
+		return Quest.of(Type.INN, Text.t("inn.courier"), Text.t("inn.courier.task", where), Goal.MANUAL,
+			List.of(LETTER, offer.id(), String.valueOf(target.asLong())), 1, Reward.item(2, "emerald", emeralds));
+	}
+
+	/** The nearest patch of the biome, or nothing if there's none within reach. */
+	private static Quest expedition(ServerPlayer player, Offer offer) {
+		Expedition expedition = offer.expedition();
+		ServerLevel overworld = player.level().getServer().overworld();
+		if (player.level().dimension() != Level.OVERWORLD) return null;
+		var found = overworld.findClosestBiome3d(b -> b.unwrapKey().filter(k -> k.identifier().toString().equals(expedition.biome())).isPresent(),
+			player.blockPosition(), 3000, 32, 64);
+		if (found == null) {
+			player.sendSystemMessage(Text.t("inn.expedition.none", expedition.name()).withStyle(ChatFormatting.GRAY));
+			return null;
+		}
+		BlockPos pos = found.getFirst();
+		Questlines.giveMap(player, GlobalPos.of(Level.OVERWORLD, pos), Text.t("inn.expedition", expedition.name()));
+		return Quest.of(Type.INN, Text.t("inn.expedition", expedition.name()), Text.t("inn.expedition.task", expedition.name(),
+			pos.getX() + ", " + pos.getZ()), Goal.BIOME, List.of(expedition.biome()), 1, Reward.item(2, "emerald", offer.emeralds()));
+	}
+
+	/** Runs with the quest checks: places the lost satchel's chest once the player comes near it. */
+	static void tickJob(ServerPlayer player, Quest quest) {
+		if (quest.type != Type.INN || quest.targets.isEmpty() || !SATCHEL.equals(quest.targets.getFirst())) return;
+		if (quest.seen.containsKey("placed") || !Quests.isAt(player, quest)) return;
+		ServerLevel level = player.level();
+		BlockPos spot = quest.place.get().pos();
+		int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spot.getX(), spot.getZ());
+		BlockPos chestPos = new BlockPos(spot.getX(), y, spot.getZ());
+		level.setBlockAndUpdate(chestPos, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState());
+		if (level.getBlockEntity(chestPos) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity chest) {
+			ItemStack satchel = new ItemStack(Items.BUNDLE);
+			satchel.set(DataComponents.CUSTOM_NAME, name(Text.t("inn.satchel.item"), ChatFormatting.GOLD));
+			satchel.set(DataComponents.LORE, new ItemLore(List.of(line(Text.t("inn.satchel.item_lore"), ChatFormatting.GRAY))));
+			CompoundTag tag = new CompoundTag();
+			tag.putString(ITEM_TAG, quest.targets.get(1));
+			satchel.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+			chest.setItem(13, satchel);
+		}
+		quest.seen.put("placed", 1);
+		Lineages.markDirty(level.getServer());
+		player.sendSystemMessage(Text.t("inn.satchel.spotted", chestPos.getX() + ", " + chestPos.getY() + ", " + chestPos.getZ())
+			.withStyle(ChatFormatting.GOLD));
+	}
+
+	/** The job item (a letter or satchel) for this quest in the player's inventory, or an empty stack. */
+	private static ItemStack jobItem(ServerPlayer player, String id) {
+		Inventory inventory = player.getInventory();
+		for (int i = 0; i < inventory.getContainerSize(); i++) {
+			ItemStack stack = inventory.getItem(i);
+			CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+			if (data != null && id.equals(data.copyTag().getStringOr(ITEM_TAG, ""))) return stack;
+		}
+		return ItemStack.EMPTY;
+	}
+
+	/** Letters are handed in at the target village's inn; satchels at any inn. */
+	private static void handInJobItems(ServerPlayer player, Lineage lineage, BlockPos inn) {
+		for (Quest quest : lineage.allQuests()) {
+			if (quest.type != Type.INN || quest.goal != Goal.MANUAL || quest.isDone() || quest.targets.size() < 2) continue;
+			String kind = quest.targets.getFirst();
+			if (!LETTER.equals(kind) && !SATCHEL.equals(kind)) continue;
+			ItemStack item = jobItem(player, quest.targets.get(1));
+			if (item.isEmpty()) continue;
+			if (LETTER.equals(kind)) {
+				BlockPos target = BlockPos.of(Long.parseLong(quest.targets.get(2)));
+				double dx = target.getX() - inn.getX(), dz = target.getZ() - inn.getZ();
+				if (dx * dx + dz * dz > 160 * 160) {
+					player.sendSystemMessage(Text.t("inn.courier.wrong_inn").withStyle(ChatFormatting.GRAY));
+					continue;
+				}
+			}
+			item.shrink(1);
+			quest.progress = quest.required;
+			Lineages.markDirty(player.level().getServer());
+			player.sendSystemMessage(Text.t(LETTER.equals(kind) ? "inn.courier.delivered" : "inn.satchel.returned").withStyle(ChatFormatting.GRAY));
+		}
+	}
+
 	private static void handInDeliveries(ServerPlayer player, Lineage lineage) {
 		for (Quest quest : lineage.allQuests()) {
 			if (quest.type != Type.INN || quest.goal != Goal.MANUAL || quest.isDone()) continue;
+			if (LETTER.equals(quest.targets.getFirst()) || SATCHEL.equals(quest.targets.getFirst())) continue;
 			Item item = BuiltInRegistries.ITEM.getOptional(Identifier.parse(quest.targets.getFirst())).orElse(null);
 			if (item == null || count(player, item) < quest.required) continue;
 			take(player, item, quest.required);

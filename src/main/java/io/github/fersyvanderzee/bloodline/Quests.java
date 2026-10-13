@@ -62,15 +62,26 @@ public final class Quests {
 
 	private static final List<Template> MINING = List.of(
 		new Template("finish_mine", Goal.MINE, List.of("iron_ore", "deepslate_iron_ore"), 16, Reward.item(3, "diamond", 2)),
-		new Template("last_vein", Goal.MINE, List.of("diamond_ore", "deepslate_diamond_ore"), 3, Reward.item(5, "golden_apple", 2))
+		new Template("last_vein", Goal.MINE, List.of("diamond_ore", "deepslate_diamond_ore"), 3, Reward.item(5, "golden_apple", 2)),
+		new Template("coal", Goal.MINE, List.of("coal_ore", "deepslate_coal_ore"), 32, Reward.item(2, "torch", 32)),
+		new Template("copper", Goal.MINE, List.of("copper_ore", "deepslate_copper_ore"), 24, Reward.item(3, "emerald", 4)),
+		new Template("pick", Goal.CRAFT, List.of("diamond_pickaxe"), 1, Reward.levels(5))
 	);
 	private static final List<Template> FIGHTING = List.of(
-		new Template("finish_hunt", Goal.CUSTOM_STAT, List.of("mob_kills"), 25, Reward.item(4, "golden_apple", 1))
+		new Template("finish_hunt", Goal.CUSTOM_STAT, List.of("mob_kills"), 25, Reward.item(4, "golden_apple", 1)),
+		new Template("rivals", Goal.KILL, List.of("minecraft:skeleton", "minecraft:stray"), 15, Reward.item(3, "arrow", 32)),
+		new Template("creepers", Goal.KILL, List.of("minecraft:creeper"), 8, Reward.item(3, "tnt", 2)),
+		new Template("shield", Goal.CRAFT, List.of("shield"), 1, Reward.levels(3))
 	);
 	private static final List<Template> GENERAL = List.of(
 		new Template("hearth", Goal.CRAFT, List.of("bread"), 12, Reward.item(2, "cake", 1)),
 		new Template("halls", Goal.CRAFT, List.of("lantern"), 6, Reward.item(2, "emerald", 4)),
-		new Template("arm_family", Goal.CRAFT, List.of("iron_sword"), 1, Reward.levels(3))
+		new Template("arm_family", Goal.CRAFT, List.of("iron_sword"), 1, Reward.levels(3)),
+		new Template("garden", Goal.CUSTOM_STAT, List.of("pot_flower"), 5, Reward.item(2, "bone_meal", 16)),
+		new Template("songs", Goal.CUSTOM_STAT, List.of("play_noteblock"), 20, Reward.item(2, "music_disc_cat", 1)),
+		new Template("library", Goal.CRAFT, List.of("bookshelf"), 3, Reward.levels(4)),
+		new Template("saplings", Goal.USE, List.of("oak_sapling", "spruce_sapling", "birch_sapling", "jungle_sapling", "acacia_sapling",
+			"dark_oak_sapling", "cherry_sapling", "mangrove_propagule", "pale_oak_sapling"), 10, Reward.item(2, "apple", 8))
 	);
 
 	/** Unfinished business, picked by how the ancestor lived (their epithet). */
@@ -79,24 +90,37 @@ public final class Quests {
 		Map.entry("slayer", FIGHTING), Map.entry("bold", FIGHTING), Map.entry("fierce", FIGHTING),
 		Map.entry("scarred", FIGHTING), Map.entry("unbroken", FIGHTING),
 		Map.entry("wanderer", wandering()), Map.entry("far_walker", wandering()), Map.entry("restless", wandering()),
-		Map.entry("angler", List.of(new Template("pond", Goal.CUSTOM_STAT, List.of("fish_caught"), 10, Reward.item(3, "name_tag", 1)))),
-		Map.entry("patient", List.of(new Template("pond", Goal.CUSTOM_STAT, List.of("fish_caught"), 10, Reward.item(3, "name_tag", 1)))),
+		Map.entry("angler", fishing()), Map.entry("patient", fishing()),
 		Map.entry("shepherd", herding()), Map.entry("herder", herding()),
 		Map.entry("merchant", trading()), Map.entry("silver_tongued", trading()),
-		Map.entry("brief", List.of(new Template("outlive", Goal.CUSTOM_STAT, List.of("play_time"), 24000, 1200, Reward.item(3, "golden_carrot", 8))))
+		Map.entry("brief", List.of(new Template("outlive", Goal.CUSTOM_STAT, List.of("play_time"), 24000, 1200, Reward.item(3, "golden_carrot", 8)),
+			new Template("two_days", Goal.CUSTOM_STAT, List.of("play_time"), 48000, 1200, Reward.item(5, "golden_apple", 1)),
+			new Template("cake", Goal.CUSTOM_STAT, List.of("eat_cake_slice"), 7, Reward.levels(3))))
 	);
 
 	private static List<Template> wandering() {
-		return List.of(new Template("road", Goal.CUSTOM_STAT, List.of("walk_one_cm", "sprint_one_cm"),
-			300_000, 100, Reward.item(3, "ender_pearl", 4)));
+		return List.of(new Template("road", Goal.CUSTOM_STAT, List.of("walk_one_cm", "sprint_one_cm"), 300_000, 100, Reward.item(3, "ender_pearl", 4)),
+			new Template("river", Goal.CUSTOM_STAT, List.of("boat_one_cm"), 100_000, 100, Reward.item(3, "emerald", 5)),
+			new Template("nether", Goal.DIMENSION, List.of("minecraft:the_nether"), 1, Reward.item(4, "golden_carrot", 8)),
+			new Template("far_road", Goal.CUSTOM_STAT, List.of("walk_one_cm", "sprint_one_cm"), 500_000, 100, Reward.item(5, "ender_pearl", 8)));
+	}
+
+	private static List<Template> fishing() {
+		return List.of(new Template("pond", Goal.CUSTOM_STAT, List.of("fish_caught"), 10, Reward.item(3, "name_tag", 1)),
+			new Template("catch", Goal.CUSTOM_STAT, List.of("fish_caught"), 20, Reward.item(4, "saddle", 1)),
+			new Template("dish", Goal.USE, List.of("cooked_cod", "cooked_salmon"), 5, Reward.item(2, "emerald", 4)));
 	}
 
 	private static List<Template> herding() {
-		return List.of(new Template("herd", Goal.CUSTOM_STAT, List.of("animals_bred"), 10, Reward.item(3, "emerald", 5)));
+		return List.of(new Template("herd", Goal.CUSTOM_STAT, List.of("animals_bred"), 10, Reward.item(3, "emerald", 5)),
+			new Template("great_herd", Goal.CUSTOM_STAT, List.of("animals_bred"), 20, Reward.item(4, "golden_carrot", 12)),
+			new Template("feast", Goal.USE, List.of("cooked_mutton", "cooked_beef", "cooked_porkchop"), 8, Reward.item(2, "cake", 1)));
 	}
 
 	private static List<Template> trading() {
-		return List.of(new Template("dealings", Goal.CUSTOM_STAT, List.of("traded_with_villager"), 10, Reward.item(3, "emerald", 10)));
+		return List.of(new Template("dealings", Goal.CUSTOM_STAT, List.of("traded_with_villager"), 10, Reward.item(3, "emerald", 10)),
+			new Template("big_deal", Goal.CUSTOM_STAT, List.of("traded_with_villager"), 25, Reward.item(5, "emerald", 20)),
+			new Template("market", Goal.CUSTOM_STAT, List.of("bell_ring"), 3, Reward.item(2, "emerald", 3)));
 	}
 
 	private Quests() {
@@ -179,8 +203,9 @@ public final class Quests {
 		boolean changed = false;
 		for (Quest quest : lineage.allQuests()) {
 			switch (quest.goal) {
-				case KILL_PLAYER, KILL_WITH_OATHBLADE, MANUAL -> {
+				case KILL_PLAYER, KILL_WITH_OATHBLADE -> {
 				}
+				case MANUAL -> Inns.tickJob(player, quest);
 				case KILL_CHAMPION -> Questlines.maybeSpawnChampion(player, quest);
 				case VISIT -> {
 					// Wait a little after respawning, so dying next to the spawn point doesn't finish this instantly.
@@ -193,6 +218,12 @@ public final class Quests {
 				}
 				case DEPTH -> {
 					if (player.getBlockY() <= Integer.parseInt(quest.targets.getFirst())) quest.progress = 1;
+				}
+				case BIOME -> {
+					String biome = quest.targets.getFirst();
+					if (player.level().getBiome(player.blockPosition()).unwrapKey().filter(k -> k.identifier().toString().equals(biome)).isPresent()) {
+						quest.progress = 1;
+					}
 				}
 				default -> {
 					// Each member has their own baseline, so on shared quests everyone's progress adds up.
