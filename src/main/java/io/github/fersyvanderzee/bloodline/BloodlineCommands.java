@@ -181,6 +181,15 @@ final class BloodlineCommands {
 						quest.progress = quest.required;
 						return 1;
 					}))
+				.then(Commands.literal("renown")
+					.then(Commands.argument("amount", IntegerArgumentType.integer(-1000, 1000))
+						.executes(ctx -> {
+							ServerPlayer player = ctx.getSource().getPlayerOrException();
+							Lineage lineage = lineageOf(ctx.getSource(), player);
+							if (lineage == null) return 0;
+							Renown.change(player, lineage, IntegerArgumentType.getInteger(ctx, "amount"), Text.t("renown.reason.debug"));
+							return 1;
+						})))
 				.then(Commands.literal("event")
 					.then(Commands.argument("type", StringArgumentType.word())
 						.suggests((ctx, builder) -> {

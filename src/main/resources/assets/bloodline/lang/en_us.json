@@ -542,5 +542,6 @@
 	"bloodline.event.cousin.welcomed": "%s welcomes cousin %s, who hands over %s.",
 	"bloodline.chronicle.cousin_away": "%s sent their cousin %s away.",
 	"bloodline.event.cousin.sent_away": "%s leaves without a word.",
-	"bloodline.command.event_started": "Started the %s event."
+	"bloodline.command.event_started": "Started the %s event.",
+	"bloodline.renown.reason.debug": "from an operator"
 }
