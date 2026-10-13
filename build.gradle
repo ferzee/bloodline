@@ -22,6 +22,11 @@ loom {
 	}
 
 	runs {
+		// A fixed name gives the test client the same player ID every time, so a test world's family
+		// is still yours after a restart (real accounts always keep their ID).
+		client {
+			programArgs "--username", "Fersy"
+		}
 		// A second client with its own folder and name, for testing multiplayer on one computer:
 		// open a world to LAN in one client and join it from the other.
 		client2 {
