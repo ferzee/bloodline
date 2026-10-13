@@ -61,6 +61,21 @@ public final class BloodlineConfig {
 		public boolean enabled = true;
 		/** Minecraft days between family events, plus up to two days of chance. */
 		public int intervalDays = 3;
+		/** Days after founding before a house can face a feud or a restless spirit. */
+		public int graceDays = 7;
+	}
+
+	/**
+	 * How strong "surprise" champions are (rival champions, restless shades, inn bounties and the
+	 * heirloom thief), by the house's renown. Oath champions are not scaled.
+	 */
+	public static final class Champions {
+		/** Renown at which a house reaches the Established, Renowned and Legendary tiers. */
+		public int[] tierRenown = {15, 45, 100};
+		/** Health of the champion per tier (Fledgling, Established, Renowned, Legendary), times its normal health. */
+		public double[] tierHealth = {0.4, 0.7, 1.0, 1.5};
+		/** Bodyguards added to (or taken from) the champion's normal number, per tier. */
+		public int[] tierGuards = {-3, -1, 0, 1};
 	}
 
 	public static final class Sacrifice {
@@ -111,6 +126,7 @@ public final class BloodlineConfig {
 	public Heirlooms heirlooms = new Heirlooms();
 	public Structures structures = new Structures();
 	public Events events = new Events();
+	public Champions champions = new Champions();
 
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static BloodlineConfig current = new BloodlineConfig();
@@ -151,6 +167,10 @@ public final class BloodlineConfig {
 		if (heirlooms == null) heirlooms = new Heirlooms();
 		if (structures == null) structures = new Structures();
 		if (events == null) events = new Events();
+		if (champions == null || champions.tierRenown == null || champions.tierRenown.length != 3
+			|| champions.tierHealth == null || champions.tierHealth.length != 4
+			|| champions.tierGuards == null || champions.tierGuards.length != 4) champions = new Champions();
+		events.graceDays = Math.max(0, events.graceDays);
 		events.intervalDays = Math.max(1, events.intervalDays);
 		if (renown.actThresholds == null || renown.actThresholds.length < 4) renown.actThresholds = new Renown().actThresholds;
 		if (steward.vaultSlots == null || steward.vaultRenown == null || steward.vaultSlots.length == 0

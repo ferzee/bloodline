@@ -120,8 +120,18 @@ public final class Champions {
 			champion.setItemSlot(slot, item == null ? ItemStack.EMPTY : new ItemStack(item));
 			champion.setDropChance(slot, 0);
 		}
+		// Surprise enemies grow with the house; oath champions are always at full strength.
+		int tier = scaled(kind) ? tierOf(player) : -1;
+		if (tier >= 0) {
+			for (EquipmentSlot slot : EquipmentSlot.values()) {
+				Item item = kind.gear().get(slot);
+				if (item != null) champion.setItemSlot(slot, new ItemStack(gearForTier(item, tier)));
+			}
+		}
 		mainHand.ifPresent(stack -> champion.setItemSlot(EquipmentSlot.MAINHAND, stack.copy()));
-		double health = preparations.contains(Questlines.WEAKENED) ? kind.health() * 0.7 : kind.health();
+		BloodlineConfig.Champions settings = BloodlineConfig.get().champions;
+		double baseHealth = tier >= 0 ? Math.max(10, kind.health() * settings.tierHealth[tier]) : kind.health();
+		double health = preparations.contains(Questlines.WEAKENED) ? baseHealth * 0.7 : baseHealth;
 		champion.getAttribute(Attributes.MAX_HEALTH).setBaseValue(health);
 		champion.setHealth((float) health);
 		if (preparations.contains(Questlines.EXPOSED)) {
@@ -129,7 +139,7 @@ public final class Champions {
 			champion.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, MobEffectInstance.INFINITE_DURATION, 0));
 		}
 		var damage = champion.getAttribute(Attributes.ATTACK_DAMAGE);
-		if (damage != null) damage.setBaseValue(damage.getBaseValue() + kind.extraDamage());
+		if (damage != null && tier != 0) damage.setBaseValue(damage.getBaseValue() + kind.extraDamage());
 		champion.setCustomName(kind.name().withStyle(ChatFormatting.GOLD));
 		champion.addTag(KIND_TAG + kind.id());
 		champion.setCustomNameVisible(true);
@@ -140,7 +150,8 @@ public final class Champions {
 		champion.setTarget(player);
 		level.addFreshEntity(champion);
 
-		int guards = preparations.contains(Questlines.STANDS_ALONE) ? 0 : kind.guards();
+		int normalGuards = tier >= 0 ? Math.max(0, kind.guards() + settings.tierGuards[tier]) : kind.guards();
+		int guards = preparations.contains(Questlines.STANDS_ALONE) ? 0 : normalGuards;
 		for (int i = 0; i < guards; i++) {
 			Mob guard = kind.guard().create(level, EntitySpawnReason.EVENT);
 			if (guard == null) continue;
@@ -156,6 +167,40 @@ public final class Champions {
 		player.connection.send(new ClientboundSetTitleTextPacket(kind.name().withStyle(ChatFormatting.DARK_RED)));
 		player.connection.send(new ClientboundSetSubtitleTextPacket(Text.t("oath.quoted", kind.taunt()).withStyle(ChatFormatting.GRAY)));
 		level.playSound(null, pos, SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 2f, 1f);
+	}
+
+	private static final java.util.Set<String> SCALED = java.util.Set.of("rival", "shade", "rotgut", "old_bones", "broodmother", "deserter", "thief");
+
+	private static boolean scaled(Kind kind) {
+		return SCALED.contains(kind.id());
+	}
+
+	/** The house's strength tier: 0 Fledgling, 1 Established, 2 Renowned, 3 Legendary. */
+	public static int tierOf(ServerPlayer player) {
+		var lineage = Lineages.get(player);
+		if (lineage == null) return 2;
+		int[] thresholds = BloodlineConfig.get().champions.tierRenown;
+		int tier = 0;
+		for (int threshold : thresholds) if (lineage.house.renown >= threshold) tier++;
+		return tier;
+	}
+
+	/** Weaker gear for a young house (stone and leather), better for a legendary one (diamond). */
+	private static Item gearForTier(Item item, int tier) {
+		if (tier == 0) {
+			if (item == Items.IRON_SWORD || item == Items.NETHERITE_SWORD || item == Items.DIAMOND_SWORD) return Items.STONE_SWORD;
+			if (item == Items.IRON_AXE || item == Items.NETHERITE_AXE || item == Items.DIAMOND_AXE) return Items.STONE_AXE;
+			if (item == Items.IRON_HELMET || item == Items.CHAINMAIL_HELMET) return Items.LEATHER_HELMET;
+			if (item == Items.IRON_CHESTPLATE || item == Items.CHAINMAIL_CHESTPLATE) return Items.LEATHER_CHESTPLATE;
+			if (item == Items.IRON_LEGGINGS) return Items.LEATHER_LEGGINGS;
+		} else if (tier == 3) {
+			if (item == Items.IRON_SWORD || item == Items.STONE_SWORD) return Items.DIAMOND_SWORD;
+			if (item == Items.IRON_AXE || item == Items.STONE_AXE) return Items.DIAMOND_AXE;
+			if (item == Items.IRON_HELMET || item == Items.CHAINMAIL_HELMET || item == Items.LEATHER_HELMET) return Items.DIAMOND_HELMET;
+			if (item == Items.IRON_CHESTPLATE) return Items.DIAMOND_CHESTPLATE;
+			if (item == Items.IRON_LEGGINGS) return Items.DIAMOND_LEGGINGS;
+		}
+		return item;
 	}
 
 	/** Somewhere a few blocks from {@code origin} with room to stand, or {@code origin} itself. */

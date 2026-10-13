@@ -96,9 +96,13 @@ public final class FamilyEvents {
 
 	private static void start(ServerPlayer player, Lineage lineage) {
 		RandomSource random = player.getRandom();
-		List<String> possible = new ArrayList<>(List.of(FEUD, WEDDING, COUSIN));
+		List<String> possible = new ArrayList<>(List.of(WEDDING, COUSIN));
 		if (!lineage.sick) possible.add(SICKNESS);
-		if (graveToHaunt(player, lineage, random).isPresent()) possible.add(RESTLESS);
+		// Young houses get time to settle before anything comes to fight them.
+		int founded = lineage.house.chronicle.isEmpty() ? 0 : lineage.house.chronicle.getFirst().day();
+		boolean settled = Lineages.today(player.level().getServer()) >= founded + BloodlineConfig.get().events.graceDays;
+		if (settled) possible.add(FEUD);
+		if (settled && graveToHaunt(player, lineage, random).isPresent()) possible.add(RESTLESS);
 		switch (possible.get(random.nextInt(possible.size()))) {
 			case SICKNESS -> sickness(player, lineage);
 			case RESTLESS -> restless(player, lineage, graveToHaunt(player, lineage, random).get());
