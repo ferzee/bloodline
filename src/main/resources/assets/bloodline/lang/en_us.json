@@ -213,7 +213,6 @@
 	"bloodline.book.sacrifice.at": "At %s",
 	"bloodline.book.sacrifice.place_founder": "At a grave or your steward's home",
 	"bloodline.book.sacrifice.place": "At an ancestor's grave",
-	"bloodline.book.sacrifice.reward": "Heir keeps every boon, +%s renown. Sacrifices: %s/%s",
 	"bloodline.button.offer_life": "[Offer your life]",
 	"bloodline.book.sacrifice.hover_ready": "You'll be asked to confirm. Your belongings fall where you kneel.",
 	"bloodline.book.sacrifice.hover_missing": "Not possible yet: click to see what's missing.",
@@ -553,5 +552,8 @@
 	"bloodline.house.invite.window": "An Invitation",
 	"bloodline.button.not_yet": "[Not yet]",
 	"bloodline.screen.choose_later": "You can also choose later in chat or in your Chronicle.",
-	"bloodline.event.feud.cannot_pay": "You can't pay the %s emeralds. House %s takes it as a refusal: their champion is coming for you at night."
+	"bloodline.event.feud.cannot_pay": "You can't pay the %s emeralds. House %s takes it as a refusal: their champion is coming for you at night.",
+	"bloodline.book.sacrifice.count": "Sacrifices: %s / %s",
+	"bloodline.book.sacrifice.about": "About the Sacrifice",
+	"bloodline.book.sacrifice.reward_text": "Their heir keeps every boon and the house gains %s renown. After %s sacrifices the house becomes Blood-Sworn."
 }

@@ -96,7 +96,9 @@ public final class Chronicle {
 		int offset = choosing ? 1 : 0;
 		List<Component> mainQuest = Questlines.bookPages(lineage, 2 + offset, lineage.isHead(viewer.getUUID()));
 		List<Component> duties = duties(lineage);
-		List<Component> head = List.of(head(lineage), members(viewer.level().getServer(), lineage), sacrifice(viewer, lineage));
+		List<Component> head = new ArrayList<>(List.of(head(lineage), members(viewer.level().getServer(), lineage)));
+		int sacrificeOffset = head.size();
+		head.addAll(sacrifice(viewer, lineage));
 		List<Component> tree = familyTree(lineage);
 		List<Component> history = entries(lineage);
 		int room = MAX_PAGES - 1 - mainQuest.size() - duties.size() - head.size() - tree.size();
@@ -118,7 +120,7 @@ public final class Chronicle {
 			link(dutyCount > 0 ? Text.t("book.contents.duties_count", dutyCount) : Text.t("book.contents.duties"), dutiesPage),
 			link(Text.t("book.contents.house"), headPage),
 			// The Sacrifice page is the last of the "You & the House" pages.
-			link(Text.t("book.contents.sacrifice"), headPage + head.size() - 1),
+			link(Text.t("book.contents.sacrifice"), headPage + sacrificeOffset),
 			link(Text.t("book.contents.tree"), treePage),
 			link(Text.t("book.contents.history"), historyPage)));
 		pages.add(cover(lineage, contents));
@@ -265,19 +267,26 @@ public final class Chronicle {
 		return page;
 	}
 
-	private static Component sacrifice(ServerPlayer viewer, Lineage lineage) {
+	/**
+	 * Two pages: the button and the conditions first, then what the Sacrifice is. A book page shows
+	 * about 14 lines and cuts off the rest, so the button goes at the top where it is always visible.
+	 */
+	private static List<Component> sacrifice(ServerPlayer viewer, Lineage lineage) {
 		Sacrifice.Conditions now = Sacrifice.check(viewer, lineage);
+		// Always offer the button: if something is missing, the command says exactly what.
 		MutableComponent page = heading(Text.t("book.sacrifice.title"))
-			.append(body(Text.t("book.sacrifice.intro"))).append("\n\n");
+			.append(button(Text.t("button.offer_life"), "/bloodline sacrifice", Text.t(now.met() ? "book.sacrifice.hover_ready" : "book.sacrifice.hover_missing")))
+			.append("\n\n");
 		page.append(condition(now.actDone(), Text.t("book.sacrifice.act")));
 		page.append(condition(now.night(), Text.t("book.sacrifice.night")));
 		page.append(condition(now.fullMoon(), now.fullMoon() ? Text.t("book.sacrifice.moon") : Text.t("book.sacrifice.moon_in", now.nightsUntilFullMoon())));
 		page.append(condition(now.place().isPresent(), now.place().map(p -> Text.t("book.sacrifice.at", p))
 			.orElse(Text.t(now.founder() ? "book.sacrifice.place_founder" : "book.sacrifice.place"))));
-		page.append("\n").append(faint(Text.t("book.sacrifice.reward", Sacrifice.renown(), lineage.house.sacrifices, Sacrifice.forBloodSworn()))).append("\n\n");
-		// Always offer the button: if something is missing, the command says exactly what.
-		page.append(button(Text.t("button.offer_life"), "/bloodline sacrifice", Text.t(now.met() ? "book.sacrifice.hover_ready" : "book.sacrifice.hover_missing")));
-		return page;
+		page.append("\n").append(faint(Text.t("book.sacrifice.count", lineage.house.sacrifices, Sacrifice.forBloodSworn())));
+		MutableComponent about = heading(Text.t("book.sacrifice.about"))
+			.append(body(Text.t("book.sacrifice.intro"))).append("\n\n")
+			.append(faint(Text.t("book.sacrifice.reward_text", Sacrifice.renown(), Sacrifice.forBloodSworn())));
+		return List.of(page, about);
 	}
 
 	private static Component condition(boolean met, Component text) {
