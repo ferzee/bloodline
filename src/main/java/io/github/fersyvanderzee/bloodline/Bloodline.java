@@ -50,6 +50,7 @@ public class Bloodline implements ModInitializer {
 		ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> Lineages.onRespawn(newPlayer, alive));
 
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
+			Screens.tick(server);
 			if (server.getTickCount() % HEIRLOOM_TICK_INTERVAL != 0) return;
 			boolean questTick = server.getTickCount() % QUEST_TICK_INTERVAL == 0;
 			Champions.tick(server);

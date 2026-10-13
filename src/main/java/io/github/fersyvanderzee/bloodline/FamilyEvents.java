@@ -72,9 +72,16 @@ public final class FamilyEvents {
 			return;
 		}
 		if (house.pendingEvent.isPresent()) {
-			if (house.pendingEvent.get().expiresDay() < today) {
+			PendingEvent waiting = house.pendingEvent.get();
+			if (waiting.expiresDay() < today) {
 				house.pendingEvent = Optional.empty();
-				Lineages.tellHouse(server, house, Text.t("event.expired").withStyle(ChatFormatting.GRAY));
+				if (waiting.type().equals(FEUD)) {
+					// Ignoring a feud doesn't avoid it: only paying tribute does.
+					Lineages.tellHouse(server, house, Text.t("event.feud.unanswered", waiting.detail()).withStyle(ChatFormatting.RED));
+					acceptFeud(player, lineage, waiting.detail());
+				} else {
+					Lineages.tellHouse(server, house, Text.t("event.expired").withStyle(ChatFormatting.GRAY));
+				}
 				Lineages.markDirty(server);
 			}
 			return;
@@ -198,6 +205,22 @@ public final class FamilyEvents {
 				.append(button(Text.t("button.send_away"), "decline", ChatFormatting.GRAY, Text.t("event.cousin.decline_hover")));
 		};
 		player.sendSystemMessage(message);
+
+		String accept = "/bloodline event accept", decline = "/bloodline event decline";
+		switch (event.type()) {
+			case FEUD -> Screens.show(player, Text.t("event.feud.window"),
+				List.of(Text.t("event.feud.announce", event.detail(), lineage.house.name), Text.t("event.feud.ask")),
+				List.of(new Screens.Button(Text.t("button.accept_challenge"), Text.t("event.feud.accept_hover"), accept),
+					new Screens.Button(Text.t("button.pay_tribute", TRIBUTE), Text.t("event.feud.tribute_hover"), decline)));
+			case WEDDING -> Screens.show(player, Text.t("event.wedding.window"),
+				List.of(Text.t("event.wedding.announce", nameOf(player, event.member())), Text.t("event.wedding.ask")),
+				List.of(new Screens.Button(Text.t("button.accept_match", DOWRY), Text.t("event.wedding.accept_hover"), accept),
+					new Screens.Button(Text.t("button.decline"), Text.t("event.wedding.decline_hover"), decline)));
+			default -> Screens.show(player, Text.t("event.cousin.window"),
+				List.of(Text.t("event.cousin.announce", event.detail())),
+				List.of(new Screens.Button(Text.t("button.welcome"), Text.t("event.cousin.accept_hover"), accept),
+					new Screens.Button(Text.t("button.send_away"), Text.t("event.cousin.decline_hover"), decline)));
+		}
 	}
 
 	private static String nameOf(ServerPlayer viewer, UUID member) {
@@ -235,13 +258,7 @@ public final class FamilyEvents {
 		switch (event.type()) {
 			case FEUD -> {
 				if (accept) {
-					Quest quest = Quest.of(Type.EVENT, Text.t("event.feud.title", event.detail()), Text.t("event.feud.task", event.detail()),
-						Goal.KILL_CHAMPION, List.of("rival_" + UUID.randomUUID().toString().substring(0, 8), Champions.RIVAL.id(),
-							Level.OVERWORLD.identifier().toString(), "night"), 1, Reward.item(4, "emerald", 8));
-					quest.line = Optional.of(LINE_PREFIX + FEUD + ":" + event.detail());
-					Quests.add(player, lineage, quest);
-					Lineages.record(server, lineage, Text.t("chronicle.feud", event.detail(), lineage.house.name, who));
-					announceDuty(server, lineage, quest);
+					acceptFeud(player, lineage, event.detail());
 				} else {
 					Lineages.record(server, lineage, Text.t("chronicle.tribute", lineage.house.name, event.detail()));
 					Renown.change(player, lineage, -3, Text.t("renown.reason.tribute", event.detail()));
@@ -275,6 +292,18 @@ public final class FamilyEvents {
 			}
 		}
 		Lineages.markDirty(server);
+	}
+
+	/** The rival's champion will hunt the house at night until it is defeated. */
+	private static void acceptFeud(ServerPlayer player, Lineage lineage, String rival) {
+		MinecraftServer server = player.level().getServer();
+		Quest quest = Quest.of(Type.EVENT, Text.t("event.feud.title", rival), Text.t("event.feud.task", rival),
+			Goal.KILL_CHAMPION, List.of("rival_" + UUID.randomUUID().toString().substring(0, 8), Champions.RIVAL.id(),
+				Level.OVERWORLD.identifier().toString(), "night"), 1, Reward.item(4, "emerald", 8));
+		quest.line = Optional.of(LINE_PREFIX + FEUD + ":" + rival);
+		Quests.add(player, lineage, quest);
+		Lineages.record(server, lineage, Text.t("chronicle.feud", rival, lineage.house.name, lineage.current.name()));
+		announceDuty(server, lineage, quest);
 	}
 
 	// --- Endings ------------------------------------------------------------------------------

@@ -512,7 +512,7 @@
 	"bloodline.event.restless.task": "Defeat the shade at %s's grave at night (%s)",
 	"bloodline.chronicle.restless": "%s laid the spirit of %s to rest.",
 	"bloodline.event.feud.announce": "House %s has declared a feud on House %s!",
-	"bloodline.event.feud.ask": "Their champion will hunt you at night.",
+	"bloodline.event.feud.ask": "Their champion will hunt you at night unless you pay tribute.",
 	"bloodline.button.accept_challenge": "[Accept the challenge]",
 	"bloodline.button.pay_tribute": "[Pay tribute: %s emeralds]",
 	"bloodline.event.feud.accept_hover": "Their champion comes for you at night. Defeat it for emeralds and renown.",
@@ -545,5 +545,12 @@
 	"bloodline.book.contents.sacrifice": "The Sacrifice",
 	"bloodline.sacrifice.hint": "%s has fulfilled an act, and may now give their life for the house under a full moon.",
 	"bloodline.button.how": "[How?]",
-	"bloodline.sacrifice.hint_hover": "Shows what is still needed for the Sacrifice"
+	"bloodline.sacrifice.hint_hover": "Shows what is still needed for the Sacrifice",
+	"bloodline.event.feud.unanswered": "House %s took your silence as an answer: their champion is coming for you at night.",
+	"bloodline.event.feud.window": "A Rival House",
+	"bloodline.event.wedding.window": "A Wedding Proposal",
+	"bloodline.event.cousin.window": "A Long-Lost Cousin",
+	"bloodline.house.invite.window": "An Invitation",
+	"bloodline.button.not_yet": "[Not yet]",
+	"bloodline.screen.choose_later": "You can also choose later in chat or in your Chronicle."
 }

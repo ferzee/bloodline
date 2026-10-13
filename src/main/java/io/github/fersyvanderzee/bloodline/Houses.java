@@ -13,6 +13,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -70,6 +71,12 @@ public final class Houses {
 			.append(" ")
 			.append(button(Text.t("button.decline"), "/bloodline decline", ChatFormatting.GRAY, Text.t("house.invite.decline_hover", oldHouse)));
 		target.sendSystemMessage(message);
+		Screens.show(target, Text.t("house.invite.window"),
+			List.of(Text.t("house.invite.received", lineage.fullName(), lineage.house.name), leftBehind),
+			List.of(new Screens.Button(Text.t("button.join_keep"), Text.t("house.invite.keep_hover", theirs.current.name(), lineage.house.name),
+					"/bloodline accept keep"),
+				new Screens.Button(Text.t("button.join_fresh"), Text.t("house.invite.fresh_hover", lineage.house.name), "/bloodline accept fresh"),
+				new Screens.Button(Text.t("button.decline"), Text.t("house.invite.decline_hover", oldHouse), "/bloodline decline")));
 	}
 
 	private static Component button(Component label, String command, ChatFormatting color, Component hover) {

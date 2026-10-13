@@ -20,6 +20,7 @@ import net.minecraft.world.level.MoonPhase;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -121,6 +122,11 @@ public final class Sacrifice {
 			.append(Text.t("button.give_life").withStyle(s -> s.withColor(ChatFormatting.DARK_RED).withBold(true)
 				.withClickEvent(new ClickEvent.RunCommand("/bloodline sacrifice confirm"))
 				.withHoverEvent(new HoverEvent.ShowText(Text.t("sacrifice.confirm_hover", lineage.current.name(), renown()))))));
+		Screens.show(player, Text.t("book.sacrifice.title"),
+			List.of(Text.t("sacrifice.kneel", conditions.place().get()), Text.t("sacrifice.ask", lineage.current.name(), lineage.house.name),
+				Text.t("sacrifice.confirm_hover", lineage.current.name(), renown()).withStyle(ChatFormatting.GRAY)),
+			List.of(new Screens.Button(Text.t("button.give_life").withStyle(ChatFormatting.DARK_RED), null, "/bloodline sacrifice confirm"),
+				new Screens.Button(Text.t("button.not_yet"), null, null)));
 	}
 
 	private static Component missing(MutableComponent reason) {

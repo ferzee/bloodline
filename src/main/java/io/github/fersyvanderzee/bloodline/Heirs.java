@@ -105,6 +105,28 @@ public final class Heirs {
 		}
 		player.sendSystemMessage(Text.t("heir.hint")
 			.withStyle(ChatFormatting.DARK_GRAY));
+
+		// The same choice as a window; opened a second later so respawning doesn't close it straight away.
+		List<Component> body = new ArrayList<>();
+		body.add(Text.t("heir.leaves", parent.fullName(), lineage.candidates.size()));
+		if (lineage.inheritAll) body.add(Text.t("heir.sacrifice_note", parent.name()).withStyle(ChatFormatting.GRAY));
+		else if (diedYoung(parent)) body.add(Text.t("heir.brief_note", parent.fullName()).withStyle(ChatFormatting.GRAY));
+		List<Screens.Button> buttons = new ArrayList<>();
+		for (int i = 0; i < lineage.candidates.size(); i++) {
+			Member child = lineage.candidates.get(i);
+			body.add(Component.literal(child.name() + ": ").withStyle(ChatFormatting.BOLD)
+				.append(Lineages.traitList(child.traits(), parent).withStyle(s -> s.withBold(false))));
+			MutableComponent details = Component.empty();
+			for (String id : child.traits()) {
+				Trait trait = Traits.get(id);
+				if (trait == null) continue;
+				if (!details.getSiblings().isEmpty()) details.append("\n");
+				details.append(trait.name().withStyle(trait.kind().color)).append(": ").append(Text.t("trait." + id + ".desc"));
+			}
+			buttons.add(new Screens.Button(Component.literal(child.name()), details, "/bloodline heir " + (i + 1)));
+		}
+		body.add(Text.t("screen.choose_later").withStyle(ChatFormatting.DARK_GRAY));
+		Screens.showLater(player, 20, Text.t("heir.title"), body, buttons);
 	}
 
 	/** Died within a day of play. Sacrifices never count: they need a fulfilled act and earn "the Devoted". */
