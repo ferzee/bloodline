@@ -199,7 +199,7 @@ public final class Inns {
 			VILLAGE_RADIUS, PoiManager.Occupancy.ANY);
 		if (bell.isEmpty()) return;
 		// Optionally only bells that are part of a generated village attract an innkeeper.
-		if (!BloodlineConfig.get().inns.innkeepersAtPlayerBells
+		if (!BloodlineConfig.get().inns.innkeepersAtPlayerBells && !isRoadside(level, bell.get())
 			&& !level.structureManager().getStructureWithPieceAt(bell.get(), StructureTags.VILLAGE).isValid()) return;
 		boolean hasInnkeeper = !level.getEntitiesOfClass(Villager.class, new AABB(bell.get()).inflate(VILLAGE_RADIUS), Inns::isInnkeeper).isEmpty();
 		if (hasInnkeeper) return;
@@ -213,7 +213,8 @@ public final class Inns {
 	private static void spawnInnkeeper(ServerLevel level, BlockPos bell, ServerPlayer player) {
 		Villager innkeeper = EntityTypes.VILLAGER.create(level, EntitySpawnReason.EVENT);
 		if (innkeeper == null) return;
-		BlockPos pos = Champions.findSpot(level, bell);
+		// Stand right by the bell (behind the counter at a roadside inn), or somewhere near it.
+		BlockPos pos = spotBeside(level, bell).orElseGet(() -> Champions.findSpot(level, bell));
 		innkeeper.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
 		innkeeper.finalizeSpawn(level, level.getCurrentDifficultyAt(pos), EntitySpawnReason.EVENT, null);
 		innkeeper.setNoAi(true);
@@ -224,7 +225,8 @@ public final class Inns {
 		innkeeper.addTag(TAG);
 		innkeeper.addTag(INN_TAG + bell.asLong());
 		level.addFreshEntity(innkeeper);
-		player.sendSystemMessage(Text.t("inn.found", Component.literal(innName(bell)).withStyle(ChatFormatting.GOLD)).withStyle(ChatFormatting.GRAY));
+		player.sendSystemMessage(Text.t(isRoadside(level, bell) ? "inn.found_roadside" : "inn.found",
+			Component.literal(innName(bell)).withStyle(ChatFormatting.GOLD)).withStyle(ChatFormatting.GRAY));
 	}
 
 	private static BlockPos innOf(Villager innkeeper) {
@@ -243,16 +245,37 @@ public final class Inns {
 		handInJobItems(player, lineage, inn);
 		markMetInnkeeper(player, lineage, inn);
 		int day = Lineages.today(player.level().getServer());
-		List<Offer> offers = offers(inn, day);
+		boolean roadside = isRoadside(player.level(), inn);
+		List<Offer> offers = offers(inn, day, roadside);
 		SimpleContainer board = new SimpleContainer(9);
 		fill(board, player, lineage, offers);
 		player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new BoardMenu(id, inventory, board, player, innkeeper, offers),
-			Text.t("inn.board_title", innName(inn))));
+			Text.t(roadside ? "inn.board_title_roadside" : "inn.board_title", innName(inn))));
 	}
 
 	// --- The quest board ----------------------------------------------------------------------
 
-	private static List<Offer> offers(BlockPos inn, int day) {
+	/** Roadside inns pay half as much again for every job. */
+	private static final double ROADSIDE_PAY = 1.5;
+	private static final ResourceKey<Structure> ROADSIDE_INN = ResourceKey.create(net.minecraft.core.registries.Registries.STRUCTURE,
+		Bloodline.id("roadside_inn"));
+
+	/** Whether this bell stands in one of the mod's roadside inns rather than a village. */
+	static boolean isRoadside(ServerLevel level, BlockPos bell) {
+		return level.structureManager().getStructureWithPieceAt(bell, holder -> holder.is(ROADSIDE_INN)).isValid();
+	}
+
+	/** The nearest free spot within two blocks of the bell, at or just below its height. */
+	private static Optional<BlockPos> spotBeside(ServerLevel level, BlockPos bell) {
+		BlockPos best = null;
+		for (BlockPos pos : BlockPos.betweenClosed(bell.offset(-2, -2, -2), bell.offset(2, 0, 2))) {
+			if (pos.equals(bell) || !level.isEmptyBlock(pos) || !level.isEmptyBlock(pos.above()) || level.isEmptyBlock(pos.below())) continue;
+			if (best == null || pos.distSqr(bell) < best.distSqr(bell)) best = pos.immutable();
+		}
+		return Optional.ofNullable(best);
+	}
+
+	private static List<Offer> offers(BlockPos inn, int day, boolean roadside) {
 		RandomSource random = RandomSource.create(inn.asLong() * 31 + day);
 		List<Offer> offers = new ArrayList<>();
 		Map<Kind, Integer> posted = new java.util.EnumMap<>(Kind.class);
@@ -284,7 +307,10 @@ public final class Inns {
 				}
 			});
 		}
-		return offers;
+		if (!roadside) return offers;
+		return offers.stream().map(o -> o.kind() == Kind.RUMOUR || o.emeralds() == 0 ? o
+			: new Offer(o.id(), o.kind(), o.bounty(), o.bountyPos(), o.delivery(), o.rumour(), o.hunt(), o.expedition(),
+				(int) Math.ceil(o.emeralds() * ROADSIDE_PAY))).toList();
 	}
 
 	/** A kind of job by weight, posting at most two of the same kind on one board. */

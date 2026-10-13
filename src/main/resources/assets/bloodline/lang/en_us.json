@@ -620,5 +620,7 @@
 	"bloodline.unfinished.library": "%s's library",
 	"bloodline.unfinished.library.task": "Craft bookshelves",
 	"bloodline.unfinished.saplings": "Plant trees for %s",
-	"bloodline.unfinished.saplings.task": "Plant saplings"
+	"bloodline.unfinished.saplings.task": "Plant saplings",
+	"bloodline.inn.board_title_roadside": "%s (Roadside Inn) - Quest Board",
+	"bloodline.inn.found_roadside": "You've found %s, a roadside inn. Its innkeeper pays well for work."
 }
