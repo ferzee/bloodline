@@ -150,8 +150,8 @@ for z in (10, 11):
     pane(X1, 2, z); pane(X1, 3, z)
 
 # Front double door, back door
-door(11, Z0, 1, "south", "left")
-door(12, Z0, 1, "south", "right")
+door(11, Z0, 1, "south", "right")  # hinges on the outer sides, so the pair opens in the middle
+door(12, Z0, 1, "south", "left")
 door(12, Z1, 1, "north", "left")
 
 # --- Upper floor (y 5) with the jetty beams and corbels --------------------------------------------------
