@@ -7,6 +7,8 @@ import io.github.fersyvanderzee.bloodline.data.Quest.Reward;
 import io.github.fersyvanderzee.bloodline.data.Quest.Type;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -267,6 +269,12 @@ public final class Inns {
 
 	/** The nearest free spot within two blocks of the bell, at or just below its height. */
 	private static Optional<BlockPos> spotBeside(ServerLevel level, BlockPos bell) {
+		// Behind the bar: the bell faces the guests, so the innkeeper stands on the other side of it.
+		BlockState bellState = level.getBlockState(bell);
+		if (bellState.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
+			BlockPos behind = bell.relative(bellState.getValue(BlockStateProperties.HORIZONTAL_FACING).getOpposite()).below();
+			if (level.isEmptyBlock(behind) && level.isEmptyBlock(behind.above()) && !level.isEmptyBlock(behind.below())) return Optional.of(behind);
+		}
 		BlockPos best = null;
 		for (BlockPos pos : BlockPos.betweenClosed(bell.offset(-2, -2, -2), bell.offset(2, 0, 2))) {
 			if (pos.equals(bell) || !level.isEmptyBlock(pos) || !level.isEmptyBlock(pos.above()) || level.isEmptyBlock(pos.below())) continue;
