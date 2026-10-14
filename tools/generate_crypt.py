@@ -29,6 +29,8 @@ TOMB_LOOT = "bloodline:chests/crypt_tomb"
 
 # --- Core positions the mod relies on (template coordinates of the entrance piece) ------------------------
 SURF = 16                      # first air layer above the ground; the ground itself is y = 15
+FRONT = 7                      # the graveyard in front of the mausoleum; everything else is FRONT blocks further south
+# The CORE_* positions are in the mausoleum's own coordinates. In the finished piece (and in Crypts.java) their z is FRONT more.
 CORE_BRAZIERS = {"crown": (7, 2, 24), "sword": (13, 2, 24), "harvest": (7, 2, 27), "bone": (13, 2, 27)}
 EMBLEM_BLOCKS = {"crown": "gold_block", "sword": "iron_block", "harvest": "hay_block", "bone": "bone_block"}
 CORE_SARCOPHAGI = [(2, 21), (2, 29), (17, 21), (17, 29)]   # west end (x, z) of each; each is 2 long in x
@@ -96,15 +98,165 @@ def soul_lantern(t, x, y, z, chain=1):
 # =====================================================================================================
 # The core: mausoleum, stairway, Hall of the Fallen and the sealed tomb
 # =====================================================================================================
-def entrance():
-    t = Template((21, SURF + 10, 44))
-    G = SURF - 1  # the ground layer
+def grave(t, x, z):
+    """A headstone at (x, z) with its grave mound to the south of it. Some graves stand open."""
+    G = SURF - 1
+    kind = rng.random()
+    if kind < 0.12:
+        # dug up: an open grave with a skull at the bottom
+        crumble(t, x, SURF, z, "stone_bricks")
+        t.put(x, SURF, z, "cracked_stone_bricks")
+        for dz in (1, 2):
+            t.put(x, G - 1, z + dz, "coarse_dirt")
+            t.put(x, G, z + dz, "air")
+        t.put(x, G, z + 1, "skeleton_skull", rotation=rng.choice([0, 4, 8, 12]), powered=False)
+        t.put(x + 1, G, z + 1, "coarse_dirt"); t.put(x + 1, SURF, z + 1, "rooted_dirt")
+        return
+    if kind < 0.35:
+        t.put(x, SURF, z, "mossy_stone_brick_wall")
+    elif kind < 0.6:
+        t.put(x, SURF, z, "chiseled_stone_bricks")
+        t.slab(x, SURF + 1, z, "stone_brick_slab")
+        if rng.random() < 0.5:
+            t.put(x, SURF + 2, z, "candle", candles=rng.randint(1, 2), lit=rng.random() < 0.6, waterlogged=False)
+    elif kind < 0.8:
+        t.put(x, SURF, z, "andesite_wall"); t.put(x, SURF + 1, z, "andesite_wall")
+    else:
+        t.stair(x, SURF, z, rng.choice(["stone_brick_stairs", "mossy_stone_brick_stairs"]), "south")  # a sunken, tilted stone
+    for dz in (1, 2):
+        mound = rng.choice(["coarse_dirt", "podzol", "rooted_dirt"])
+        t.put(x, G, z + dz, mound, **({"snowy": False} if mound == "podzol" else {}))
+        t.put(x, SURF, z + dz, "air")
+    if rng.random() < 0.45:
+        t.put(x, SURF, z + rng.choice([1, 2]), rng.choice(["lily_of_the_valley", "poppy", "allium", "azure_bluet"]))
 
-    # --- Mausoleum on the surface (x 5..15, z 1..11) ---------------------------------------------------------
+
+def obelisk(t, x, z):
+    crumble(t, x, SURF, z, "stone_bricks")
+    for y in range(SURF + 1, SURF + 4):
+        t.put(x, y, z, "polished_deepslate")
+    t.put(x, SURF + 4, z, "chiseled_deepslate")
+    t.put(x, SURF + 5, z, "deepslate_brick_wall")
+    t.put(x, SURF + 6, z, "soul_lantern", hanging=False, waterlogged=False)
+    for dx, dz, facing in ((1, 0, "west"), (-1, 0, "east"), (0, 1, "north"), (0, -1, "south")):
+        t.stair(x + dx, SURF, z + dz, "stone_brick_stairs", facing)
+
+
+def dead_tree(t, x, z, tall=6):
+    """A bare, crooked tree with hanging moss and a soul lantern on a chain."""
+    for y in range(SURF, SURF + tall):
+        t.put(x, y, z, "dark_oak_log", axis="y")
+    top = SURF + tall
+    branches = [((1, 0), "x"), ((-1, 0), "x"), ((0, 1), "z"), ((0, -1), "z")]
+    rng.shuffle(branches)
+    for i, ((dx, dz), axis) in enumerate(branches[:3]):
+        y = top - 1 - i
+        length = 2 + (i == 0)
+        for step in range(1, length + 1):
+            t.put(x + dx * step, y + (step == length), z + dz * step, "dark_oak_log", axis=axis if step < length else "y")
+        if i == 0:
+            t.put(x + dx * (length - 1), y - 1, z + dz * (length - 1), "iron_chain", axis="y", waterlogged=False)
+            t.put(x + dx * (length - 1), y - 2, z + dz * (length - 1), "soul_lantern", hanging=True, waterlogged=False)
+        else:
+            t.put(x + dx * step, y - 1, z + dz * step, "pale_hanging_moss", tip=True)
+    t.put(x, top, z, "dark_oak_log", axis="y")
+
+
+def graveyard(t):
+    """A walled churchyard around the mausoleum (x 0..20, z 0..30), cut level into the ground."""
+    G = SURF - 1
+    X1, Z1 = 20, 30
+    for x in range(0, X1 + 1):
+        for z in range(0, Z1 + 1):
+            for y in range(G - 4, G):
+                t.put(x, y, z, "dirt")  # so the yard doesn't float over a small dip
+            r = rng.random()
+            t.put(x, G, z, "podzol" if r < 0.15 else "coarse_dirt" if r < 0.25 else "moss_block" if r < 0.32 else "grass_block",
+                  **({"snowy": False} if r < 0.15 or r >= 0.32 else {}))
+            for y in range(SURF, SURF + 8):
+                t.put(x, y, z, "air")
+            c = rng.random()
+            ground = t.get(x, G, z)
+            if c < 0.14 and ground in ("grass_block", "podzol"):
+                t.put(x, SURF, z, "short_grass")
+            elif c < 0.19 and ground in ("grass_block", "podzol"):
+                t.put(x, SURF, z, "fern")
+            elif c < 0.24 and ground == "moss_block":
+                t.put(x, SURF, z, "moss_carpet")
+            elif c < 0.26:
+                t.put(x, SURF, z, "dead_bush")
+    # the wall, with pillars every few blocks and iron railings along the front
+    for x in range(0, X1 + 1):
+        for z in range(0, Z1 + 1):
+            if x in (0, X1) or z in (0, Z1):
+                crumble(t, x, G, z, "stone_bricks")
+                t.put(x, SURF, z, rng.choice(["stone_brick_wall", "mossy_stone_brick_wall", "mossy_stone_brick_wall", "cobblestone_wall"]))
+                if z == 0:
+                    t.put(x, SURF + 1, z, "iron_bars")
+    for x in (0, 5, 15, 20):
+        for z in (0, 10, 20, 30):
+            if x in (0, 20) or z in (0, 30):
+                crumble(t, x, SURF, z, "stone_bricks"); crumble(t, x, SURF + 1, z, "stone_bricks")
+                t.put(x, SURF + 2, z, "chiseled_stone_bricks")
+                if (x, z) in ((0, 0), (20, 0), (0, 30), (20, 30)):
+                    t.put(x, SURF + 3, z, "soul_lantern", hanging=False, waterlogged=False)
+    # the gate: two pillars topped with skulls under an arch with a hanging lantern
+    t.air(9, SURF, 0, 11, SURF + 1, 0)
+    for x in (8, 12):
+        for y in range(SURF, SURF + 3):
+            crumble(t, x, y, 0, "stone_bricks")
+        t.put(x, SURF + 3, 0, "chiseled_stone_bricks")
+        t.put(x, SURF + 4, 0, "skeleton_skull", rotation=8, powered=False)
+    t.stair(9, SURF + 3, 0, "stone_brick_stairs", "east", top=True)
+    t.stair(11, SURF + 3, 0, "stone_brick_stairs", "west", top=True)
+    t.put(10, SURF + 3, 0, "chiseled_stone_bricks")
+    t.slab(9, SURF + 4, 0, "stone_brick_slab"); t.slab(11, SURF + 4, 0, "stone_brick_slab")
+    t.put(10, SURF + 4, 0, "stone_bricks")
+    t.put(10, SURF + 2, 0, "soul_lantern", hanging=True, waterlogged=False)
+    # the path from the gate to the mausoleum
+    for z in range(0, FRONT + 1):
+        for x in range(9, 12):
+            t.put(x, G, z, rng.choice(["gravel", "gravel", "coarse_dirt", "cobblestone", "mossy_cobblestone"]))
+            t.put(x, SURF, z, "air")
+    # rows of graves in front, beside and behind the mausoleum
+    for x in (2, 4, 6, 14, 16, 18):
+        grave(t, x, 2)
+    for x in (2, 6, 14, 18):
+        grave(t, x, 5)
+    for z in (14, 22):
+        grave(t, 2, z)
+        grave(t, 18, z + 2)
+    for x in (2, 5, 15, 18):
+        grave(t, x, 21)
+        grave(t, x, 25)
+    # a chest tomb in the back, with candles on its lid
+    for x in range(9, 12):
+        for z in range(22, 25):
+            crumble(t, x, SURF, z, "stone_bricks")
+            t.slab(x, SURF + 1, z, "polished_deepslate_slab")
+    t.put(9, SURF + 2, 22, "candle", candles=3, lit=True, waterlogged=False)
+    t.put(11, SURF + 2, 24, "candle", candles=2, lit=False, waterlogged=False)
+    t.put(10, SURF + 2, 23, "skeleton_skull", rotation=0, powered=False)
+    # obelisks beside the mausoleum and dead trees in the corners
+    obelisk(t, 2, 10)
+    obelisk(t, 18, 10)
+    dead_tree(t, 3, 27, tall=6)
+    dead_tree(t, 17, 26, tall=5)
+    dead_tree(t, 3, 19, tall=4)
+
+
+def entrance():
+    t = Template((21, SURF + 19, 44 + FRONT))
+    G = SURF - 1  # the ground layer
+    graveyard(t)
+    # Everything below was laid out before the graveyard was added in front of it.
+    t.offset = (0, 0, FRONT)
+
+    # --- Mausoleum on the surface (walls x 5..15, z 1..11) ------------------------------------------------
     for x in range(5, 16):
         for z in range(1, 12):
             crumble(t, x, G, z, "stone_bricks")
-    for x in range(8, 13):
+    for x in range(7, 14):
         t.stair(x, G, 0, "stone_brick_stairs", "south")
     for y in range(SURF, SURF + 5):
         for x in range(5, 16):
@@ -115,36 +267,62 @@ def entrance():
                     t.put(x, y, z, "air")
         for x, z in [(5, 1), (15, 1), (5, 11), (15, 11), (5, 6), (15, 6)]:
             t.put(x, y, z, "polished_deepslate")
-    # the doorway, flanked by two soul lanterns on posts
+    # buttresses along the sides and at the front corners, with gargoyle skulls on the front ones
+    for z in (1, 6, 11):
+        for x, facing in ((4, "east"), (16, "west")):
+            crumble(t, x, SURF, z, "stone_bricks")
+            crumble(t, x, SURF + 1, z, "stone_bricks")
+            t.stair(x, SURF + 2, z, "stone_brick_stairs", facing)
+    for x in (5, 15):
+        crumble(t, x, SURF, 0, "stone_bricks")
+        t.stair(x, SURF + 1, 0, "stone_brick_stairs", "south")
+        t.put(x, SURF + 3, 0, "wither_skeleton_wall_skull", facing="north", powered=False)
+    # the doorway, with a rusted portcullis half raised
     t.air(9, SURF, 1, 11, SURF + 2, 1)
     for x in (9, 11):
         t.stair(x, SURF + 3, 1, "stone_brick_stairs", "west" if x == 9 else "east", top=True)
     t.put(10, SURF + 3, 1, "chiseled_stone_bricks")
+    for x in range(9, 12):
+        t.put(x, SURF + 2, 1, "iron_bars")
+    t.put(9, SURF + 1, 1, "cobweb")
     for x in (7, 13):
         t.put(x, SURF, 0, "cobbled_deepslate_wall")
         t.put(x, SURF + 1, 0, "soul_lantern", hanging=False, waterlogged=False)
-    # narrow windows with iron bars
-    for z in (4, 8):
+    # tall stained-glass windows
+    for z in (3, 4, 8, 9):
         for x in (5, 15):
-            t.put(x, SURF + 2, z, "iron_bars"); t.put(x, SURF + 3, z, "iron_bars")
-    # stepped roof
-    for k in range(0, 4):
-        y = SURF + 5 + k
-        for x in range(5 + k, 16 - k):
-            for z in range(1 + k, 12 - k):
-                edge = x in (5 + k, 15 - k) or z in (1 + k, 11 - k)
-                if edge:
-                    t.put(x, y, z, "deepslate_tile_slab" if k == 3 else "deepslate_tiles")
-                elif k < 3:
-                    t.put(x, y, z, "air")
-    t.put(10, SURF + 8, 6, "deepslate_tiles")
-    t.put(10, SURF + 9, 6, "soul_lantern", hanging=False, waterlogged=False)
-    # inside: candles and an urn by the stairs
+            for y in (SURF + 1, SURF + 2, SURF + 3):
+                t.put(x, y, z, "purple_stained_glass_pane" if y < SURF + 3 else "black_stained_glass_pane")
+    # a steep slate roof, ridge running front to back, open to the rafters inside
+    for k in range(0, 6):
+        y = SURF + 4 + 2 * k
+        for z in range(-1, 13):
+            t.put(4 + k, y, z, "deepslate_tiles"); t.stair(4 + k, y + 1, z, "deepslate_tile_stairs", "east")
+            t.put(16 - k, y, z, "deepslate_tiles"); t.stair(16 - k, y + 1, z, "deepslate_tile_stairs", "west")
+            for x in range(5 + k, 16 - k):
+                for yy in (y, y + 1):
+                    if z in (1, 11) or (k == 0 and x in (5, 15) and 1 <= z <= 11):
+                        crumble(t, x, yy, z, "stone_bricks")  # gable ends, and the side walls up to the roof
+                    elif 1 < z < 11:
+                        t.put(x, yy, z, "air")
+    for z in range(-1, 13):
+        t.put(10, SURF + 15, z, "deepslate_tiles")
+        t.slab(10, SURF + 16, z, "deepslate_tile_slab")
+    # a rose window in the front gable
+    for x, y in [(10, SURF + 6), (9, SURF + 7), (11, SURF + 7), (10, SURF + 8), (10, SURF + 7)]:
+        t.put(x, y, 1, "black_stained_glass_pane" if (x, y) == (10, SURF + 7) else "purple_stained_glass_pane")
+    # finials with soul lanterns on both ends of the ridge
+    for z in (-1, 12):
+        t.put(10, SURF + 17, z, "deepslate_brick_wall")
+        t.put(10, SURF + 18, z, "soul_lantern", hanging=False, waterlogged=False)
+    # inside: candles, an urn and a skull by the stairs, a soul lantern on a long chain
     for x, z in [(6, 2), (14, 2), (6, 10), (14, 10)]:
         t.put(x, SURF, z, "candle", candles=3, lit=True, waterlogged=False)
     t.put(7, SURF, 10, "decorated_pot", facing="south", cracked=True, waterlogged=False)
     t.put(13, SURF, 10, "skeleton_skull", rotation=0, powered=False)
-    soul_lantern(t, 10, SURF + 3, 6, chain=1)
+    soul_lantern(t, 10, SURF + 5, 6, chain=9)
+    for x, z in [(6, 2), (14, 10)]:
+        t.put(x, SURF + 4, z, "cobweb")
     # railings around the stairwell
     for z in range(4, 11):
         t.put(8, SURF, z, "deepslate_brick_wall"); t.put(12, SURF, z, "deepslate_brick_wall")

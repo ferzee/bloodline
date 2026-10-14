@@ -25,9 +25,12 @@ class Template:
         self.blocks = {}
         self.nbt = {}
         self.entities = []
+        # Added to every position given to put() and get(), to build part of a piece in its own coordinates.
+        self.offset = (0, 0, 0)
 
     # --- Placing blocks ---------------------------------------------------------------------------
     def put(self, x, y, z, block, nbt=None, **props):
+        x, y, z = x + self.offset[0], y + self.offset[1], z + self.offset[2]
         self.blocks[(x, y, z)] = (block, {k: str(v).lower() for k, v in props.items()})
         if nbt is None:
             self.nbt.pop((x, y, z), None)
@@ -44,6 +47,7 @@ class Template:
         self.fill(x1, y1, z1, x2, y2, z2, "air")
 
     def get(self, x, y, z):
+        x, y, z = x + self.offset[0], y + self.offset[1], z + self.offset[2]
         return self.blocks.get((x, y, z), ("structure_void", {}))[0]
 
     def stair(self, x, y, z, block, facing, top=False):
@@ -68,6 +72,7 @@ class Template:
         def solid(name):
             return name.endswith(("bricks", "tiles", "planks", "_log", "stone", "deepslate", "blackstone", "_block", "cobblestone")) \
                 or name in ("chiseled_deepslate", "polished_deepslate", "gilded_blackstone", "tuff", "calcite")
+        self.offset = (0, 0, 0)
         for pos, (name, props) in list(self.blocks.items()):
             family = None
             if name.endswith("_fence"):

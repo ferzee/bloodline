@@ -77,9 +77,9 @@ public final class Crypts {
 	public static final String JOB = "crypt";
 	private static final String SIGIL_TAG = "bloodline_sigil";
 
-	// Positions in the core piece's template. Keep them in step with tools/generate_crypt.py.
+	// Positions in the core piece's template: the CORE_* values in tools/generate_crypt.py, with FRONT (7) added to z.
 	private enum Emblem {
-		CROWN(7, 2, 24), SWORD(13, 2, 24), HARVEST(7, 2, 27), BONE(13, 2, 27);
+		CROWN(7, 2, 31), SWORD(13, 2, 31), HARVEST(7, 2, 34), BONE(13, 2, 34);
 
 		final BlockPos brazier;
 
@@ -93,13 +93,13 @@ public final class Crypts {
 	}
 
 	/** The west end of each child's sarcophagus; each is two blocks long in x and two high. */
-	private static final int[][] SARCOPHAGI = {{2, 21}, {2, 29}, {17, 21}, {17, 29}};
-	private static final int[] SEAL = {9, 1, 31, 11, 4, 31};
-	private static final int[] TOMB = {3, 0, 31, 17, 8, 43};
-	private static final BlockPos BOSS = new BlockPos(10, 1, 35);
-	private static final BlockPos RELIQUARY = new BlockPos(4, 1, 19);
-	private static final BlockPos HALL_CENTRE = new BlockPos(10, 1, 25);
-	private static final BlockPos BEFORE_SEAL = new BlockPos(10, 1, 29);
+	private static final int[][] SARCOPHAGI = {{2, 28}, {2, 36}, {17, 28}, {17, 36}};
+	private static final int[] SEAL = {9, 1, 38, 11, 4, 38};
+	private static final int[] TOMB = {3, 0, 38, 17, 8, 50};
+	private static final BlockPos BOSS = new BlockPos(10, 1, 42);
+	private static final BlockPos RELIQUARY = new BlockPos(4, 1, 26);
+	private static final BlockPos HALL_CENTRE = new BlockPos(10, 1, 32);
+	private static final BlockPos BEFORE_SEAL = new BlockPos(10, 1, 36);
 
 	private static final int INSCRIPTION_RANGE = 6;
 	private static final long REMIND_TICKS = 20 * 60 * 5;
