@@ -26,6 +26,8 @@ loom {
 		// is still yours after a restart (real accounts always keep their ID).
 		client {
 			programArgs "--username", "Fersy"
+			// Open the game in a bigger window than Minecraft's default 854 x 480.
+			programArgs "--width", "1600", "--height", "900"
 		}
 		// A second client with its own folder and name, for testing multiplayer on one computer:
 		// open a world to LAN in one client and join it from the other.
@@ -34,6 +36,7 @@ loom {
 			configName = "Minecraft Client (second player)"
 			runDir = "run2"
 			programArgs "--username", "Friend"
+			programArgs "--width", "1280", "--height", "720"
 		}
 	}
 }
