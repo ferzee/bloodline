@@ -64,7 +64,7 @@ public class Bloodline implements ModInitializer {
 				if (questTick && lineage != null && !lineage.awaitingHeir) {
 					Quests.tick(player, lineage);
 					Questlines.tickReclaim(player, lineage);
-					Crypts.tick(player);
+					safely("crypt tick", () -> Crypts.tick(player));
 					if (server.getTickCount() % INN_TICK_INTERVAL == 0) {
 						Inns.tick(player);
 						Stewards.tick(player, lineage);
@@ -115,9 +115,21 @@ public class Bloodline implements ModInitializer {
 
 		UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
 			if (!(player instanceof ServerPlayer serverPlayer) || hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
-			return Crypts.onUseBlock(serverPlayer, level, hit.getBlockPos());
+			try {
+				return Crypts.onUseBlock(serverPlayer, level, hit.getBlockPos());
+			} catch (RuntimeException e) {
+				LOGGER.error("Bloodline: crypt interaction failed", e);
+				return InteractionResult.PASS;
+			}
 		});
-		PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) -> Crypts.canBreak(level, player, pos));
+		PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) -> {
+			try {
+				return Crypts.canBreak(level, player, pos);
+			} catch (RuntimeException e) {
+				LOGGER.error("Bloodline: crypt protection check failed", e);
+				return true;
+			}
+		});
 
 		UseEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
 			boolean innkeeper = Inns.isInnkeeper(entity);
@@ -132,6 +144,15 @@ public class Bloodline implements ModInitializer {
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> BloodlineCommands.register(dispatcher));
 
 		LOGGER.info("Bloodline loaded");
+	}
+
+	/** Runs a feature's tick, logging a failure instead of letting it crash the server. */
+	private static void safely(String what, Runnable task) {
+		try {
+			task.run();
+		} catch (RuntimeException e) {
+			LOGGER.error("Bloodline: {} failed", what, e);
+		}
 	}
 
 	public static Identifier id(String path) {

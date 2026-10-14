@@ -184,7 +184,7 @@ public final class Crypts {
 			String name;
 			do {
 				name = Names.given(random, founder);
-			} while (List.of(children).contains(name));
+			} while (java.util.Arrays.asList(children).contains(name));
 			children[i] = name;
 		}
 		List<Emblem> emblems = new ArrayList<>(List.of(Emblem.values()));
