@@ -1,0 +1,18 @@
+{
+  "structures": [
+    {
+      "structure": "bloodline:crypt",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 40,
+    "separation": 16,
+    "salt": 731905422,
+    "exclusion_zone": {
+      "chunk_count": 4,
+      "other_set": "minecraft:villages"
+    }
+  }
+}

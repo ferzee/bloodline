@@ -156,6 +156,25 @@ final class BloodlineCommands {
 						}))))
 			.then(Commands.literal("debug")
 				.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+				.then(Commands.literal("crypt")
+					.executes(ctx -> {
+						ServerPlayer player = ctx.getSource().getPlayerOrException();
+						var description = Crypts.describe(player);
+						if (description.isEmpty()) {
+							ctx.getSource().sendFailure(Text.t("command.crypt.none"));
+							return 0;
+						}
+						ctx.getSource().sendSuccess(description::get, false);
+						return 1;
+					})
+					.then(Commands.literal("reset").executes(ctx -> {
+						if (!Crypts.reset(ctx.getSource().getPlayerOrException())) {
+							ctx.getSource().sendFailure(Text.t("command.crypt.none"));
+							return 0;
+						}
+						ctx.getSource().sendSuccess(() -> Text.t("command.crypt.reset"), true);
+						return 1;
+					})))
 				.then(Commands.literal("age")
 					.executes(ctx -> {
 						ServerPlayer player = ctx.getSource().getPlayerOrException();

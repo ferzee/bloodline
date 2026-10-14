@@ -1,0 +1,95 @@
+{
+  "fallback": "bloodline:crypt/caps",
+  "elements": [
+    {
+      "weight": 5,
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "bloodline:crypt/corridor",
+        "processors": "bloodline:crypt_decay",
+        "projection": "rigid"
+      }
+    },
+    {
+      "weight": 3,
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "bloodline:crypt/corridor_trap",
+        "processors": "bloodline:crypt_decay",
+        "projection": "rigid"
+      }
+    },
+    {
+      "weight": 2,
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "bloodline:crypt/corner_left",
+        "processors": "bloodline:crypt_decay",
+        "projection": "rigid"
+      }
+    },
+    {
+      "weight": 2,
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "bloodline:crypt/corner_right",
+        "processors": "bloodline:crypt_decay",
+        "projection": "rigid"
+      }
+    },
+    {
+      "weight": 2,
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "bloodline:crypt/crossroads",
+        "processors": "bloodline:crypt_decay",
+        "projection": "rigid"
+      }
+    },
+    {
+      "weight": 3,
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "bloodline:crypt/burial_hall",
+        "processors": "bloodline:crypt_decay",
+        "projection": "rigid"
+      }
+    },
+    {
+      "weight": 2,
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "bloodline:crypt/ossuary",
+        "processors": "bloodline:crypt_decay",
+        "projection": "rigid"
+      }
+    },
+    {
+      "weight": 2,
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "bloodline:crypt/collapsed",
+        "processors": "bloodline:crypt_decay",
+        "projection": "rigid"
+      }
+    },
+    {
+      "weight": 1,
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "bloodline:crypt/chapel",
+        "processors": "bloodline:crypt_decay",
+        "projection": "rigid"
+      }
+    },
+    {
+      "weight": 1,
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "bloodline:crypt/cap_niche",
+        "processors": "bloodline:crypt_decay",
+        "projection": "rigid"
+      }
+    }
+  ]
+}

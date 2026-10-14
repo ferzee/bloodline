@@ -9,6 +9,8 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -62,6 +64,7 @@ public class Bloodline implements ModInitializer {
 				if (questTick && lineage != null && !lineage.awaitingHeir) {
 					Quests.tick(player, lineage);
 					Questlines.tickReclaim(player, lineage);
+					Crypts.tick(player);
 					if (server.getTickCount() % INN_TICK_INTERVAL == 0) {
 						Inns.tick(player);
 						Stewards.tick(player, lineage);
@@ -109,6 +112,12 @@ public class Bloodline implements ModInitializer {
 			}
 			return InteractionResult.PASS;
 		});
+
+		UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
+			if (!(player instanceof ServerPlayer serverPlayer) || hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
+			return Crypts.onUseBlock(serverPlayer, level, hit.getBlockPos());
+		});
+		PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) -> Crypts.canBreak(level, player, pos));
 
 		UseEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
 			boolean innkeeper = Inns.isInnkeeper(entity);

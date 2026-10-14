@@ -253,6 +253,32 @@ public final class Heirlooms {
 		return stack;
 	}
 
+	/**
+	 * The last heirloom of a house that died out, taken up by the player's family: the fallen house carried it
+	 * for generations, so it arrives already strong. Its story lists its old bearers.
+	 */
+	public static ItemStack fallenHouseGift(ServerPlayer player, Lineage lineage, net.minecraft.world.item.Item item, String fallenHouse,
+											List<String> oldBearers) {
+		ItemStack stack = new ItemStack(item);
+		String name = NAMES.get(player.getRandom().nextInt(NAMES.size()));
+		List<Integer> generations = new ArrayList<>();
+		List<String> bearers = new ArrayList<>();
+		List<String> carriers = new ArrayList<>();
+		for (int i = 0; i < oldBearers.size(); i++) {
+			generations.add(0);
+			bearers.add(oldBearers.get(i) + " " + fallenHouse);
+			carriers.add("fallen:" + fallenHouse + ":" + i);
+		}
+		generations.add(lineage.current.generation());
+		bearers.add(lineage.current.name());
+		carriers.add(carrierKey(player, lineage));
+		Data data = new Data(player.getUUID(), lineage.house.name, generations, bearers, Optional.of(name), false, carriers);
+		stack.set(DataComponents.CUSTOM_NAME, Component.literal(name).withStyle(s -> s.withItalic(false).withColor(ChatFormatting.GOLD)));
+		stack.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+		write(stack, data);
+		return stack;
+	}
+
 	/** Gives a recovered heirloom back to the family with a note of who reclaimed it. */
 	public static ItemStack reclaimed(ItemStack stack, Lineage lineage) {
 		ItemStack copy = stack.copy();

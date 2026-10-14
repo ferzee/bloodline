@@ -99,11 +99,11 @@ public final class Inns {
 		new Rumour(BuiltinStructures.OCEAN_MONUMENT, "monument", 6)
 	);
 
-	private enum Kind { BOUNTY, DELIVERY, RUMOUR, COURIER, SATCHEL, HUNT, EXPEDITION }
+	private enum Kind { BOUNTY, DELIVERY, RUMOUR, COURIER, SATCHEL, HUNT, EXPEDITION, CRYPT }
 
 	/** How often each kind of job is posted, relative to the others. */
 	private static final Map<Kind, Integer> WEIGHTS = Map.of(Kind.BOUNTY, 2, Kind.DELIVERY, 3, Kind.RUMOUR, 2, Kind.COURIER, 2,
-		Kind.SATCHEL, 2, Kind.HUNT, 3, Kind.EXPEDITION, 2);
+		Kind.SATCHEL, 2, Kind.HUNT, 3, Kind.EXPEDITION, 2, Kind.CRYPT, 2);
 
 	/** A creature to hunt: an entity id, how many, and the pay. */
 	private record Hunt(String entity, int count, int emeralds) {
@@ -313,6 +313,7 @@ public final class Inns {
 					Expedition expedition = EXPEDITIONS.get(random.nextInt(EXPEDITIONS.size()));
 					yield new Offer(id, kind, null, null, null, null, null, expedition, expedition.emeralds());
 				}
+				case CRYPT -> new Offer(id, kind, null, null, null, null, null, null, 8 + random.nextInt(5));
 			});
 		}
 		if (!roadside) return offers;
@@ -396,6 +397,13 @@ public final class Inns {
 					icon = new ItemStack(Items.COMPASS);
 					icon.set(DataComponents.CUSTOM_NAME, name(Text.t("inn.expedition", offer.expedition().name()), ChatFormatting.AQUA));
 					lore.add(line(Text.t("inn.expedition.line", offer.expedition().name()), ChatFormatting.GRAY));
+					lore.add(line(Text.t("inn.delivery.reward", offer.emeralds(), BloodlineConfig.get().renown.innJob), ChatFormatting.GREEN));
+				}
+				case CRYPT -> {
+					icon = new ItemStack(Items.SKELETON_SKULL);
+					icon.set(DataComponents.CUSTOM_NAME, name(Text.t("inn.crypt"), ChatFormatting.DARK_PURPLE));
+					lore.add(line(Text.t("inn.crypt.line"), ChatFormatting.GRAY));
+					lore.add(line(Text.t("inn.crypt.line2"), ChatFormatting.GRAY));
 					lore.add(line(Text.t("inn.delivery.reward", offer.emeralds(), BloodlineConfig.get().renown.innJob), ChatFormatting.GREEN));
 				}
 			}
@@ -519,6 +527,7 @@ public final class Inns {
 				Text.t("inn.hunt.task", offer.hunt().count(), offer.hunt().name()), Goal.KILL, List.of(offer.hunt().entity()), offer.hunt().count(),
 				Reward.item(2, "emerald", offer.emeralds()));
 			case EXPEDITION -> expedition(player, offer);
+			case CRYPT -> crypt(player, offer);
 		};
 		if (quest == null) return;
 		quest.line = Optional.of(LINE_PREFIX + offer.id());
@@ -594,6 +603,19 @@ public final class Inns {
 			pos.getX() + ", " + pos.getZ()), Goal.BIOME, List.of(expedition.biome()), 1, Reward.item(2, "emerald", offer.emeralds()));
 	}
 
+	/** The nearest barrow crypt nobody has been sent to yet. */
+	private static Quest crypt(ServerPlayer player, Offer offer) {
+		Optional<GlobalPos> place = Questlines.locate(player, Level.OVERWORLD, Crypts.CRYPT, true);
+		if (place.isEmpty() || player.level().dimension() != Level.OVERWORLD) {
+			player.sendSystemMessage(Text.t("inn.crypt.none").withStyle(ChatFormatting.GRAY));
+			return null;
+		}
+		String where = place.get().pos().getX() + ", " + place.get().pos().getZ();
+		Questlines.giveMap(player, place.get(), Text.t("inn.crypt"));
+		return Quest.of(Type.INN, Text.t("inn.crypt"), Text.t("inn.crypt.task", where), Goal.MANUAL, List.of(Crypts.JOB), 1,
+			Reward.item(3, "emerald", offer.emeralds())).at(place.get(), 64);
+	}
+
 	/** Runs with the quest checks: places the lost satchel's chest once the player comes near it. */
 	static void tickJob(ServerPlayer player, Quest quest) {
 		if (quest.type != Type.INN || quest.targets.isEmpty() || !SATCHEL.equals(quest.targets.getFirst())) return;
@@ -655,7 +677,8 @@ public final class Inns {
 	private static void handInDeliveries(ServerPlayer player, Lineage lineage) {
 		for (Quest quest : lineage.allQuests()) {
 			if (quest.type != Type.INN || quest.goal != Goal.MANUAL || quest.isDone()) continue;
-			if (LETTER.equals(quest.targets.getFirst()) || SATCHEL.equals(quest.targets.getFirst())) continue;
+			String first = quest.targets.getFirst();
+			if (LETTER.equals(first) || SATCHEL.equals(first) || Crypts.JOB.equals(first)) continue;
 			Item item = BuiltInRegistries.ITEM.getOptional(Identifier.parse(quest.targets.getFirst())).orElse(null);
 			if (item == null || count(player, item) < quest.required) continue;
 			take(player, item, quest.required);

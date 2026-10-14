@@ -52,6 +52,8 @@ public final class BloodlineConfig {
 		public int maxBloodDebts = 3;
 		/** For a family event's duty, such as defeating a rival champion. */
 		public int familyEvent = 4;
+		/** For laying the founder of a crypt to rest. */
+		public int cryptCleared = 6;
 		/** Extra renown every act needs for each oath the house has already fulfilled. */
 		public int perFulfilledOath = 50;
 	}

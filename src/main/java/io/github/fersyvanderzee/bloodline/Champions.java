@@ -95,7 +95,13 @@ public final class Champions {
 		Map.of(EquipmentSlot.MAINHAND, Items.BOW, EquipmentSlot.HEAD, Items.CHAINMAIL_HELMET),
 		EntityTypes.VEX, 2, BossEvent.BossBarColor.WHITE);
 
-	public static final List<Kind> ALL = List.of(FORTRESS_CAPTAIN, LOST_DELVER, WARLORD, THIEF, ROTGUT, OLD_BONES, BROODMOTHER, DESERTER, RIVAL, SHADE);
+	// The founder of a fallen house, risen in their crypt.
+	public static final Kind BARROW_LORD = new Kind("barrow_lord", EntityTypes.WITHER_SKELETON, 140, 3,
+		Map.of(EquipmentSlot.MAINHAND, Items.IRON_SWORD, EquipmentSlot.HEAD, Items.CHAINMAIL_HELMET, EquipmentSlot.CHEST, Items.IRON_CHESTPLATE),
+		EntityTypes.SKELETON, 2, BossEvent.BossBarColor.PURPLE);
+
+	public static final List<Kind> ALL = List.of(FORTRESS_CAPTAIN, LOST_DELVER, WARLORD, THIEF, ROTGUT, OLD_BONES, BROODMOTHER, DESERTER, RIVAL, SHADE,
+		BARROW_LORD);
 	public static final List<Kind> BOUNTIES = List.of(ROTGUT, OLD_BONES, BROODMOTHER, DESERTER);
 
 	private static final Map<LivingEntity, ServerBossEvent> BARS = new IdentityHashMap<>();
@@ -108,8 +114,17 @@ public final class Champions {
 	 * {@code mainHand} overrides the weapon (used to show a stolen heirloom).
 	 */
 	public static void spawn(ServerPlayer player, Kind kind, String key, Optional<ItemStack> mainHand, List<String> preparations) {
+		spawn(player, kind, key, mainHand, preparations, findSpot(player.level(), player.blockPosition()), kind.name());
+	}
+
+	/** Spawns a champion at a fixed spot under its own name, such as a crypt's founder rising from their tomb. */
+	public static void spawnAt(ServerPlayer player, Kind kind, String key, BlockPos pos, Component name) {
+		spawn(player, kind, key, Optional.empty(), List.of(), pos, name);
+	}
+
+	private static void spawn(ServerPlayer player, Kind kind, String key, Optional<ItemStack> mainHand, List<String> preparations, BlockPos pos,
+							  Component name) {
 		ServerLevel level = player.level();
-		BlockPos pos = findSpot(level, player.blockPosition());
 		Mob champion = kind.type().create(level, EntitySpawnReason.EVENT);
 		if (champion == null) return;
 		champion.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
@@ -140,7 +155,7 @@ public final class Champions {
 		}
 		var damage = champion.getAttribute(Attributes.ATTACK_DAMAGE);
 		if (damage != null && tier != 0) damage.setBaseValue(damage.getBaseValue() + kind.extraDamage());
-		champion.setCustomName(kind.name().withStyle(ChatFormatting.GOLD));
+		champion.setCustomName(name.copy().withStyle(ChatFormatting.GOLD));
 		champion.addTag(KIND_TAG + kind.id());
 		champion.setCustomNameVisible(true);
 		champion.setPersistenceRequired();
@@ -164,12 +179,12 @@ public final class Champions {
 		}
 
 		player.connection.send(new ClientboundSetTitlesAnimationPacket(10, 60, 20));
-		player.connection.send(new ClientboundSetTitleTextPacket(kind.name().withStyle(ChatFormatting.DARK_RED)));
+		player.connection.send(new ClientboundSetTitleTextPacket(name.copy().withStyle(ChatFormatting.DARK_RED)));
 		player.connection.send(new ClientboundSetSubtitleTextPacket(Text.t("oath.quoted", kind.taunt()).withStyle(ChatFormatting.GRAY)));
 		level.playSound(null, pos, SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 2f, 1f);
 	}
 
-	private static final java.util.Set<String> SCALED = java.util.Set.of("rival", "shade", "rotgut", "old_bones", "broodmother", "deserter", "thief");
+	private static final java.util.Set<String> SCALED = java.util.Set.of("rival", "shade", "rotgut", "old_bones", "broodmother", "deserter", "thief", "barrow_lord");
 
 	private static boolean scaled(Kind kind) {
 		return SCALED.contains(kind.id());
@@ -234,6 +249,7 @@ public final class Champions {
 			if (tag.startsWith(OWNER_TAG)) owner = UUID.fromString(tag.substring(OWNER_TAG.length()));
 			if (tag.startsWith(KEY_TAG)) key = tag.substring(KEY_TAG.length());
 		}
+		if (key != null && key.startsWith(Crypts.KEY_PREFIX)) Crypts.onFounderSlain(server, champion, key.substring(Crypts.KEY_PREFIX.length()));
 		if (owner == null || key == null) return;
 		Lineage lineage = BloodlineState.get(server).get(owner);
 		if (lineage == null) return;
