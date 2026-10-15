@@ -96,3 +96,9 @@ The mod jar ends up in `build/libs/`. It needs [Fabric Loader](https://fabricmc.
 ```
 
 Starts a headless test world (no window) where simulated players play through the mod: founding goals, death and heirs, blood debts, every unfinished-business task, all three oaths act by act, preparations, the Stolen Heirloom, family events, every kind of inn job, shared houses, the Chronicle's text, bounty champions, the roadside inn's innkeeper and a whole barrow crypt from puzzle to laid to rest. The tests live in `src/gametest` and aren't part of the mod jar. Each run starts in a fresh world.
+
+```
+./gradlew runClientGametest
+```
+
+Opens the real game, shows each kind of Bloodline scroll and saves screenshots in `build/clientgametest/screenshots`.

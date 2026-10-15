@@ -17,6 +17,8 @@ sourceSets {
 		compileClasspath += main.compileClasspath + main.output
 		runtimeClasspath += main.runtimeClasspath + main.output
 	}
+	// Opens Bloodline's own screens in the real game and takes screenshots: ./gradlew runClientGametest
+	clientgametest
 }
 
 loom {
@@ -30,9 +32,20 @@ loom {
 		"bloodline-gametest" {
 			sourceSet sourceSets.gametest
 		}
+		"bloodline-clientgametest" {
+			sourceSet sourceSets.clientgametest
+		}
 	}
 
 	runs {
+		clientGametest {
+			client()
+			configName = "Client Game Tests"
+			source sourceSets.clientgametest
+			runDir = "build/clientgametest"
+			programArgs "--username", "Fersy"
+			vmArg "-Dfabric.client.gametest"
+		}
 		gametest {
 			server()
 			configName = "Game Tests"
@@ -58,6 +71,12 @@ loom {
 			programArgs "--width", "1280", "--height", "720"
 		}
 	}
+}
+
+// The client source set only exists once Loom has split the sources, so the client tests are wired up here.
+sourceSets.clientgametest {
+	compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output + sourceSets.client.compileClasspath + sourceSets.client.output
+	runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output + sourceSets.client.runtimeClasspath + sourceSets.client.output
 }
 
 dependencies {

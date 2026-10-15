@@ -12,6 +12,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -140,6 +141,9 @@ public class Bloodline implements ModInitializer {
 			}
 			return InteractionResult.SUCCESS;
 		});
+
+		// Players who have the mod get choices as a parchment scroll instead of Minecraft's own dialog window.
+		PayloadTypeRegistry.clientboundPlay().register(ScrollPayload.TYPE, ScrollPayload.CODEC);
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> BloodlineCommands.register(dispatcher));
 

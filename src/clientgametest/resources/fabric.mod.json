@@ -1,0 +1,17 @@
+{
+	"schemaVersion": 1,
+	"id": "bloodline-clientgametest",
+	"version": "1.0.0",
+	"name": "Bloodline Client Game Tests",
+	"description": "Opens Bloodline's screens in the real game and takes screenshots. Not shipped with the mod.",
+	"environment": "client",
+	"entrypoints": {
+		"fabric-client-gametest": [
+			"io.github.fersyvanderzee.bloodline.client.ScrollScreenTest"
+		]
+	},
+	"depends": {
+		"bloodline": "*",
+		"fabric-client-gametest-api-v1": "*"
+	}
+}

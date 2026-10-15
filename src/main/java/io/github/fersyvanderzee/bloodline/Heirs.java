@@ -13,6 +13,8 @@ import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -111,22 +113,26 @@ public final class Heirs {
 		body.add(Text.t("heir.leaves", parent.fullName(), lineage.candidates.size()));
 		if (lineage.inheritAll) body.add(Text.t("heir.sacrifice_note", parent.name()).withStyle(ChatFormatting.GRAY));
 		else if (diedYoung(parent)) body.add(Text.t("heir.brief_note", parent.fullName()).withStyle(ChatFormatting.GRAY));
-		List<Screens.Button> buttons = new ArrayList<>();
+		List<Screens.Card> cards = new ArrayList<>();
 		for (int i = 0; i < lineage.candidates.size(); i++) {
 			Member child = lineage.candidates.get(i);
-			body.add(Component.literal(child.name() + ": ").withStyle(ChatFormatting.BOLD)
-				.append(Lineages.traitList(child.traits(), parent).withStyle(s -> s.withBold(false))));
+			List<Component> traits = new ArrayList<>();
 			MutableComponent details = Component.empty();
 			for (String id : child.traits()) {
 				Trait trait = Traits.get(id);
 				if (trait == null) continue;
+				MutableComponent line = trait.displayName().copy();
+				if (!parent.traits().contains(id)) line.append(" ").append(Text.t("trait.new").withStyle(ChatFormatting.DARK_GRAY));
+				traits.add(line);
 				if (!details.getSiblings().isEmpty()) details.append("\n");
 				details.append(trait.name().withStyle(trait.kind().color)).append(": ").append(Text.t("trait." + id + ".desc"));
 			}
-			buttons.add(new Screens.Button(Component.literal(child.name()), details, "/bloodline heir " + (i + 1)));
+			if (traits.isEmpty()) traits.add(Text.t("trait.none").withStyle(ChatFormatting.GRAY));
+			cards.add(new Screens.Card(Component.literal(child.name()), Text.t("heir.generation", Names.numeral(child.generation())), traits, details,
+				"/bloodline heir " + (i + 1)));
 		}
-		body.add(Text.t("screen.choose_later").withStyle(ChatFormatting.DARK_GRAY));
-		Screens.showLater(player, 20, Text.t("heir.title"), body, buttons);
+		Screens.showLater(player, 20, new Screens.Window(new ItemStack(Items.TOTEM_OF_UNDYING), Text.t("heir.title"), body, cards, List.of(),
+			Text.t("screen.choose_later")));
 	}
 
 	/** Died within a day of play. Sacrifices never count: they need a fulfilled act and earn "the Devoted". */

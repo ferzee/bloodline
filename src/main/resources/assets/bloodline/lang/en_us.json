@@ -665,5 +665,6 @@
   "bloodline.command.crypt.none": "You aren't in a crypt.",
   "bloodline.command.crypt.reset": "This crypt's progress is forgotten.",
   "bloodline.crypt.sigil.hint": "Now find the Sigil of House %s: it lies in a chest in the catacombs to the %s. Then right-click the seal with it.",
-  "bloodline.crypt.sigil.hint_near": "Now find the Sigil of House %s in a chest in the catacombs. Then right-click the seal with it."
+  "bloodline.crypt.sigil.hint_near": "Now find the Sigil of House %s in a chest in the catacombs. Then right-click the seal with it.",
+  "bloodline.heir.generation": "Generation %s"
 }

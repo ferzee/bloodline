@@ -12,6 +12,8 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.attribute.EnvironmentAttributes;
@@ -122,11 +124,11 @@ public final class Sacrifice {
 			.append(Text.t("button.give_life").withStyle(s -> s.withColor(ChatFormatting.DARK_RED).withBold(true)
 				.withClickEvent(new ClickEvent.RunCommand("/bloodline sacrifice confirm"))
 				.withHoverEvent(new HoverEvent.ShowText(Text.t("sacrifice.confirm_hover", lineage.current.name(), renown()))))));
-		Screens.show(player, Text.t("book.sacrifice.title"),
+		Screens.show(player, Screens.Window.of(new ItemStack(Items.WITHER_ROSE), Text.t("book.sacrifice.title"),
 			List.of(Text.t("sacrifice.kneel", conditions.place().get()), Text.t("sacrifice.ask", lineage.current.name(), lineage.house.name),
 				Text.t("sacrifice.confirm_hover", lineage.current.name(), renown()).withStyle(ChatFormatting.GRAY)),
 			List.of(new Screens.Button(Text.t("button.give_life").withStyle(ChatFormatting.DARK_RED), null, "/bloodline sacrifice confirm"),
-				new Screens.Button(Text.t("button.not_yet"), null, null)));
+				new Screens.Button(Text.t("button.not_yet"), null, null))));
 	}
 
 	private static Component missing(MutableComponent reason) {

@@ -212,18 +212,18 @@ public final class FamilyEvents {
 
 		String accept = "/bloodline event accept", decline = "/bloodline event decline";
 		switch (event.type()) {
-			case FEUD -> Screens.show(player, Text.t("event.feud.window"),
+			case FEUD -> Screens.show(player, Screens.Window.of(new ItemStack(Items.IRON_SWORD), Text.t("event.feud.window"),
 				List.of(Text.t("event.feud.announce", event.detail(), lineage.house.name), Text.t("event.feud.ask")),
 				List.of(new Screens.Button(Text.t("button.accept_challenge"), Text.t("event.feud.accept_hover"), accept),
-					new Screens.Button(Text.t("button.pay_tribute", TRIBUTE), Text.t("event.feud.tribute_hover"), decline)));
-			case WEDDING -> Screens.show(player, Text.t("event.wedding.window"),
+					new Screens.Button(Text.t("button.pay_tribute", TRIBUTE), Text.t("event.feud.tribute_hover"), decline))));
+			case WEDDING -> Screens.show(player, Screens.Window.of(new ItemStack(Items.POPPY), Text.t("event.wedding.window"),
 				List.of(Text.t("event.wedding.announce", nameOf(player, event.member())), Text.t("event.wedding.ask")),
 				List.of(new Screens.Button(Text.t("button.accept_match", DOWRY), Text.t("event.wedding.accept_hover"), accept),
-					new Screens.Button(Text.t("button.decline"), Text.t("event.wedding.decline_hover"), decline)));
-			default -> Screens.show(player, Text.t("event.cousin.window"),
+					new Screens.Button(Text.t("button.decline"), Text.t("event.wedding.decline_hover"), decline))));
+			default -> Screens.show(player, Screens.Window.of(new ItemStack(Items.LANTERN), Text.t("event.cousin.window"),
 				List.of(Text.t("event.cousin.announce", event.detail())),
 				List.of(new Screens.Button(Text.t("button.welcome"), Text.t("event.cousin.accept_hover"), accept),
-					new Screens.Button(Text.t("button.send_away"), Text.t("event.cousin.decline_hover"), decline)));
+					new Screens.Button(Text.t("button.send_away"), Text.t("event.cousin.decline_hover"), decline))));
 		}
 	}
 
