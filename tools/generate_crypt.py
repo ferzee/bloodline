@@ -348,6 +348,9 @@ def entrance():
         for x in range(9, 12):
             crumble(t, x, y - 1, z)
             t.stair(x, y, z, "deepslate_brick_stairs", "north")
+    # the top step sits in the mausoleum floor, so climbing out needs no jump
+    for x in range(9, 12):
+        t.stair(x, G, 3, "deepslate_brick_stairs", "north")
 
     # --- Hall of the Fallen (walls x 1..19, z 18..31, floor y 0, ceiling y 7) --------------------------------
     shell(t, 1, 0, 18, 19, 7, 31)
