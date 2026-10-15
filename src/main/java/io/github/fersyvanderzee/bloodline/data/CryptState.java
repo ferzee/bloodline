@@ -18,22 +18,26 @@ public class CryptState extends SavedData {
 			Codec.BOOL.optionalFieldOf("sigil_hidden", false).forGetter(c -> c.sigilHidden),
 			Codec.BOOL.optionalFieldOf("flames_lit", false).forGetter(c -> c.flamesLit),
 			Codec.BOOL.optionalFieldOf("opened", false).forGetter(c -> c.opened),
-			Codec.BOOL.optionalFieldOf("cleared", false).forGetter(c -> c.cleared)
+			Codec.BOOL.optionalFieldOf("cleared", false).forGetter(c -> c.cleared),
+			Codec.LONG.optionalFieldOf("sigil_chest", 0L).forGetter(c -> c.sigilChest)
 		).apply(i, Crypt::new));
 
 		public boolean sigilHidden;
 		public boolean flamesLit;
 		public boolean opened;
 		public boolean cleared;
+		/** Where the sigil was hidden (a packed block position), for the hint that points the way. 0 if unknown. */
+		public long sigilChest;
 
 		public Crypt() {
 		}
 
-		private Crypt(boolean sigilHidden, boolean flamesLit, boolean opened, boolean cleared) {
+		private Crypt(boolean sigilHidden, boolean flamesLit, boolean opened, boolean cleared, long sigilChest) {
 			this.sigilHidden = sigilHidden;
 			this.flamesLit = flamesLit;
 			this.opened = opened;
 			this.cleared = cleared;
+			this.sigilChest = sigilChest;
 		}
 	}
 

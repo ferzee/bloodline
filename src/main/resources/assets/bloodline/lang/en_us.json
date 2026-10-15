@@ -641,7 +641,7 @@
   "bloodline.crypt.clue.last": "I buried all my kin before I joined them.",
   "bloodline.crypt.flames.wakes": "The flame of %s wakes, and the name %s echoes through the hall.",
   "bloodline.crypt.flames.wrong": "The flames gutter and die. The dead don't like to be woken out of turn...",
-  "bloodline.crypt.flames.solved": "The four flames burn as one. Behind the seal, %s of House %s stirs. The seal waits for its sigil.",
+  "bloodline.crypt.flames.solved": "The four flames burn as one. Behind the seal, %s of House %s stirs.",
   "bloodline.crypt.sigil.name": "Sigil of House %s",
   "bloodline.crypt.sigil.lore": "Opens the tomb of %s, founder of House %s.",
   "bloodline.crypt.seal.cold": "The seal doesn't answer. The four flames are cold.",
@@ -663,5 +663,7 @@
   "bloodline.inn.crypt.none": "Nobody here has heard of a barrow anywhere near.",
   "bloodline.command.crypt": "House %s, founder %s. Flames in order: %s. Sigil hidden: %s, flames lit: %s, opened: %s, laid to rest: %s",
   "bloodline.command.crypt.none": "You aren't in a crypt.",
-  "bloodline.command.crypt.reset": "This crypt's progress is forgotten."
+  "bloodline.command.crypt.reset": "This crypt's progress is forgotten.",
+  "bloodline.crypt.sigil.hint": "Now find the Sigil of House %s: it lies in a chest in the catacombs to the %s. Then right-click the seal with it.",
+  "bloodline.crypt.sigil.hint_near": "Now find the Sigil of House %s in a chest in the catacombs. Then right-click the seal with it."
 }

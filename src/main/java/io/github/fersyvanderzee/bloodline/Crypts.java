@@ -213,9 +213,12 @@ public final class Crypts {
 			player.sendSystemMessage(Text.t(crypt.cleared ? "crypt.quiet" : "crypt.entered", fallen.house()).withStyle(ChatFormatting.DARK_GRAY));
 		}
 		if (crypt.cleared) return;
-		if (!crypt.sigilHidden && hideSigil(level, core, fallen)) {
-			crypt.sigilHidden = true;
-			state.setDirty();
+		if (!crypt.sigilHidden) {
+			hideSigil(level, core, fallen).ifPresent(chest -> {
+				crypt.sigilHidden = true;
+				crypt.sigilChest = chest.asLong();
+				state.setDirty();
+			});
 		}
 		if (!crypt.opened && player.blockPosition().closerThan(core.world(BEFORE_SEAL), INSCRIPTION_RANGE) && once(player, core.key() + ":seal")) {
 			player.sendSystemMessage(Text.t("crypt.inscription", fallen.founder(), fallen.house()).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
@@ -277,6 +280,7 @@ public final class Crypts {
 			state.setDirty();
 			PROGRESS.remove(core.key());
 			tellNear(level, hall, Text.t("crypt.flames.solved", fallen.founder(), fallen.house()).withStyle(ChatFormatting.GOLD));
+			tellNear(level, hall, sigilHint(core, crypt, fallen));
 			level.playSound(null, hall, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 2f, 0.6f);
 		}
 	}
@@ -303,7 +307,7 @@ public final class Crypts {
 	 * Hides the founder's sigil in the catacombs' chest farthest from the hall, or in the reliquary by the stairs
 	 * when the catacombs have no chest. Returns false (to try again later) if none of them is loaded yet.
 	 */
-	private static boolean hideSigil(ServerLevel level, Core core, Fallen fallen) {
+	private static Optional<BlockPos> hideSigil(ServerLevel level, Core core, Fallen fallen) {
 		BlockPos hall = core.world(HALL_CENTRE);
 		ChestBlockEntity best = null;
 		List<StructurePiece> pieces = core.start().getPieces();
@@ -323,18 +327,30 @@ public final class Crypts {
 			}
 		}
 		if (best == null && level.getBlockEntity(core.world(RELIQUARY)) instanceof ChestBlockEntity reliquary) best = reliquary;
-		if (best == null) return false;
+		if (best == null) return Optional.empty();
 		ItemStack sigil = sigil(core.key(), fallen);
 		RandomSource random = level.getRandom();
 		for (int attempt = 0; attempt < 54; attempt++) {
 			int slot = random.nextInt(best.getContainerSize());
 			if (best.getItem(slot).isEmpty()) {
 				best.setItem(slot, sigil);
-				return true;
+				return Optional.of(best.getBlockPos());
 			}
 		}
 		best.setItem(0, sigil);
-		return true;
+		return Optional.of(best.getBlockPos());
+	}
+
+	/** Where to look for the sigil: a direction from the hall, and how to use it. */
+	private static Component sigilHint(Core core, CryptState.Crypt crypt, Fallen fallen) {
+		BlockPos hall = core.world(HALL_CENTRE);
+		if (crypt.sigilChest == 0) return Text.t("crypt.sigil.hint_near", fallen.house()).withStyle(ChatFormatting.YELLOW);
+		BlockPos chest = BlockPos.of(crypt.sigilChest);
+		if (chest.closerThan(hall, 12)) return Text.t("crypt.sigil.hint_near", fallen.house()).withStyle(ChatFormatting.YELLOW);
+		double angle = Math.toDegrees(Math.atan2(chest.getZ() - hall.getZ(), chest.getX() - hall.getX()));
+		String[] names = {"east", "south_east", "south", "south_west", "west", "north_west", "north", "north_east"};
+		int index = (int) Math.round(((angle + 360) % 360) / 45) % 8;
+		return Text.t("crypt.sigil.hint", fallen.house(), Text.t("direction." + names[index])).withStyle(ChatFormatting.YELLOW);
 	}
 
 	private static ItemStack sigil(String key, Fallen fallen) {
@@ -413,6 +429,7 @@ public final class Crypts {
 		ItemStack sigil = findSigil(player, core.key());
 		if (sigil.isEmpty()) {
 			player.sendSystemMessage(Text.t("crypt.seal.no_sigil", fallen.house()).withStyle(ChatFormatting.GRAY));
+			player.sendSystemMessage(sigilHint(core, crypt, fallen));
 			return;
 		}
 		sigil.shrink(1);
