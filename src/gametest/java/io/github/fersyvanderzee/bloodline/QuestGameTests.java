@@ -34,6 +34,8 @@ public class QuestGameTests {
 			needQuest(helper, lineage, key, q -> keyOf(q.title).equals("bloodline." + key));
 		}
 		check(helper, count(player, Items.WRITTEN_BOOK) == 1, "the founder carries the Chronicle");
+		check(helper, Chronicle.isChronicle(player.getInventory().getItem(0)), "the Chronicle is in the first hotbar slot, not "
+			+ player.getInventory().getItem(0));
 		check(helper, lineage.isHead(player.getUUID()), "the founder heads the house");
 		checkTexts(helper, lineage);
 		helper.succeed();

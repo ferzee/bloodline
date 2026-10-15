@@ -86,8 +86,9 @@ public final class Lineages {
 			lineage = new Lineage(House.found(Names.house(player.getRandom()), player.getUUID()), founder);
 			state.put(player.getUUID(), lineage);
 			record(server, lineage, Text.t("chronicle.founded", founder.name(), lineage.house.name));
-			Quests.addFounding(player, lineage);
+			// The Chronicle first, so it's in the first hotbar slot (the founding quests also hand out a map).
 			Chronicle.give(player);
+			Quests.addFounding(player, lineage);
 			announceBirth(player, lineage, null);
 		} else if (lineage.awaitingHeir && player.isAlive()) {
 			Heirs.offer(player, lineage);
