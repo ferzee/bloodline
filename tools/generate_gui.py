@@ -167,7 +167,99 @@ def flourish():
     save("flourish", img)
 
 
+def book_cover():
+    """The open book's leather binding, with gold tooling on the corners."""
+    size, border = 48, 12
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    px = img.load()
+    leather = [(98, 38, 30), (104, 42, 33), (92, 35, 28), (100, 40, 31)]
+    for y in range(size):
+        for x in range(size):
+            if (x in (0, size - 1)) and (y in (0, size - 1)):
+                continue
+            edge = min(x, y, size - 1 - x, size - 1 - y)
+            if edge == 0:
+                px[x, y] = (46, 18, 14, 255)
+            elif edge == 1:
+                px[x, y] = (128, 58, 44, 255)
+            else:
+                px[x, y] = rng.choice(leather) + (255,)
+    # gold rule and corner pieces
+    gold, dark_gold = (196, 152, 64), (140, 104, 40)
+    for i in range(4, size - 4):
+        for a2, b2 in ((4, i), (i, 4), (size - 5, i), (i, size - 5)):
+            px[a2, b2] = dark_gold + (255,)
+    for cx, cy, sx, sy in ((4, 4, 1, 1), (size - 5, 4, -1, 1), (4, size - 5, 1, -1), (size - 5, size - 5, -1, -1)):
+        for d in range(6):
+            px[cx + sx * d, cy] = gold + (255,)
+            px[cx, cy + sy * d] = gold + (255,)
+        for d in range(3):
+            px[cx + sx * (d + 1), cy + sy * (d + 1)] = gold + (255,)
+    save("book_cover", img, border)
+
+
+def page(name, spine_on_right):
+    """A page: cream paper, darker at the outer edge where the pages stack, shadowed towards the spine."""
+    w, h, border = 40, 40, 10
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    px = img.load()
+    paper = [(240, 230, 204), (236, 225, 197), (242, 233, 209)]
+    for y in range(h):
+        for x in range(w):
+            to_spine = (w - 1 - x) if spine_on_right else x
+            to_edge = x if spine_on_right else (w - 1 - x)
+            base = rng.choice(paper)
+            if to_spine < 8:
+                f = 0.72 + 0.035 * to_spine
+                base = tuple(int(c * f) for c in base)
+            if to_edge < 3 or y < 2 or y >= h - 2:
+                # the edges of the pages underneath
+                base = (214, 198, 160) if (to_edge + y) % 2 == 0 and to_edge < 3 else (222, 208, 172)
+            if to_edge == 0 or y == 0 or y == h - 1:
+                base = (150, 124, 84)
+            px[x, y] = base + (255,)
+    save(name, img, border)
+
+
+def tab(name, fill, frame):
+    """A bookmark tab sticking out of the book."""
+    w, h, border = 32, 16, 4
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    px = img.load()
+    for y in range(h):
+        for x in range(w):
+            if x == w - 1 and y in (0, h - 1):
+                continue
+            if y in (0, h - 1) or x == w - 1:
+                px[x, y] = frame + (255,)
+            elif x < 3:
+                px[x, y] = tuple(int(c * 0.8) for c in fill) + (255,)
+            else:
+                v = rng.randint(-5, 5)
+                px[x, y] = tuple(max(0, min(255, c + v)) for c in fill) + (255,)
+    save(name, img, border)
+
+
+def ribbon():
+    """The red silk ribbon that hangs from the spine."""
+    w, h = 6, 40
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    px = img.load()
+    for y in range(h):
+        for x in range(w):
+            if y >= h - 4 and abs(x - 2.5) < (y - (h - 4)) * 0.9:
+                continue  # the forked end
+            px[x, y] = ((168, 32, 36) if x in (1, 2, 3) else (124, 20, 24)) + (255,)
+    save("ribbon", img)
+
+
 if __name__ == "__main__":
+    book_cover()
+    page("page_left", True)
+    page("page_right", False)
+    tab("tab", (226, 210, 172), (122, 82, 48))
+    tab("tab_active", (238, 214, 140), (176, 130, 44))
+    ribbon()
     scroll()
     card("card", (122, 82, 48), 1)
     card("card_hover", (186, 140, 46), 2)

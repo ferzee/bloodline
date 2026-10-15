@@ -25,6 +25,10 @@
 		"fabric-api": "*"
 	},
 	"mixins": [
-		"bloodline.mixins.json"
+		"bloodline.mixins.json",
+		{
+			"config": "bloodline.client.mixins.json",
+			"environment": "client"
+		}
 	]
 }

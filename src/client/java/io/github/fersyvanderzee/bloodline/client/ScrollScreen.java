@@ -306,8 +306,9 @@ public class ScrollScreen extends Screen {
 		int rgb = color.getValue();
 		int r = (rgb >> 16) & 0xFF, g = (rgb >> 8) & 0xFF, b = rgb & 0xFF;
 		double light = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-		if (light < 0.4) return rgb;
-		double f = 0.5;
+		if (light < 0.3) return rgb;
+		// Brighter colours are darkened more, down to half their brightness.
+		double f = Math.max(0.5, Math.min(0.85, 0.3 / light));
 		return ((int) (r * f) << 16) | ((int) (g * f) << 8) | (int) (b * f);
 	}
 }

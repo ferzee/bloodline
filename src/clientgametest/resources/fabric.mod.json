@@ -7,7 +7,8 @@
 	"environment": "client",
 	"entrypoints": {
 		"fabric-client-gametest": [
-			"io.github.fersyvanderzee.bloodline.client.ScrollScreenTest"
+			"io.github.fersyvanderzee.bloodline.client.ScrollScreenTest",
+			"io.github.fersyvanderzee.bloodline.client.ChronicleScreenTest"
 		]
 	},
 	"depends": {
