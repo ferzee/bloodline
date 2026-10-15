@@ -303,11 +303,4 @@ public class ChronicleScreen extends Screen {
 		}
 		return super.keyPressed(event);
 	}
-
-	@Override
-	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-		if (scrollY > 0 && back.visible) turn(-2);
-		else if (scrollY < 0 && forward.visible) turn(2);
-		return true;
-	}
 }
