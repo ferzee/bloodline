@@ -36,6 +36,7 @@ public class ChronicleScreen extends Screen {
 	private static final Identifier TAB = sprite("tab");
 	private static final Identifier TAB_ACTIVE = sprite("tab_active");
 	private static final Identifier RIBBON = sprite("ribbon");
+	private static final Identifier FLOURISH = sprite("flourish");
 
 	/** The same text area as a vanilla book page, so pages written for the book fit exactly. */
 	private static final int TEXT_WIDTH = 114;
@@ -55,7 +56,12 @@ public class ChronicleScreen extends Screen {
 
 	private final List<Component> pages;
 	private final List<Bookmark> bookmarks;
-	/** The left-hand page of the spread being read (always even). */
+	/**
+	 * The book laid out in spreads: each section starts on a left-hand page, so a section ending on a left page
+	 * leaves the right one blank. Each entry is a page of the book, or -1 for a blank page.
+	 */
+	private final List<Integer> slots;
+	/** The left-hand slot of the spread being read (always even). */
 	private int spread;
 	private final List<List<FormattedCharSequence>> cache = new ArrayList<>();
 	private PageButton back;
@@ -69,6 +75,7 @@ public class ChronicleScreen extends Screen {
 		super(Component.translatable("book.view.title"));
 		this.pages = pages.isEmpty() ? List.of(Component.empty()) : pages;
 		this.bookmarks = bookmarksFrom(this.pages.getFirst());
+		this.slots = layout(this.pages.size(), bookmarks);
 		for (int i = 0; i < this.pages.size(); i++) cache.add(null);
 	}
 
@@ -92,6 +99,23 @@ public class ChronicleScreen extends Screen {
 			if (!name.isEmpty()) found.add(new Bookmark(Component.literal(name), page));
 		});
 		return found;
+	}
+
+	private static List<Integer> layout(int pageCount, List<Bookmark> bookmarks) {
+		List<Integer> starts = new ArrayList<>(List.of(0));
+		for (Bookmark mark : bookmarks) if (mark.page() > starts.getLast() && mark.page() < pageCount) starts.add(mark.page());
+		List<Integer> slots = new ArrayList<>();
+		for (int i = 0; i < starts.size(); i++) {
+			int end = i + 1 < starts.size() ? starts.get(i + 1) : pageCount;
+			for (int page = starts.get(i); page < end; page++) slots.add(page);
+			if (slots.size() % 2 == 1) slots.add(-1);
+		}
+		return slots;
+	}
+
+	/** The book page in a slot of the current layout, or -1 for a blank page or past the end. */
+	private int pageAt(int slot) {
+		return slot >= 0 && slot < slots.size() ? slots.get(slot) : -1;
 	}
 
 	// --- Layout ---------------------------------------------------------------------------------------
@@ -135,15 +159,20 @@ public class ChronicleScreen extends Screen {
 	private void updateArrows() {
 		if (back == null) return;
 		back.visible = spread > 0;
-		forward.visible = spread + 2 < pages.size();
+		forward.visible = spread + 2 < slots.size();
 	}
 
 	private void turn(int by) {
-		goTo(spread + by);
+		int target = Math.max(0, Math.min(slots.size() - 1, spread + by)) & ~1;
+		if (target == spread) return;
+		spread = target;
+		updateArrows();
 	}
 
+	/** Opens the spread that shows a page of the book (0-based). */
 	void goTo(int page) {
-		int target = Math.max(0, Math.min(pages.size() - 1, page)) & ~1;
+		int slot = Math.max(0, slots.indexOf(Math.max(0, Math.min(pages.size() - 1, page))));
+		int target = slot & ~1;
 		if (target == spread) return;
 		spread = target;
 		updateArrows();
@@ -176,7 +205,7 @@ public class ChronicleScreen extends Screen {
 		// Bookmarks first, so the book covers their inner ends.
 		int tabX = left + BOOK_WIDTH - 6, tabY = top + 14;
 		for (Bookmark mark : bookmarks) {
-			boolean current = sectionAt(spread) == mark || sectionAt(spread + 1) == mark;
+			boolean current = sectionAt(pageAt(spread)) == mark;
 			boolean hover = mouseX >= tabX && mouseX < tabX + tabWidth() && mouseY >= tabY && mouseY < tabY + TAB_HEIGHT;
 			int out = current ? 4 : hover ? 2 : 0;
 			graphics.blitSprite(RenderPipelines.GUI_TEXTURED, current ? TAB_ACTIVE : TAB, tabX + out, tabY, tabWidth(), TAB_HEIGHT);
@@ -192,8 +221,13 @@ public class ChronicleScreen extends Screen {
 		ActiveTextCollector text = graphics.textRenderer(GuiGraphicsExtractor.HoveredTextEffects.TOOLTIP_AND_CURSOR);
 		visitText(text);
 		for (int side = 0; side < 2; side++) {
-			int page = spread + side;
-			if (page >= pages.size()) continue;
+			int page = pageAt(spread + side);
+			if (page < 0) {
+				// A blank page at the end of a section: just an ornament.
+				if (spread + side < slots.size()) graphics.blitSprite(RenderPipelines.GUI_TEXTURED, FLOURISH, pageLeft(side) + PAGE_WIDTH / 2 - 48,
+					pageTop() + PAGE_HEIGHT / 2 - 4, 96, 7);
+				continue;
+			}
 			graphics.text(font, Component.literal("- " + (page + 1) + " -"), pageLeft(side) + PAGE_WIDTH / 2 - font.width("- " + (page + 1) + " -") / 2,
 				pageTop() + PAGE_HEIGHT - 16, FADED_INK, false);
 		}
@@ -202,7 +236,7 @@ public class ChronicleScreen extends Screen {
 
 	private void visitText(ActiveTextCollector collector) {
 		for (int side = 0; side < 2; side++) {
-			List<FormattedCharSequence> page = lines(spread + side);
+			List<FormattedCharSequence> page = lines(pageAt(spread + side));
 			int x = pageLeft(side) + PAGE_PAD_X, y = pageTop() + PAGE_PAD_TOP;
 			for (int i = 0; i < Math.min(LINES, page.size()); i++) collector.accept(TextAlignment.LEFT, x, y + i * 9, page.get(i));
 		}

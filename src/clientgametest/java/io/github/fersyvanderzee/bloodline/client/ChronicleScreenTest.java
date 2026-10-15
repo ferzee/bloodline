@@ -39,7 +39,7 @@ public class ChronicleScreenTest implements FabricClientGameTest {
 			context.waitForScreen(ChronicleScreen.class);
 			context.waitTicks(5);
 			context.takeScreenshot("bloodline_chronicle_cover");
-			for (int page : new int[]{2, 4, 6}) {
+			for (int page : new int[]{1, 3, 5, 7, 8}) {
 				context.runOnClient(minecraft -> ((ChronicleScreen) minecraft.gui.screen()).goTo(page));
 				context.waitTicks(2);
 				context.takeScreenshot("bloodline_chronicle_" + page);
