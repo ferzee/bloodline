@@ -220,15 +220,15 @@ public final class Heirlooms {
 				break;
 			}
 		}
-		if (blade.isEmpty()) {
-			blade = new ItemStack(net.minecraft.world.item.Items.IRON_SWORD);
-			if (!player.getInventory().add(blade)) player.spawnAtLocation(player.level(), blade);
-		}
+		boolean forged = blade.isEmpty();
+		if (forged) blade = new ItemStack(net.minecraft.world.item.Items.IRON_SWORD);
 		Data data = new Data(player.getUUID(), lineage.house.name, List.of(lineage.current.generation()), List.of(lineage.current.name()),
 			Optional.of("Oathblade"), true, List.of(carrierKey(player, lineage)));
 		blade.set(DataComponents.CUSTOM_NAME, Text.t("oathblade.name").withStyle(s -> s.withItalic(false).withColor(ChatFormatting.GOLD)));
 		blade.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
 		write(blade, data);
+		// Only hand over a new blade once it is the Oathblade: adding a stack to the inventory empties the original.
+		if (forged && !player.getInventory().add(blade)) player.spawnAtLocation(player.level(), blade);
 	}
 
 	/** Whether this item, lying on the ground, is a family heirloom worth sending thieves after when it is destroyed. */

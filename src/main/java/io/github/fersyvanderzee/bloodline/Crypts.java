@@ -78,7 +78,7 @@ public final class Crypts {
 	private static final String SIGIL_TAG = "bloodline_sigil";
 
 	// Positions in the core piece's template: the CORE_* values in tools/generate_crypt.py, with FRONT (7) added to z.
-	private enum Emblem {
+	enum Emblem {
 		CROWN(7, 2, 31), SWORD(13, 2, 31), HARVEST(7, 2, 34), BONE(13, 2, 34);
 
 		final BlockPos brazier;
@@ -491,9 +491,10 @@ public final class Crypts {
 		Item item = heirloomItem(RandomSource.create(Long.parseLong(key)), Champions.tierOf(hero));
 		ItemStack heirloom = lineage == null ? new ItemStack(item)
 			: Heirlooms.fallenHouseGift(hero, lineage, item, fallen.house(), List.of(fallen.founder(), fallen.children()[fallen.childWith(fallen.order()[3])]));
+		// Read the name first: adding a stack to the inventory empties the original.
+		String heirloomName = Heirlooms.nameOf(heirloom);
 		if (!hero.getInventory().add(heirloom)) hero.spawnAtLocation(level, heirloom);
 		if (lineage == null) return;
-		String heirloomName = Heirlooms.nameOf(heirloom);
 		Lineages.tellHouse(server, lineage.house, Text.t("crypt.heirloom", lineage.current.name(),
 			Component.literal(heirloomName).withStyle(ChatFormatting.GOLD), fallen.house()).withStyle(ChatFormatting.GRAY));
 		Lineages.record(server, lineage, Text.t("crypt.chronicle", lineage.current.name(), fallen.founder(), fallen.house(), heirloomName));

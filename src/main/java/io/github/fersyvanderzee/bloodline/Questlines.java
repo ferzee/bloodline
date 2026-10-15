@@ -508,8 +508,8 @@ public final class Questlines {
 	private static void finishReclaim(ServerPlayer player, Lineage lineage, Quest quest) {
 		if (lineage.house.lostHeirlooms.isEmpty()) return;
 		ItemStack heirloom = Heirlooms.reclaimed(lineage.house.lostHeirlooms.removeFirst(), lineage);
+		String name = Heirlooms.nameOf(heirloom); // before adding it: that empties the stack
 		if (!player.getInventory().add(heirloom)) player.spawnAtLocation(player.level(), heirloom);
-		String name = Heirlooms.nameOf(heirloom);
 		player.sendSystemMessage(Text.t("reclaim.done", Component.literal(name).withStyle(ChatFormatting.GOLD)));
 		Lineages.record(player.level().getServer(), lineage, Text.t("chronicle.reclaimed", lineage.current.name(), name));
 	}

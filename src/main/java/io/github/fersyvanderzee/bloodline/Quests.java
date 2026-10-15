@@ -302,6 +302,8 @@ public final class Quests {
 	}
 
 	private static int statTotal(ServerPlayer player, Quest quest) {
+		// Only stat-based goals have registry names as targets; others hold ids, places or job details.
+		if (!java.util.EnumSet.of(Goal.KILL, Goal.MINE, Goal.CRAFT, Goal.USE, Goal.CUSTOM_STAT).contains(quest.goal)) return 0;
 		ServerStatsCounter stats = player.getStats();
 		int total = 0;
 		for (String target : quest.targets) {

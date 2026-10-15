@@ -11,6 +11,14 @@ repositories {
 	// for more information about repositories.
 }
 
+// Automated tests that play through the mod's quests in a headless test world: ./gradlew runGametest
+sourceSets {
+	gametest {
+		compileClasspath += main.compileClasspath + main.output
+		runtimeClasspath += main.runtimeClasspath + main.output
+	}
+}
+
 loom {
 	splitEnvironmentSourceSets()
 
@@ -19,9 +27,20 @@ loom {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
 		}
+		"bloodline-gametest" {
+			sourceSet sourceSets.gametest
+		}
 	}
 
 	runs {
+		gametest {
+			server()
+			configName = "Game Tests"
+			source sourceSets.gametest
+			runDir = "build/gametest"
+			vmArg "-Dfabric-api.gametest"
+			vmArg "-Dfabric-api.gametest.report-file=${project.layout.buildDirectory.get().asFile}/gametest/report.xml"
+		}
 		// A fixed name gives the test client the same player ID every time, so a test world's family
 		// is still yours after a restart (real accounts always keep their ID).
 		client {
@@ -97,4 +116,10 @@ publishing {
 		// The repositories here will be used for publishing your artifact, not for
 		// retrieving dependencies.
 	}
+}
+
+// Every test run starts in a fresh world, so a crypt solved in one run doesn't carry over into the next.
+tasks.matching { it.name == "runGametest" }.configureEach {
+	def world = layout.buildDirectory.dir("gametest/world").get().asFile
+	doFirst { world.deleteDir() }
 }

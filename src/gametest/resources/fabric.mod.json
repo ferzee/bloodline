@@ -1,0 +1,20 @@
+{
+	"schemaVersion": 1,
+	"id": "bloodline-gametest",
+	"version": "1.0.0",
+	"name": "Bloodline Game Tests",
+	"description": "Automated tests that play through Bloodline's quests. Not shipped with the mod.",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-gametest": [
+			"io.github.fersyvanderzee.bloodline.QuestGameTests",
+			"io.github.fersyvanderzee.bloodline.OathGameTests",
+			"io.github.fersyvanderzee.bloodline.PlaceGameTests",
+			"io.github.fersyvanderzee.bloodline.HouseGameTests"
+		]
+	},
+	"depends": {
+		"bloodline": "*",
+		"fabric-gametest-api-v1": "*"
+	}
+}

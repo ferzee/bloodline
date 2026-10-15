@@ -293,9 +293,10 @@ public final class FamilyEvents {
 				if (accept) {
 					Item[] gifts = {Items.IRON_SWORD, Items.IRON_AXE, Items.IRON_PICKAXE, Items.BOW, Items.IRON_CHESTPLATE};
 					ItemStack gift = Heirlooms.cousinGift(player, lineage, gifts[player.getRandom().nextInt(gifts.length)], event.detail());
+					Component giftName = gift.getHoverName(); // before adding it: that empties the stack
 					if (!player.getInventory().add(gift)) player.spawnAtLocation(player.level(), gift);
-					Lineages.record(server, lineage, Text.t("chronicle.cousin", who, event.detail(), gift.getHoverName()));
-					Lineages.tellHouse(server, lineage.house, Text.t("event.cousin.welcomed", who, event.detail(), gift.getHoverName())
+					Lineages.record(server, lineage, Text.t("chronicle.cousin", who, event.detail(), giftName));
+					Lineages.tellHouse(server, lineage.house, Text.t("event.cousin.welcomed", who, event.detail(), giftName)
 						.withStyle(ChatFormatting.GOLD));
 				} else {
 					Lineages.record(server, lineage, Text.t("chronicle.cousin_away", who, event.detail()));
