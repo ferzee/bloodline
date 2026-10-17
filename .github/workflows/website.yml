@@ -1,0 +1,39 @@
+# Builds the website (website/build.py) and publishes it to GitHub Pages
+# whenever something in website/ changes on main.
+
+name: website
+on:
+  push:
+    branches: [main]
+    paths: ['website/**', '.github/workflows/website.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v6
+      - name: build the website
+        run: python3 website/build.py
+      - name: configure pages
+        uses: actions/configure-pages@v5
+      - name: upload the website
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: website/dist
+      - name: publish
+        id: deployment
+        uses: actions/deploy-pages@v4

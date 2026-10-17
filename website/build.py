@@ -23,13 +23,13 @@ DIST = os.path.join(HERE, "dist")
 
 # The address the site will be published at, such as "https://bloodline.example.com/". Link previews on social
 # media need it to find the preview image; while it is None, pages have no preview image.
-SITE_URL = None
+SITE_URL = "https://ferzee.github.io/bloodline/"
 
 # Where the mod can be downloaded. Change these once the project pages exist; a link set to None is left out.
 LINKS = {
 	"modrinth": "https://modrinth.com/mod/bloodline-chronicles",
 	"curseforge": "https://www.curseforge.com/minecraft/mc-mods/bloodline-chronicles",
-	"github": None,
+	"github": "https://github.com/ferzee/bloodline",
 }
 
 NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV"]

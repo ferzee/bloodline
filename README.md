@@ -105,7 +105,7 @@ Opens the real game, shows each kind of Bloodline Chronicles scroll and saves sc
 
 ## Website
 
-The mod's website (home page, player guide and a page for server owners) lives in `website/`. Build it with:
+The mod's website, [ferzee.github.io/bloodline](https://ferzee.github.io/bloodline/) (home page, player guide and a page for server owners), lives in `website/`. GitHub publishes it automatically when something in `website/` changes on main. To build it yourself:
 
 ```bash
 python3 website/build.py
