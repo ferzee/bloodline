@@ -1,10 +1,10 @@
-# Bloodline
+# Bloodline Chronicles
 
 **You don't play one hero. You play a family.**
 
-Bloodline is a Fabric mod for Minecraft 26.3. When your character dies, they're gone for good, and their heir carries on. The heir inherits some of their parent's traits, the gear the family has carried for generations, and a chronicle of everything the family has done.
+Bloodline Chronicles is a Fabric mod for Minecraft 26.3. When your character dies, they're gone for good, and their heir carries on. The heir inherits some of their parent's traits, the gear the family has carried for generations, and a chronicle of everything the family has done.
 
-It runs entirely on the server, so players can join a Bloodline server with a vanilla client.
+It runs entirely on the server, so players can join a Bloodline Chronicles server with a vanilla client.
 
 ## Features
 
@@ -65,15 +65,15 @@ It runs entirely on the server, so players can join a Bloodline server with a va
 
 ## Configuration
 
-Server owners can tune Bloodline in `config/bloodline.json`, which is created with the defaults on first start (and gains any new settings after updates). It covers trait inheritance chances, how many children to choose from, how short a life counts as "the Brief", renown rewards and the renown each act needs, the Sacrifice, steward costs and vault tiers, inn job limits, whether player-placed bells attract innkeepers, the house size limit, heirloom ranks, how strong surprise champions are at each renown tier, the grace period before feuds, and how far to search for structures. Changes apply the next time a world starts.
+Server owners can tune Bloodline Chronicles in `config/bloodline.json`, which is created with the defaults on first start (and gains any new settings after updates). It covers trait inheritance chances, how many children to choose from, how short a life counts as "the Brief", renown rewards and the renown each act needs, the Sacrifice, steward costs and vault tiers, inn job limits, whether player-placed bells attract innkeepers, the house size limit, heirloom ranks, how strong surprise champions are at each renown tier, the grace period before feuds, and how far to search for structures. Changes apply the next time a world starts.
 
 Operators can use `/bloodline debug complete` to finish the newest quest, `/bloodline debug champion` to spawn a test champion, `/bloodline debug event <type>` to start a family event, `/bloodline debug renown <amount>` to add renown, `/bloodline debug age` to make the current family member count as having lived a full life, `/bloodline debug crypt [reset]` to see (or forget) the progress and answer of the crypt you stand in, and `/bloodline admin reset <player>` to wipe a player's family so they start over.
 
 ## Translations
 
-All of Bloodline's text lives in `src/main/resources/assets/bloodline/lang/en_us.json`. To translate it, copy that file to your language's code (for example `nl_nl.json` or `de_de.json`), translate the values (keep the `%s` placeholders and the keys as they are) and send it in.
+All of Bloodline Chronicles' text lives in `src/main/resources/assets/bloodline/lang/en_us.json`. To translate it, copy that file to your language's code (for example `nl_nl.json` or `de_de.json`), translate the values (keep the `%s` placeholders and the keys as they are) and send it in.
 
-Bloodline usually runs only on the server, so players without the mod see the English text. Players who have the mod installed (or a resource pack with its language files) see their own language.
+Bloodline Chronicles usually runs only on the server, so players without the mod see the English text. Players who have the mod installed (or a resource pack with its language files) see their own language.
 
 ## Testing multiplayer on one computer
 
@@ -101,4 +101,14 @@ Starts a headless test world (no window) where simulated players play through th
 ./gradlew runClientGametest
 ```
 
-Opens the real game, shows each kind of Bloodline scroll and saves screenshots in `build/clientgametest/screenshots`.
+Opens the real game, shows each kind of Bloodline Chronicles scroll and saves screenshots in `build/clientgametest/screenshots`.
+
+## Website
+
+The mod's website (home page, player guide and a page for server owners) lives in `website/`. Build it with:
+
+```bash
+python3 website/build.py
+```
+
+That writes plain HTML to `website/dist/`, which can be hosted anywhere. Page content is in `website/content/` (one file per guide chapter in `website/content/guide/`), the look in `website/assets/style.css`. The download links are at the top of `website/build.py`.

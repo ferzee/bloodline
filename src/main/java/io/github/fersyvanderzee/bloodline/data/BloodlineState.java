@@ -33,7 +33,7 @@ public class BloodlineState extends SavedData {
 	private static final Codec<BloodlineState> LEGACY_CODEC = Codec.unboundedMap(UUIDUtil.STRING_CODEC, LegacyLineage.CODEC)
 		.fieldOf("lineages").codec()
 		.xmap(BloodlineState::fromLegacy, s -> {
-			throw new UnsupportedOperationException("Bloodline always saves in the current format");
+			throw new UnsupportedOperationException("Bloodline Chronicles always saves in the current format");
 		});
 
 	private static final Codec<BloodlineState> CODEC = Codec.withAlternative(CURRENT_CODEC, LEGACY_CODEC);

@@ -39,3 +39,5 @@ replay_*.log
 *.hprof
 *.jfr
 run2/
+release/
+website/dist/

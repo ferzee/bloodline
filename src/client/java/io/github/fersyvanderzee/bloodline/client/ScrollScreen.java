@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * A Bloodline choice drawn as a parchment scroll: a wax seal with an emblem, the title in ink, the text, cards
+ * A Bloodline Chronicles choice drawn as a parchment scroll: a wax seal with an emblem, the title in ink, the text, cards
  * to pick from (such as the children who could become heir) and leather buttons. Clicking a card or button
  * sends its /bloodline command, just like the buttons in chat.
  */

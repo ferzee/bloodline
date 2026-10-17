@@ -11,7 +11,7 @@ import net.minecraft.world.item.Items;
 
 import java.util.List;
 
-/** Opens each kind of Bloodline scroll in a real game and takes a screenshot of it (in build/clientgametest/screenshots). */
+/** Opens each kind of Bloodline Chronicles scroll in a real game and takes a screenshot of it (in build/clientgametest/screenshots). */
 public class ScrollScreenTest implements FabricClientGameTest {
 	@Override
 	public void runTest(ClientGameTestContext context) {

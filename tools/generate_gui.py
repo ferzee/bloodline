@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generates the pixel-art sprites of Bloodline's own screens (src/main/resources/assets/bloodline/textures/gui/sprites/).
+Generates the pixel-art sprites of Bloodline Chronicles' own screens (src/main/resources/assets/bloodline/textures/gui/sprites/).
 
 Run it after changing a sprite:  python3 tools/generate_gui.py
 

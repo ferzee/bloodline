@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Translatable text. Bloodline usually runs only on the server, so players may not have its
+ * Translatable text. Bloodline Chronicles usually runs only on the server, so players may not have its
  * language files: every key carries its English text as a fallback, read from the mod's own
  * en_us.json. Players who have the mod (or a resource pack with its language files) see their
  * own language; everyone else sees English.

@@ -79,7 +79,7 @@ final class TestSupport {
 		if (!condition) throw helper.assertionException(Component.literal(message));
 	}
 
-	/** Fails if the text, or any text inside it, uses a Bloodline translation key that has no English text. */
+	/** Fails if the text, or any text inside it, uses a Bloodline Chronicles translation key that has no English text. */
 	static void checkText(GameTestHelper helper, Component component, String where) {
 		if (component.getContents() instanceof TranslatableContents t) {
 			if (t.getKey().startsWith("bloodline.")) {

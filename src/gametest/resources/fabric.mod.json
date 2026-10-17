@@ -2,8 +2,8 @@
 	"schemaVersion": 1,
 	"id": "bloodline-gametest",
 	"version": "1.0.0",
-	"name": "Bloodline Game Tests",
-	"description": "Automated tests that play through Bloodline's quests. Not shipped with the mod.",
+	"name": "Bloodline Chronicles Game Tests",
+	"description": "Automated tests that play through Bloodline Chronicles' quests. Not shipped with the mod.",
 	"environment": "*",
 	"entrypoints": {
 		"fabric-gametest": [

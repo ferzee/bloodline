@@ -12,7 +12,7 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * Opens the Chronicle the way a player does (the server tells the client to open the book) and checks that
- * Bloodline's illustrated book appears instead of the plain one; screenshots a few of its spreads.
+ * Bloodline Chronicles' illustrated book appears instead of the plain one; screenshots a few of its spreads.
  */
 public class ChronicleScreenTest implements FabricClientGameTest {
 	@Override

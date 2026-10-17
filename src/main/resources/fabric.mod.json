@@ -2,7 +2,7 @@
 	"schemaVersion": 1,
 	"id": "bloodline",
 	"version": "${version}",
-	"name": "Bloodline",
+	"name": "Bloodline Chronicles",
 	"description": "You don't play one hero, you play a family. When your character dies, their heir carries on - inheriting traits, heirlooms and a chronicle of everything the family has done.",
 	"authors": [
 		"fersyvanderzee"

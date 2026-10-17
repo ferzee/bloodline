@@ -27,7 +27,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Choices shown as a window on the player's screen. Players with Bloodline installed get a parchment scroll
+ * Choices shown as a window on the player's screen. Players with Bloodline Chronicles installed get a parchment scroll
  * drawn by the mod ({@link ScrollPayload}); everyone else gets the same choice as one of Minecraft's own
  * dialog windows, so a server works for players without the mod too. Each card and button runs a
  * /bloodline command, exactly like the clickable buttons in chat.

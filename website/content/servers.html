@@ -1,0 +1,209 @@
+<section class="intro">
+<div class="wrap">
+<p class="kicker">For server owners</p>
+<h1>Host a world where families last for generations</h1>
+<p class="lede">Bloodline Chronicles runs on the server. Players can join with normal Minecraft; those who install the mod themselves get the illustrated Chronicle and parchment scrolls.</p>
+<ul class="chips">
+<li>Minecraft 26.3</li>
+<li>Fabric Loader 0.19.5+</li>
+<li>Fabric API</li>
+<li>Java 25</li>
+</ul>
+</div>
+</section>
+
+<div class="sheet-outer">
+<div class="sheet split" id="content">
+<div class="ribbon" aria-hidden="true"></div>
+<main class="main">
+
+<section aria-labelledby="install">
+<h2 id="install"><span class="seal" aria-hidden="true">I</span>Installing</h2>
+<p>The mod needs <strong>Fabric Loader</strong> and <strong>Fabric API</strong> for Minecraft 26.3, and Java 25.</p>
+<ol class="isteps">
+<li><span class="sn" aria-hidden="true">1</span><div>
+<p class="st">Install Fabric Loader on the server</p>
+<p>Download the Fabric installer from <a href="https://fabricmc.net/use/server/">fabricmc.net</a> and run it in your server folder, or use the server launcher it offers there.</p>
+<div class="code"><div class="code-bar"><span class="code-k">Terminal</span><button class="copy" type="button">Copy</button></div>
+<pre>java -jar fabric-installer.jar server <span class="c-k">-mcversion</span> <span class="c-n">26.3</span> <span class="c-k">-downloadMinecraft</span></pre></div>
+</div></li>
+<li><span class="sn" aria-hidden="true">2</span><div>
+<p class="st">Add the mods</p>
+<p>Put Fabric API and Bloodline Chronicles in the <code>mods</code> folder.</p>
+<div class="code"><div class="code-bar"><span class="code-k">Server folder</span></div>
+<pre>server/
+├── mods/
+│   ├── fabric-api-<span class="c-n">[version]</span>.jar
+│   └── bloodline-chronicles-<span class="c-n">[version]</span>.jar
+├── config/
+└── fabric-server-launch.jar</pre></div>
+</div></li>
+<li><span class="sn" aria-hidden="true">3</span><div>
+<p class="st">Start the server</p>
+<p>The first start creates the settings file, <code>config/bloodline.json</code>. Players who join get a house, a character and the Chronicle straight away.</p>
+<div class="code"><div class="code-bar"><span class="code-k">Terminal</span><button class="copy" type="button">Copy</button></div>
+<pre>java -Xmx4G -jar fabric-server-launch.jar nogui</pre></div>
+</div></li>
+</ol>
+
+<aside class="note">
+<span class="seal seal-green" aria-hidden="true">✦</span>
+<p class="note-t">Players without the mod</p>
+<p>Anyone with normal Minecraft 26.3 can join. They see the Chronicle as a plain written book and choices as Minecraft's own dialog windows. Players who install the mod (with Fabric API) get the illustrated book and parchment scrolls, and see the mod's text in their own language once translations exist.</p>
+</aside>
+
+<h3>Singleplayer</h3>
+<p>Put the same two files in the <code>mods</code> folder of a Fabric profile in your launcher, or install from Modrinth or CurseForge with their apps. Every new world starts with your first house.</p>
+
+<h3>Inns and crypts</h3>
+<p>Roadside inns and barrow crypts generate in <strong>newly explored land</strong>, so on an existing world players have to travel to new chunks to find them. Village inns work everywhere: an innkeeper appears at any village bell.</p>
+</section>
+
+<section aria-labelledby="settings">
+<h2 id="settings"><span class="seal" aria-hidden="true">II</span>The settings file</h2>
+<p>All settings live in <code>config/bloodline.json</code>. It is rewritten on every start, so settings added in later versions appear with their default values; invalid values fall back to the defaults. <strong>Changes apply the next time the world starts.</strong></p>
+
+<h3>Families</h3>
+<div class="tbl"><table>
+<thead><tr><th>Setting</th><th>Default</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td class="k">maxTraits</td><td class="num">4</td><td>Most traits a family member can have.</td></tr>
+<tr><td class="k">boonPassChance</td><td class="num">0.5</td><td>Chance that each of a parent's boons and quirks passes to a child.</td></tr>
+<tr><td class="k">flawPassChance</td><td class="num">0.35</td><td>Chance that each of a parent's flaws passes to a child.</td></tr>
+<tr><td class="k">newTraitQuirkChance<br>newTraitFlawChance</td><td class="num">0.15<br>0.25</td><td>Chances that a child's new trait is a quirk or a flaw (otherwise a boon).</td></tr>
+<tr><td class="k">heirChoices</td><td class="num">3</td><td>How many children a dead family member leaves to choose from.</td></tr>
+<tr><td class="k">heirAutoChooseSeconds</td><td class="num">120</td><td>Seconds of play before the family chooses an heir for a player who hasn't.</td></tr>
+<tr><td class="k">briefLifeMinutes</td><td class="num">20</td><td>A life shorter than this is "the Brief" and passes no traits on.</td></tr>
+</tbody>
+</table></div>
+
+<h3>Renown</h3>
+<div class="tbl"><table>
+<thead><tr><th>Setting</th><th>Default</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td class="k">actThresholds</td><td class="num">0, 10, 25, 45</td><td>Renown the house needs to begin each act of the oath.</td></tr>
+<tr><td class="k">perFulfilledOath</td><td class="num">50</td><td>Extra renown every act needs for each oath the house already fulfilled.</td></tr>
+<tr><td class="k">bloodDebt, actCompleted, cryptCleared, familyEvent, reclaimedHeirloom, unfinishedBusiness, innJob, restingPlace, foundingGoal, preparation</td><td class="num">5, 5, 6, 4, 4, 3, 3, 2, 2, 2</td><td>Renown for each kind of deed.</td></tr>
+<tr><td class="k">debtInherited<br>debtForgotten</td><td class="num">-2<br>-3</td><td>Renown lost per unpaid blood debt at death, and when an old debt is pushed out.</td></tr>
+<tr><td class="k">maxBloodDebts</td><td class="num">3</td><td>Most unpaid blood debts a house can carry.</td></tr>
+</tbody>
+</table></div>
+
+<h3>Everything else</h3>
+<div class="tbl"><table>
+<thead><tr><th>Setting</th><th>Default</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td class="k">events.enabled</td><td class="num">true</td><td>Whether family events (sickness, rivals, weddings, cousins, restless spirits) happen at all.</td></tr>
+<tr><td class="k">events.intervalDays</td><td class="num">3</td><td>Minecraft days between family events, plus up to two days of chance.</td></tr>
+<tr><td class="k">events.graceDays</td><td class="num">7</td><td>Days after founding before a house can face a feud or a restless spirit.</td></tr>
+<tr><td class="k">champions.tierRenown</td><td class="num">15, 45, 100</td><td>Renown at which surprise champions get stronger (Established, Renowned, Legendary).</td></tr>
+<tr><td class="k">champions.tierHealth<br>champions.tierGuards</td><td class="num">0.4 … 1.5<br>-3 … +1</td><td>Champion health and bodyguards per tier. Oath champions are never scaled.</td></tr>
+<tr><td class="k">sacrifice.renown</td><td class="num">10</td><td>Renown for a Sacrifice.</td></tr>
+<tr><td class="k">sacrifice.sacrificesForBloodSworn</td><td class="num">3</td><td>Sacrifices after which the house becomes Blood-Sworn.</td></tr>
+<tr><td class="k">steward.hireCost<br>steward.moveCost</td><td class="num">10<br>2</td><td>Emeralds to hire the steward, and to move them to a new bed.</td></tr>
+<tr><td class="k">steward.vaultSlots<br>steward.vaultRenown</td><td class="num">3, 6, 9<br>0, 25, 50</td><td>Vault slots unlocked at each amount of renown.</td></tr>
+<tr><td class="k">inns.maxJobsPerPlayer</td><td class="num">2</td><td>Inn jobs a player can hold at once.</td></tr>
+<tr><td class="k">inns.innkeepersAtPlayerBells</td><td class="num">true</td><td>Whether a bell placed by a player also attracts an innkeeper, or only bells in villages.</td></tr>
+<tr><td class="k">houses.maxMembers</td><td class="num">12</td><td>Most players in one house.</td></tr>
+<tr><td class="k">heirlooms.maxRank</td><td class="num">3</td><td>Highest rank an heirloom's bonus can reach.</td></tr>
+<tr><td class="k">structures.searchRadiusChunks</td><td class="num">100</td><td>How far to look for structures for quests and maps. Keep it modest on busy servers: finding rare structures far away can briefly pause the server.</td></tr>
+<tr><td class="k">structures.rumourSearchRadiusChunks</td><td class="num">64</td><td>Search radius for inn rumours.</td></tr>
+</tbody>
+</table></div>
+</section>
+
+<section aria-labelledby="commands">
+<h2 id="commands"><span class="seal" aria-hidden="true">III</span>Commands</h2>
+<p>Players don't need commands: the Chronicle, the scrolls and the buttons in chat do nearly everything. Only inviting players, removing members and passing on leadership need a command for now. The rest are for players who prefer typing, and for operators.</p>
+
+<h3>For every player</h3>
+<div class="tbl"><table>
+<thead><tr><th>Command</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td class="k">/bloodline</td><td>Your house, character, traits, members and renown.</td></tr>
+<tr><td class="k">/bloodline quests</td><td>Your duties and quests with progress.</td></tr>
+<tr><td class="k">/bloodline tree [player]</td><td>The family tree.</td></tr>
+<tr><td class="k">/bloodline info &lt;player&gt;</td><td>Another player's house.</td></tr>
+<tr><td class="k">/bloodline chronicle</td><td>A new copy of the Chronicle.</td></tr>
+<tr><td class="k">/bloodline heir &lt;1-3&gt;</td><td>Choose your heir after a death.</td></tr>
+<tr><td class="k">/bloodline event [accept|decline]</td><td>See or answer a family event waiting for a choice.</td></tr>
+<tr><td class="k">/bloodline sacrifice</td><td>Start the Sacrifice.</td></tr>
+<tr><td class="k">/bloodline accept keep|fresh<br>/bloodline decline</td><td>Answer an invitation to another house.</td></tr>
+<tr><td class="k">/bloodline leave</td><td>Leave your house and found a new one.</td></tr>
+</tbody>
+</table></div>
+
+<h3>For the head of a house</h3>
+<div class="tbl"><table>
+<thead><tr><th>Command</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td class="k">/bloodline oath [sword|deep|hearth]</td><td>See or swear the house's oath.</td></tr>
+<tr><td class="k">/bloodline house &lt;name&gt;</td><td>Rename the house.</td></tr>
+<tr><td class="k">/bloodline invite &lt;player&gt;</td><td>Invite a player into the house.</td></tr>
+<tr><td class="k">/bloodline remove &lt;player&gt;</td><td>Send a member away.</td></tr>
+<tr><td class="k">/bloodline head &lt;player&gt;</td><td>Pass leadership on.</td></tr>
+</tbody>
+</table></div>
+
+<h3>For operators</h3>
+<p>These need operator permission (level 2).</p>
+<div class="code"><div class="code-bar"><span class="code-k">In game or console</span><button class="copy" type="button">Copy</button></div>
+<pre><span class="c-c"># Wipe a player's family, so they start over with a new house</span>
+/bloodline admin reset <span class="c-s">&lt;player&gt;</span>
+
+<span class="c-c"># Find the nearest roadside inn or barrow crypt</span>
+/locate structure <span class="c-s">bloodline:roadside_inn</span>
+/locate structure <span class="c-s">bloodline:crypt</span></pre></div>
+
+<p>For testing, there are also debug commands:</p>
+<div class="tbl"><table>
+<thead><tr><th>Command</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td class="k">/bloodline debug complete</td><td>Finish your newest quest.</td></tr>
+<tr><td class="k">/bloodline debug renown &lt;amount&gt;</td><td>Add (or take) renown.</td></tr>
+<tr><td class="k">/bloodline debug event &lt;type&gt;</td><td>Start a family event: sickness, restless, feud, wedding or cousin.</td></tr>
+<tr><td class="k">/bloodline debug age</td><td>Count your character as having lived a full life.</td></tr>
+<tr><td class="k">/bloodline debug champion</td><td>Spawn a test champion.</td></tr>
+<tr><td class="k">/bloodline debug crypt [reset]</td><td>Inside a crypt: see its answer and progress, or start it over.</td></tr>
+</tbody>
+</table></div>
+
+<aside class="note warn">
+<span class="seal" aria-hidden="true">!</span>
+<p class="note-t">Grave command</p>
+<p><code>/bloodline admin reset</code> can't be undone: the player's family, ancestors and branch of the house are forgotten. Back up your <code>world</code> folder first.</p>
+</aside>
+</section>
+
+<section aria-labelledby="saves">
+<h2 id="saves"><span class="seal" aria-hidden="true">IV</span>Saves and accounts</h2>
+<p>Every family is stored in the world's save, linked to the player's Minecraft account, so it survives name changes. Families belong to that world: another world or server has its own. On offline-mode servers, families follow the player's name instead.</p>
+</section>
+</main>
+
+<aside class="aside" aria-label="At a glance">
+<div class="panel">
+<h2>At a glance</h2>
+<dl>
+<dt>Game</dt><dd>Minecraft 26.3</dd>
+<dt>Loader</dt><dd>Fabric 0.19.5 or newer</dd>
+<dt>Needs</dt><dd>Fabric API</dd>
+<dt>Java</dt><dd>25</dd>
+<dt>Server</dt><dd>Required</dd>
+<dt>Players</dt><dd>Optional: for the illustrated screens</dd>
+<dt>Settings</dt><dd><code>config/bloodline.json</code></dd>
+</dl>
+{{DOWNLOADS_PLAIN}}
+</div>
+<nav class="parch-panel" aria-label="On this page">
+<h2>On this page</h2>
+<ul>
+<li><a href="#install">Installing</a></li>
+<li><a href="#settings">The settings file</a></li>
+<li><a href="#commands">Commands</a></li>
+<li><a href="#saves">Saves and accounts</a></li>
+</ul>
+</nav>
+</aside>
+</div>
+</div>

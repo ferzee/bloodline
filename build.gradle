@@ -17,7 +17,7 @@ sourceSets {
 		compileClasspath += main.compileClasspath + main.output
 		runtimeClasspath += main.runtimeClasspath + main.output
 	}
-	// Opens Bloodline's own screens in the real game and takes screenshots: ./gradlew runClientGametest
+	// Opens Bloodline Chronicles' own screens in the real game and takes screenshots: ./gradlew runClientGametest
 	clientgametest
 }
 

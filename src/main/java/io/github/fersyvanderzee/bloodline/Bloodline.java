@@ -147,7 +147,7 @@ public class Bloodline implements ModInitializer {
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> BloodlineCommands.register(dispatcher));
 
-		LOGGER.info("Bloodline loaded");
+		LOGGER.info("Bloodline Chronicles loaded");
 	}
 
 	/** Runs a feature's tick, logging a failure instead of letting it crash the server. */

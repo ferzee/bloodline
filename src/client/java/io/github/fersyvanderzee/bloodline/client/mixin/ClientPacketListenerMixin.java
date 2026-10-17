@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Opens the family Chronicle as Bloodline's illustrated book instead of a plain written book. */
+/** Opens the family Chronicle as Bloodline Chronicles' illustrated book instead of a plain written book. */
 @Mixin(ClientPacketListener.class)
 abstract class ClientPacketListenerMixin {
 	@Inject(method = "handleOpenBook", cancellable = true, at = @At(value = "INVOKE",

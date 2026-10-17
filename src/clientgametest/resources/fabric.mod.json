@@ -2,8 +2,8 @@
 	"schemaVersion": 1,
 	"id": "bloodline-clientgametest",
 	"version": "1.0.0",
-	"name": "Bloodline Client Game Tests",
-	"description": "Opens Bloodline's screens in the real game and takes screenshots. Not shipped with the mod.",
+	"name": "Bloodline Chronicles Client Game Tests",
+	"description": "Opens Bloodline Chronicles' screens in the real game and takes screenshots. Not shipped with the mod.",
 	"environment": "client",
 	"entrypoints": {
 		"fabric-client-gametest": [

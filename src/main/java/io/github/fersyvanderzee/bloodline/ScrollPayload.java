@@ -11,7 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 
 /**
- * A choice window for players who have Bloodline installed: the client draws it as a parchment scroll.
+ * A choice window for players who have Bloodline Chronicles installed: the client draws it as a parchment scroll.
  * Players without the mod get the same choice as one of Minecraft's own dialog windows (see {@link Screens}).
  * Every card and button runs a /bloodline command, so the server treats both the same.
  */
