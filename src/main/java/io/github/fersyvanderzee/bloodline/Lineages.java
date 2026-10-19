@@ -113,9 +113,12 @@ public final class Lineages {
 		Component deathMessage = sacrificed
 			? Text.t("death.sacrifice", dead.name(), lineage.house.name)
 			: player.getCombatTracker().getDeathMessage();
-		GlobalPos place = GlobalPos.of(player.level().dimension(), player.blockPosition());
+		// Below the bottom of the world (the End's void) there is no resting place anyone could visit.
+		Optional<GlobalPos> place = player.getY() < player.level().getMinY()
+			? Optional.empty()
+			: Optional.of(GlobalPos.of(player.level().dimension(), player.blockPosition()));
 		Ancestor ancestor = new Ancestor(dead.name(), epithet, dead.generation(), dead.traits(), dead.bornDay(), today(server), deathMessage,
-			Optional.of(place));
+			place);
 		lineage.ancestors.add(ancestor);
 		lineage.awaitingHeir = true;
 		record(server, lineage, sacrificed

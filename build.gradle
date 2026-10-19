@@ -45,6 +45,8 @@ loom {
 			runDir = "build/clientgametest"
 			programArgs "--username", "Fersy"
 			vmArg "-Dfabric.client.gametest"
+			// The slow terrain check (TerrainCheckTest) only runs with: ./gradlew runClientGametest -Pterrain=true
+			vmArg "-Dbloodline.terrain=${project.findProperty('terrain') ?: 'false'}"
 		}
 		gametest {
 			server()

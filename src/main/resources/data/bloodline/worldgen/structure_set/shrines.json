@@ -1,0 +1,26 @@
+{
+  "structures": [
+    {
+      "structure": "bloodline:shrine_temperate",
+      "weight": 1
+    },
+    {
+      "structure": "bloodline:shrine_cold",
+      "weight": 1
+    },
+    {
+      "structure": "bloodline:shrine_warm",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 18,
+    "separation": 7,
+    "salt": 602214076,
+    "exclusion_zone": {
+      "chunk_count": 2,
+      "other_set": "minecraft:villages"
+    }
+  }
+}

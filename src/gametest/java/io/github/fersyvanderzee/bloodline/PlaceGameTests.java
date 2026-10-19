@@ -321,4 +321,49 @@ public class PlaceGameTests {
 		}
 		return ItemStack.EMPTY;
 	}
+
+	// --- The wayside shrine -----------------------------------------------------------------------------
+
+	@GameTest(maxTicks = 400)
+	public void aShrineBlessesOnceADayAndCountsAFirstVisit(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos at = place(helper, "bloodline:shrine_temperate", new BlockPos(4000, -60, 4000));
+		List<BlockPos> candles = new ArrayList<>();
+		BlockPos barrel = null;
+		for (BlockPos pos : BlockPos.betweenClosed(at.getX() - 12, -64, at.getZ() - 12, at.getX() + 12, 200, at.getZ() + 12)) {
+			BlockState state = level.getBlockState(pos);
+			if (state.getBlock() instanceof net.minecraft.world.level.block.CandleBlock) candles.add(pos.immutable());
+			if (state.is(Blocks.BARREL)) barrel = pos.immutable();
+		}
+		check(helper, candles.size() == 3, "the altar has three candles, got " + candles.size());
+		check(helper, barrel != null, "the shrine has a traveller's barrel");
+		check(helper, Shrines.shrineAt(level, candles.getFirst()).isPresent(), "a placed shrine is recognised as one");
+
+		ServerPlayer player = join(helper);
+		Lineage lineage = lineage(helper, player);
+		int renown = lineage.house.renown;
+		ItemStack flint = new ItemStack(Items.FLINT_AND_STEEL);
+		var result = Shrines.onUseBlock(player, level, candles.getFirst(), flint);
+		check(helper, result == net.minecraft.world.InteractionResult.PASS, "an unlit candle still lights as usual");
+		check(helper, player.hasEffect(net.minecraft.world.effect.MobEffects.LUCK), "a founder is blessed with luck");
+		check(helper, lineage.house.renown == renown + BloodlineConfig.get().renown.shrineVisited, "a first visit earns renown, got "
+			+ (lineage.house.renown - renown));
+		check(helper, lineage.house.chronicle.getLast().text().getString().contains("prayed at"), "the Chronicle records the first visit");
+
+		// Once a day; a second visit earns nothing more.
+		player.removeAllEffects();
+		Shrines.onUseBlock(player, level, candles.get(1), flint);
+		check(helper, !player.hasEffect(net.minecraft.world.effect.MobEffects.LUCK), "only one blessing a day");
+		check(helper, lineage.house.renown == renown + BloodlineConfig.get().renown.shrineVisited, "no renown for a second visit");
+
+		// The next day, an ancestor who lived as a Slayer lends their strength; a lit candle counts too.
+		lineage.blessedDay = 0;
+		lineage.ancestors.add(new io.github.fersyvanderzee.bloodline.data.Ancestor("Edric", "slayer", 1, List.of(), 1, 2,
+			net.minecraft.network.chat.Component.literal("Edric fell"), java.util.Optional.empty()));
+		level.setBlockAndUpdate(candles.get(2), level.getBlockState(candles.get(2)).setValue(net.minecraft.world.level.block.CandleBlock.LIT, true));
+		result = Shrines.onUseBlock(player, level, candles.get(2), flint);
+		check(helper, player.hasEffect(net.minecraft.world.effect.MobEffects.STRENGTH), "a Slayer's blessing is strength");
+		check(helper, result == net.minecraft.world.InteractionResult.SUCCESS, "a lit candle isn't set on fire again");
+		helper.succeed();
+	}
 }

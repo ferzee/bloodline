@@ -8,7 +8,8 @@
 	"entrypoints": {
 		"fabric-client-gametest": [
 			"io.github.fersyvanderzee.bloodline.client.ScrollScreenTest",
-			"io.github.fersyvanderzee.bloodline.client.ChronicleScreenTest"
+			"io.github.fersyvanderzee.bloodline.client.ChronicleScreenTest",
+			"io.github.fersyvanderzee.bloodline.client.TerrainCheckTest"
 		]
 	},
 	"depends": {

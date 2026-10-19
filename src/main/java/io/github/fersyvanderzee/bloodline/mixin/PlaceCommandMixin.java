@@ -10,6 +10,9 @@ import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import io.github.fersyvanderzee.bloodline.FlatGround;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
@@ -18,6 +21,8 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
  * {@code /place structure} builds a structure's blocks but doesn't tell the world a structure is there, so
  * nothing can find it afterwards. Crypts and roadside inns need to be found (the crypt's puzzle, the inn's
  * higher pay), so a placed structure is recorded in its chunks just like a generated one.
+ *
+ * <p>It also places the mod's structures exactly where asked, skipping the search for level ground ({@link FlatGround}).
  */
 @Mixin(PlaceCommand.class)
 abstract class PlaceCommandMixin {
@@ -37,5 +42,17 @@ abstract class PlaceCommandMixin {
 			}
 		}
 		return start;
+	}
+
+	@WrapMethod(method = "placeStructure")
+	private static int bloodline$placeWhereAsked(CommandSourceStack source, Holder.Reference<Structure> structure, BlockPos pos,
+												  Operation<Integer> original) {
+		boolean before = FlatGround.BYPASS.get();
+		FlatGround.BYPASS.set(true);
+		try {
+			return original.call(source, structure, pos);
+		} finally {
+			FlatGround.BYPASS.set(before);
+		}
 	}
 }

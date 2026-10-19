@@ -24,7 +24,8 @@ public class Lineage {
 		Member.CODEC.listOf().optionalFieldOf("heir_candidates", List.of()).forGetter(l -> l.candidates),
 		Codec.BOOL.optionalFieldOf("fulfilled_act", false).forGetter(l -> l.fulfilledAct),
 		Codec.BOOL.optionalFieldOf("blessed_match", false).forGetter(l -> l.blessedMatch),
-		Codec.BOOL.optionalFieldOf("sick", false).forGetter(l -> l.sick)
+		Codec.BOOL.optionalFieldOf("sick", false).forGetter(l -> l.sick),
+		Codec.INT.optionalFieldOf("blessed_day", 0).forGetter(l -> l.blessedDay)
 	).apply(i, Lineage::new));
 
 	/** The house this branch belongs to. Linked by {@link BloodlineState} after loading. */
@@ -49,9 +50,11 @@ public class Lineage {
 	public boolean blessedMatch;
 	/** Set by a sickness event until it is cured. */
 	public boolean sick;
+	/** The day this branch last received an ancestor's blessing at a wayside shrine (once a day). */
+	public int blessedDay;
 
 	Lineage(UUID houseId, Member current, boolean awaitingHeir, List<Ancestor> ancestors, List<Quest> ownQuests, List<CompletedQuest> completed,
-			boolean inheritAll, List<Member> candidates, boolean fulfilledAct, boolean blessedMatch, boolean sick) {
+			boolean inheritAll, List<Member> candidates, boolean fulfilledAct, boolean blessedMatch, boolean sick, int blessedDay) {
 		this.houseId = houseId;
 		this.current = current;
 		this.awaitingHeir = awaitingHeir;
@@ -63,10 +66,11 @@ public class Lineage {
 		this.fulfilledAct = fulfilledAct;
 		this.blessedMatch = blessedMatch;
 		this.sick = sick;
+		this.blessedDay = blessedDay;
 	}
 
 	public Lineage(House house, Member current) {
-		this(house.id, current, false, List.of(), List.of(), List.of(), false, List.of(), false, false, false);
+		this(house.id, current, false, List.of(), List.of(), List.of(), false, List.of(), false, false, false, 0);
 		this.house = house;
 	}
 

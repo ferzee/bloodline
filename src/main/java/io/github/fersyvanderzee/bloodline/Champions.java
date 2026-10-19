@@ -13,6 +13,7 @@ import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Difficulty;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -113,20 +114,40 @@ public final class Champions {
 	 * Spawns a champion near the player. {@code key} ties it to the quest that wants it dead.
 	 * {@code mainHand} overrides the weapon (used to show a stolen heirloom).
 	 */
-	public static void spawn(ServerPlayer player, Kind kind, String key, Optional<ItemStack> mainHand, List<String> preparations) {
-		spawn(player, kind, key, mainHand, preparations, findSpot(player.level(), player.blockPosition()), kind.name());
+	public static boolean spawn(ServerPlayer player, Kind kind, String key, Optional<ItemStack> mainHand, List<String> preparations) {
+		return spawn(player, kind, key, mainHand, preparations, findSpot(player.level(), player.blockPosition()), kind.name());
 	}
 
 	/** Spawns a champion at a fixed spot under its own name, such as a crypt's founder rising from their tomb. */
-	public static void spawnAt(ServerPlayer player, Kind kind, String key, BlockPos pos, Component name) {
-		spawn(player, kind, key, Optional.empty(), List.of(), pos, name);
+	public static boolean spawnAt(ServerPlayer player, Kind kind, String key, BlockPos pos, Component name) {
+		return spawn(player, kind, key, Optional.empty(), List.of(), pos, name);
 	}
 
-	private static void spawn(ServerPlayer player, Kind kind, String key, Optional<ItemStack> mainHand, List<String> preparations, BlockPos pos,
+	/**
+	 * Whether champions can appear: on Peaceful the game removes hostile mobs at once, so a champion would
+	 * vanish (and be summoned again every second). Tells the player why, at most once a minute.
+	 */
+	public static boolean canAppear(ServerPlayer player) {
+		if (player.level().getDifficulty() != Difficulty.PEACEFUL) return true;
+		long now = player.level().getGameTime();
+		Long last = PEACEFUL_NOTICE.get(player.getUUID());
+		if (last == null || now - last >= PEACEFUL_NOTICE_TICKS) {
+			PEACEFUL_NOTICE.put(player.getUUID(), now);
+			player.sendSystemMessage(Text.t("champion.peaceful").withStyle(ChatFormatting.GRAY), true);
+		}
+		return false;
+	}
+
+	private static final Map<java.util.UUID, Long> PEACEFUL_NOTICE = new java.util.HashMap<>();
+	private static final long PEACEFUL_NOTICE_TICKS = 20 * 60;
+
+	/** Returns whether the champion appeared. */
+	private static boolean spawn(ServerPlayer player, Kind kind, String key, Optional<ItemStack> mainHand, List<String> preparations, BlockPos pos,
 							  Component name) {
+		if (!canAppear(player)) return false;
 		ServerLevel level = player.level();
 		Mob champion = kind.type().create(level, EntitySpawnReason.EVENT);
-		if (champion == null) return;
+		if (champion == null) return false;
 		champion.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
 		champion.finalizeSpawn(level, level.getCurrentDifficultyAt(pos), EntitySpawnReason.EVENT, null);
 		for (EquipmentSlot slot : EquipmentSlot.values()) {
@@ -182,6 +203,7 @@ public final class Champions {
 		player.connection.send(new ClientboundSetTitleTextPacket(name.copy().withStyle(ChatFormatting.DARK_RED)));
 		player.connection.send(new ClientboundSetSubtitleTextPacket(Text.t("oath.quoted", kind.taunt()).withStyle(ChatFormatting.GRAY)));
 		level.playSound(null, pos, SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 2f, 1f);
+		return true;
 	}
 
 	private static final java.util.Set<String> SCALED = java.util.Set.of("rival", "shade", "rotgut", "old_bones", "broodmother", "deserter", "thief", "barrow_lord");

@@ -54,6 +54,8 @@ public final class BloodlineConfig {
 		public int familyEvent = 4;
 		/** For laying the founder of a crypt to rest. */
 		public int cryptCleared = 6;
+		/** For the house's first visit to each wayside shrine. */
+		public int shrineVisited = 1;
 		/** Extra renown every act needs for each oath the house has already fulfilled. */
 		public int perFulfilledOath = 50;
 	}

@@ -1,0 +1,549 @@
+<title>Bloodline Test Script</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans+SC:wght@500;700;800&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column. A sticky bar holds progress and the Full/Quick switch; sections of test rows follow, each with Works / Broken / Skip; the report closes the page. */
+:root {
+  --bg: #f1f3ef;
+  --surface: #ffffff;
+  --fg: #1b231f;
+  --muted: #5a6761;
+  --line: #d3d9d4;
+  --accent: #8a2a2a;
+  --accent-soft: #f3e3e1;
+  --ok: #2b784a;
+  --ok-soft: #e0efe5;
+  --bad: #ae392d;
+  --bad-soft: #f7e3e0;
+  --skip: #7a6a3a;
+  --skip-soft: #f1ecdc;
+  --code-bg: #e6eae6;
+  --font-display: "Alegreya Sans SC", "Trebuchet MS", sans-serif;
+  --font-body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131815; --surface: #1b211d; --fg: #e3e8e4; --muted: #97a49d; --line: #2d3530;
+    --accent: #d8706a; --accent-soft: #3a2220; --ok: #6cc28f; --ok-soft: #1d3326;
+    --bad: #ec7a6e; --bad-soft: #3d2320; --skip: #d6c27e; --skip-soft: #33301f; --code-bg: #232a26; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131815; --surface: #1b211d; --fg: #e3e8e4; --muted: #97a49d; --line: #2d3530;
+  --accent: #d8706a; --accent-soft: #3a2220; --ok: #6cc28f; --ok-soft: #1d3326;
+  --bad: #ec7a6e; --bad-soft: #3d2320; --skip: #d6c27e; --skip-soft: #33301f; --code-bg: #232a26; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 17px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 72px;
+}
+.wrap { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+header.intro { padding-block: 40px 0; display: flex; flex-direction: column; gap: 10px; }
+.eyebrow { font-family: var(--font-display); font-weight: 700; letter-spacing: .08em; color: var(--accent); font-size: 15px; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 6vw, 48px); line-height: 1.05; margin: 0; text-wrap: balance; }
+.lede { color: var(--muted); margin: 0; max-width: 64ch; }
+.lede b { color: var(--fg); }
+
+.run { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+.run label { display: flex; flex-direction: column; gap: 4px; font-family: var(--font-display); font-weight: 700; letter-spacing: .06em; font-size: 13px; color: var(--muted); min-width: 0; }
+.run input { font: inherit; font-family: var(--font-body); font-size: 16px; letter-spacing: 0; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; width: 100%; }
+
+.progress {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg); padding-block: 12px; border-bottom: 1px solid var(--line);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+}
+.bar { flex: 1 1 200px; height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; display: flex; }
+.bar span { height: 100%; transition: width .3s; }
+.bar .ok { background: var(--ok); }
+.bar .bad { background: var(--bad); }
+.bar .skip { background: var(--skip); }
+.counts { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 15px; }
+.counts b { color: var(--fg); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.mode { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.mode button { border: 0; border-radius: 0; }
+.mode button[aria-pressed="true"] { background: var(--accent); color: var(--surface); font-weight: 700; }
+button {
+  font: inherit; font-size: 15px; cursor: pointer; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--fg); padding: 6px 12px;
+}
+button:hover { border-color: var(--muted); }
+button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 700; }
+
+.toc { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.toc a { display: inline-flex; gap: 6px; align-items: baseline; text-decoration: none; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; font-size: 15px; }
+.toc a:hover { border-color: var(--muted); }
+.toc .k { font-family: var(--font-mono); font-size: 12px; color: var(--accent); }
+.toc .n { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
+
+.cmds { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.cmd { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--code-bg); border-radius: 6px; padding: 6px 6px 6px 10px; min-width: 0; }
+.cmd > div { min-width: 0; }
+.cmd code { font-family: var(--font-mono); font-size: 13px; display: block; overflow-x: auto; white-space: nowrap; }
+.cmd small { display: block; color: var(--muted); font-size: 13px; }
+.cmd button { padding: 3px 8px; font-size: 13px; flex: none; }
+.launch { display: flex; flex-direction: column; gap: 8px; }
+
+section.group { display: flex; flex-direction: column; gap: 10px; scroll-margin-top: 80px; }
+section.group > h2 { font-family: var(--font-display); font-weight: 700; font-size: 24px; margin: 0; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; text-wrap: balance; }
+section.group > h2 .key { font-family: var(--font-mono); font-size: 15px; color: var(--accent); }
+section.group > h2 .tally { font-family: var(--font-body); font-size: 15px; font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums; }
+.group-note { margin: 0; color: var(--muted); font-size: 15px; max-width: 70ch; }
+.group-note code, .test code { font-family: var(--font-mono); font-size: 13px; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+
+.test { background: var(--surface); border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px; padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; }
+.test.ok { border-left-color: var(--ok); }
+.test.bad { border-left-color: var(--bad); }
+.test.skip { border-left-color: var(--skip); }
+.test .head { grid-column: 1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.test h3 { margin: 0; font-size: 18px; font-weight: 700; }
+.test.ok h3, .test.skip h3 { color: var(--muted); }
+.test .id { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.tag { font-family: var(--font-display); font-weight: 700; letter-spacing: .05em; font-size: 12px; padding: 0 7px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); }
+.tag.quick { color: var(--accent); border-color: var(--accent); }
+.test .body { grid-column: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.label { font-family: var(--font-display); font-weight: 700; letter-spacing: .06em; font-size: 13px; color: var(--muted); }
+.test p { margin: 0; }
+.verdict { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 6px; align-self: start; }
+.verdict button { min-width: 88px; }
+.verdict button[aria-pressed="true"].v-ok { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); font-weight: 700; }
+.verdict button[aria-pressed="true"].v-bad { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); font-weight: 700; }
+.verdict button[aria-pressed="true"].v-skip { background: var(--skip-soft); border-color: var(--skip); color: var(--skip); font-weight: 700; }
+.note { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 4px; }
+.note label { font-size: 14px; color: var(--bad); font-weight: 500; }
+textarea { font: inherit; font-size: 15px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-height: 64px; resize: vertical; width: 100%; }
+
+.report { display: flex; flex-direction: column; gap: 10px; background: var(--accent-soft); border-radius: 8px; padding: 16px; }
+.report h2 { font-family: var(--font-display); margin: 0; font-size: 22px; }
+.report p { margin: 0; }
+#reportText { min-height: 160px; font-family: var(--font-mono); font-size: 13px; }
+.toast { color: var(--ok); font-weight: 700; font-size: 15px; min-height: 1.5em; }
+
+@media (max-width: 560px) {
+  .test { grid-template-columns: minmax(0, 1fr); }
+  .verdict { grid-column: 1; grid-row: auto; flex-direction: row; }
+  .verdict button { flex: 1; min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .bar span { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <div class="eyebrow">Bloodline Chronicles · Fabric · Minecraft 26.3</div>
+    <h1>Test script</h1>
+    <p class="lede">Run this after every update. Use <b>Full test</b> before a release and <b>Quick check</b> after a small change. Mark each test <b>Works</b>, <b>Broken</b> or <b>Skip</b> (not possible this time), and note what you saw when something breaks. At the end, copy the report and paste it to Claude. Your marks stay in this browser until you clear them.</p>
+  </header>
+
+  <div class="run" aria-label="This round">
+    <label for="runVersion">Version<input id="runVersion" placeholder="0.1.0"></label>
+    <label for="runTester">Tested by<input id="runTester" placeholder="Your name"></label>
+    <label for="runSetup">Setup<input id="runSetup" placeholder="Dev client, singleplayer"></label>
+  </div>
+
+  <div class="progress" aria-live="polite">
+    <div class="mode" role="group" aria-label="Which tests">
+      <button type="button" id="modeFull">Full test</button>
+      <button type="button" id="modeQuick">Quick check</button>
+    </div>
+    <div class="bar" aria-hidden="true"><span class="ok" id="barOk"></span><span class="bad" id="barBad"></span><span class="skip" id="barSkip"></span></div>
+    <div class="counts" id="counts"></div>
+    <div class="actions">
+      <button type="button" id="jumpReport">Report</button>
+      <button type="button" id="reset">New round</button>
+    </div>
+  </div>
+
+  <ul class="toc" id="toc" aria-label="Sections"></ul>
+
+  <section class="group" id="setup" aria-labelledby="h-setup">
+    <h2 id="h-setup">Before you start</h2>
+    <p class="group-note">Start the game from a terminal. The second client is only needed for the multiplayer tests (open your world to LAN in the first, join it from the second).</p>
+    <div class="launch">
+      <div class="cmd"><div><code>cd ~/Dev/Bloodline &amp;&amp; JAVA_HOME=/opt/homebrew/opt/openjdk@25/libexec/openjdk.jdk/Contents/Home ./gradlew runClient</code><small>the game, as player "Fersy"</small></div><button type="button" data-copy>Copy</button></div>
+      <div class="cmd"><div><code>cd ~/Dev/Bloodline &amp;&amp; JAVA_HOME=/opt/homebrew/opt/openjdk@25/libexec/openjdk.jdk/Contents/Home ./gradlew runClient2</code><small>a second player, "Friend"</small></div><button type="button" data-copy>Copy</button></div>
+    </div>
+    <p class="group-note">Create a <b>new world in Survival with cheats on</b> for each round. Handy commands:</p>
+    <div class="cmds">
+      <div class="cmd"><div><code>/bloodline debug complete</code><small>finishes your newest quest</small></div><button type="button" data-copy>Copy</button></div>
+      <div class="cmd"><div><code>/bloodline debug renown 50</code><small>adds renown (negative takes it)</small></div><button type="button" data-copy>Copy</button></div>
+      <div class="cmd"><div><code>/bloodline debug age</code><small>counts as a full life, so traits pass on</small></div><button type="button" data-copy>Copy</button></div>
+      <div class="cmd"><div><code>/bloodline debug event feud</code><small>or sickness, wedding, cousin, restless</small></div><button type="button" data-copy>Copy</button></div>
+      <div class="cmd"><div><code>/bloodline debug crypt</code><small>inside a crypt: its answer and progress</small></div><button type="button" data-copy>Copy</button></div>
+      <div class="cmd"><div><code>/bloodline debug champion</code><small>spawns a test champion</small></div><button type="button" data-copy>Copy</button></div>
+      <div class="cmd"><div><code>/locate structure bloodline:crypt</code><small>then click the coordinates</small></div><button type="button" data-copy>Copy</button></div>
+      <div class="cmd"><div><code>/locate structure bloodline:roadside_inn</code><small>the nearest roadside inn</small></div><button type="button" data-copy>Copy</button></div>
+      <div class="cmd"><div><code>/locate structure #minecraft:village</code><small>the nearest village inn</small></div><button type="button" data-copy>Copy</button></div>
+      <div class="cmd"><div><code>/summon zombie ~3 ~ ~</code><small>something to die to or kill</small></div><button type="button" data-copy>Copy</button></div>
+      <div class="cmd"><div><code>/time set 18000</code><small>midnight; on day 1 the moon is full</small></div><button type="button" data-copy>Copy</button></div>
+      <div class="cmd"><div><code>/give @s emerald 64</code><small>for jobs, rumours and the steward</small></div><button type="button" data-copy>Copy</button></div>
+      <div class="cmd"><div><code>/give @s iron_sword</code><small>for the heirloom tests</small></div><button type="button" data-copy>Copy</button></div>
+      <div class="cmd"><div><code>/give @s golden_apple</code><small>cures sickness</small></div><button type="button" data-copy>Copy</button></div>
+      <div class="cmd"><div><code>/difficulty peaceful</code><small>for the Peaceful tests; set back to normal after</small></div><button type="button" data-copy>Copy</button></div>
+      <div class="cmd"><div><code>/gamemode survival</code><small>deaths and drops need Survival</small></div><button type="button" data-copy>Copy</button></div>
+    </div>
+  </section>
+
+  <div id="groups"></div>
+
+  <section class="report" id="report" aria-labelledby="h-report">
+    <h2 id="h-report">Report for Claude</h2>
+    <p>Copy this and paste it into the chat. If the game crashed or showed an error, say so too: Claude can read the log in <code>run/logs/latest.log</code>.</p>
+    <textarea id="reportText" readonly aria-label="Test report"></textarea>
+    <div class="actions"><button type="button" class="primary" id="copyReport">Copy report</button><span class="toast" id="toast" role="status"></span></div>
+  </section>
+</div>
+
+<script>
+/* Test text: `backticks` become code. q: part of the Quick check. tags: "2 players", "slow" (needs travel or waiting), "needs setup". */
+const GROUPS = [
+  { key: "A", id: "auto", title: "Automated checks", note: "Run these in a terminal first, from ~/Dev/Bloodline with JAVA_HOME set as in the launch command. If one fails, stop and report it.", tests: [
+    { t: "The mod builds", q: 1, how: "`./gradlew build`", want: "BUILD SUCCESSFUL, and `build/libs/bloodline-chronicles-<version>.jar` exists." },
+    { t: "Server tests pass", q: 1, how: "`./gradlew runGametest`", want: "\"All 49 required tests passed\" (or more, if tests were added since)." },
+    { t: "Screen tests pass", q: 1, how: "`./gradlew runClientGametest`, then look through `build/clientgametest/screenshots`.", want: "BUILD SUCCESSFUL; the heir, feud and Sacrifice scrolls and the Chronicle spreads look right, with no missing text." },
+    { t: "The website builds", how: "`python3 website/build.py`", want: "\"Built 14 pages\" (more if chapters were added)." },
+  ]},
+  { key: "B", id: "join", title: "First join", note: "A brand-new Survival world with cheats on.", tests: [
+    { t: "Founding a house", q: 1, how: "Create the world and wait for it to load.", want: "A gold title with your character's name, the subtitle \"Founder of House …\", a bell sound, and chat lines saying who you are and which two traits you were born with." },
+    { t: "The Chronicle comes first", q: 1, how: "Look at your hotbar.", want: "The Chronicle in the first slot; a map to the nearest village inn next to it." },
+    { t: "Your name everywhere", how: "Type in chat and hold Tab.", want: "Chat and the tab list show your character's name, not \"Fersy\"." },
+    { t: "Four founding goals", q: 1, how: "Open the Chronicle at Duties.", want: "Raise the banner, A roof for the family, Make a name for the house (slay 15 monsters) and A warm hearth (talk to an innkeeper)." },
+    { t: "Raise the banner", how: "Place any banner.", want: "\"Duty fulfilled\", 3 levels and +2 renown in chat." },
+    { t: "A roof for the family", how: "Sleep in a bed.", want: "Fulfilled; 8 bread and +2 renown." },
+    { t: "Make a name", how: "Slay 15 monsters (`/summon zombie ~3 ~ ~`), watching the action bar.", want: "Progress above the hotbar; at 15 a new trait (or 5 levels) and +2 renown." },
+    { t: "Pointed to the oath", how: "Read chat after joining.", want: "A message pointing the head of the house to the oath in the Chronicle." },
+  ]},
+  { key: "C", id: "chronicle", title: "The Chronicle", tests: [
+    { t: "The book opens", q: 1, how: "Right-click the Chronicle.", want: "An open book with two pages and bookmark tabs on the right; the first page shows the house, your character, the generation and the house's renown." },
+    { t: "Bookmarks", how: "Click every tab.", want: "Each jumps to its section; every section starts on a left-hand page; an empty right page shows the ornament." },
+    { t: "Turning pages", how: "Use the arrow buttons, the arrow keys and Page Up/Down; then the mouse wheel.", want: "Buttons and keys turn pages; the mouse wheel does nothing." },
+    { t: "Stays up to date", how: "Gain renown (`/bloodline debug renown 5`) and open the book again.", want: "The new total shows." },
+    { t: "Replacing a lost book", how: "Throw the Chronicle into lava, then `/bloodline chronicle`.", want: "A new copy showing everything." },
+  ]},
+  { key: "D", id: "scrolls", title: "Scroll windows", tests: [
+    { t: "The heir scroll", q: 1, how: "Die (after `/bloodline debug age`) and respawn.", want: "About a second after respawning a parchment scroll opens with a card per child; hovering a card shows what each trait does; clicking a card chooses that child." },
+    { t: "Closing a scroll", how: "Press Escape on the heir scroll.", want: "It closes; you can still choose with [Choose] in chat or on the Chronicle's first page." },
+    { t: "Button colours", how: "Open scrolls with choices (a feud, the Sacrifice).", want: "The suggested choice is green, a grave choice (giving your life) is red, others are brown." },
+    { t: "Text fits", how: "Open the Sacrifice and feud scrolls, also in a small game window.", want: "No text runs off the parchment or overlaps the buttons." },
+  ]},
+  { key: "E", id: "heirs", title: "Death and heirs", tests: [
+    { t: "A full life", q: 1, how: "`/bloodline debug age`, then die to a zombie.", want: "An epithet (for example \"the Bold\"); three children; each inherits some traits plus one new one, marked \"new\"." },
+    { t: "A short life", how: "Die within 20 minutes of a new character's birth.", want: "\"the Brief\"; a note that they passed nothing on; each child has only one trait." },
+    { t: "Mourning", how: "Before choosing, hold Tab.", want: "You show as \"Heir of House …\"; quests and heirloom bonuses are paused." },
+    { t: "The family chooses", how: "Wait two minutes without choosing.", want: "\"The family could wait no longer and chose for you.\" The first child takes over." },
+    { t: "Logging out while mourning", how: "Die, leave the world before choosing, and come back.", want: "The choice is offered again." },
+    { t: "The heir takes over", q: 1, how: "Choose a child.", want: "A title, a gray server-wide message about the succession, the new name in chat, and the traits working (Stalwart shows extra hearts, Swift is faster)." },
+    { t: "What stays and what drops", how: "Die carrying normal items, an heirloom and the Chronicle.", want: "Normal items drop where you died; the heirloom and the Chronicle stay in your inventory." },
+  ]},
+  { key: "F", id: "duties", title: "Duties and blood debts", tests: [
+    { t: "Duties after a death", q: 1, how: "Die to a zombie and choose an heir.", want: "Three duties: a blood debt (slay 5 zombies), visit the resting place, and unfinished business." },
+    { t: "Strong and rare killers", how: "Die to a hoglin, then (another life) to an evoker or elder guardian.", want: "The debt asks for 2 hoglins, and for only 1 evoker or elder guardian." },
+    { t: "The resting place", how: "Wait 30 seconds after respawning, then go within 6 blocks of where you died.", want: "Fulfilled; 3 levels and +2 renown." },
+    { t: "Unfinished business", how: "Do the task (or `/bloodline debug complete`).", want: "Progress in the action bar for count tasks; the reward when done." },
+    { t: "Debts pass down", how: "Die again without settling the debt.", want: "The debt stays with the house and the house loses 2 renown per unpaid debt." },
+    { t: "No killer, no debt", how: "Die from a fall or in lava.", want: "No blood debt, but the other duties come." },
+    { t: "Lost to the void", how: "In the End, fall into the void.", want: "No \"visit the resting place\" duty for that death." },
+    { t: "Crafting counts", how: "Get a crafting duty and craft the item at a table, then try taking it from the creative inventory.", want: "Crafting counts; taking it from the creative inventory doesn't." },
+  ]},
+  { key: "G", id: "renown", title: "Renown", tests: [
+    { t: "Renown in chat and book", q: 1, how: "Fulfil any duty.", want: "\"+N Renown\" with the reason and the house's new total; the Chronicle's first page matches." },
+    { t: "Never below zero", how: "`/bloodline debug renown -1000`", want: "Renown stops at 0." },
+  ]},
+  { key: "H", id: "heirlooms", title: "Heirlooms", tests: [
+    { t: "Gear remembers", q: 1, how: "Hold an iron sword and hover it.", want: "\"Carried by <name> <house>\" in the tooltip." },
+    { t: "Becoming an heirloom", how: "Die (after `/bloodline debug age`) keeping the sword, choose an heir and hold it.", want: "A chat message that it became an heirloom with a name such as \"Oathkeeper\"; it glows and lists both bearers; the Chronicle's History records it." },
+    { t: "Rank bonus", how: "Hover the heirloom; pass it on once more.", want: "The tooltip shows its bonus (+1 attack damage per rank for weapons, armor toughness for armor, efficiency for tools), up to rank 3." },
+    { t: "Kept on death", how: "Die with the heirloom.", want: "It stays in your inventory." },
+    { t: "The Stolen Heirloom", how: "Throw an heirloom into lava.", want: "A rumour that thieves took it, a map to a pillager outpost; there, the Heirloom Thief carries it; slaying the thief returns it slightly stronger (+4 renown).", tags: ["slow"] },
+  ]},
+  { key: "I", id: "oath", title: "The Founder's Oath", note: "Between acts you need a new generation: `/bloodline debug age` and die, then choose an heir. Use `/bloodline debug complete` and `/bloodline debug renown` to move quickly.", tests: [
+    { t: "Choosing an oath", q: 1, how: "Open the Chronicle at Main Quest.", want: "The three oaths, each on its own page with its acts, reward and a [Swear this oath] button (only for the head of the house)." },
+    { t: "Swearing", how: "Swear the Oath of the Sword.", want: "A title with the oath, a History entry and the first objective of Act I." },
+    { t: "The Oathblade", how: "Finish Act I's first step, then craft an iron sword.", want: "The sword becomes the Oathblade: named, glowing and an heirloom straight away." },
+    { t: "An act fulfilled", how: "Finish Act I.", want: "+5 renown, a hint about the Sacrifice, and a message that the next act must wait for a new generation." },
+    { t: "Waiting for renown", how: "Start a new generation with less renown than the next act needs (10, 25, 45).", want: "The Objective page shows \"Renown: x / y\"; the act starts as soon as the house has enough." },
+    { t: "Only the Oathblade counts", how: "In Act II, kill blazes with another sword, then with the Oathblade.", want: "Only Oathblade kills count." },
+    { t: "Preparations", how: "Reach Act III.", want: "Three optional preparation duties, each saying what it does to the champion, and a map (or coordinates) to the structure." },
+    { t: "The champion", how: "Go to the structure (finish some preparations first).", want: "The champion appears with a boss bar and a title; a finished preparation shows (no bodyguards, less health, or glowing and slow). If you die, it waits there for your heir.", tags: ["slow"] },
+    { t: "Oath fulfilled", how: "Finish Act IV.", want: "\"Oath fulfilled\" title, a server-wide message, the legendary trait for every member, and \"A New Oath\" pages with only the other two oaths." },
+    { t: "A second oath", how: "Swear one of the other oaths.", want: "Its first act falls to the next generation; every act needs 50 more renown (50, 60, 75, 95)." },
+    { t: "The Oath of the Deep", how: "Swear it in a new world and play through it.", want: "Below Y -32, three diamonds, a map to an Ancient City, two sculk catalysts, the Lost Delver, a recovery compass, a Warden.", tags: ["slow"] },
+    { t: "The Oath of the Hearth", how: "Swear it in a new world and play through it.", want: "15 trades, 10 animals bred, 8 pillagers or vindicators, a raid, the Warlord at an outpost, two more raids.", tags: ["slow"] },
+  ]},
+  { key: "J", id: "sacrifice", title: "The Sacrifice", tests: [
+    { t: "The Sacrifice page", q: 1, how: "Open the Chronicle's Sacrifice bookmark.", want: "[Offer your life] at the top, and each condition with a tick or a cross, including the nights until the full moon." },
+    { t: "What's missing", how: "Click [Offer your life] in daytime without a fulfilled act.", want: "Chat lists exactly what is missing." },
+    { t: "Giving your life", how: "With an act fulfilled: on day 1, `/time set 18000`, stand at an ancestor's grave (or the steward's home as a founder), click [Offer your life], then the red [I give my life].", want: "You die; everyone sees that you gave your life for the house; +10 renown; your items fall where you knelt; no blood debt." },
+    { t: "The heir keeps every boon", how: "Look at the children after the Sacrifice.", want: "Every child has all of the parent's boons; the family tree shows \"the Devoted\"." },
+    { t: "Not yet", how: "Open the scroll and click [Not yet].", want: "The scroll closes and nothing happens." },
+    { t: "Blood-Sworn", how: "Make three sacrifices in one house.", want: "The house becomes Blood-Sworn: a legendary trait for every member, now and in future.", tags: ["slow"] },
+  ]},
+  { key: "K", id: "inns", title: "Inns and jobs", tests: [
+    { t: "A village inn", q: 1, how: "Go to a village and stand near its bell for a few seconds.", want: "An innkeeper appears and the inn gets a name such as \"The Sleeping Griffin\"." },
+    { t: "The quest board", q: 1, how: "Right-click the innkeeper.", want: "Five jobs with details on hover; never more than two of one kind; the jobs change the next morning." },
+    { t: "Two jobs at most", how: "Accept three jobs.", want: "The third is refused with a clear message." },
+    { t: "Bounty", how: "Accept a bounty and follow the map.", want: "A named beast with a boss bar appears when you arrive; slaying it pays out.", tags: ["slow"] },
+    { t: "Delivery", how: "Accept a delivery, bring the items to any innkeeper and right-click them.", want: "Items taken, reward paid." },
+    { t: "Rumour", how: "Accept a rumour.", want: "Emeralds taken and a map to a structure you haven't found; reaching it pays 4 levels and 3 renown. With nothing nearby you pay nothing." },
+    { t: "Courier", how: "Accept a courier job.", want: "A sealed letter and a map to another village's inn; only that innkeeper accepts it.", tags: ["slow"] },
+    { t: "Lost satchel", how: "Accept a lost satchel job and follow the map.", want: "A chest with the satchel appears when you get close; any innkeeper takes it." },
+    { t: "Hunt and expedition", how: "Accept a hunt and an expedition.", want: "The hunt counts kills; the expedition finishes when you reach the biome." },
+    { t: "Jobs end at death", how: "Die while holding a job.", want: "The job is gone for the heir." },
+    { t: "A roadside inn", q: 1, how: "`/locate structure bloodline:roadside_inn` and go there.", want: "A timber hall with a stone tower and a column of smoke above the trees; the front double doors open properly; the innkeeper appears behind the bar." },
+    { t: "Inns on level ground", how: "Visit two or three roadside inns.", want: "Each stands on fairly level land, never on a block of dirt on a mountainside or in water." },
+    { t: "Roadside extras", how: "Explore the roadside inn.", want: "The board says (Roadside Inn) and pays half again as many emeralds; guest beds upstairs; a strongbox in the innkeeper's room; a stable with a horse, a donkey and a tack chest; a garden; a cat; a ladder up the tower." },
+    { t: "Your own bell", how: "Place a bell at home and stand near it.", want: "An innkeeper appears there too (this can be turned off in the settings)." },
+  ]},
+  { key: "L", id: "steward", title: "The steward", tests: [
+    { t: "Hiring a steward", how: "Sleep in a bed, then choose the steward on a quest board with 10 emeralds.", want: "A named steward appears at your bed; without a bed or emeralds you're told why not." },
+    { t: "The family vault", how: "Talk to the steward; add renown to 25 and 50.", want: "3 slots, then 6 and 9; locked slots say what unlocks them; items stay put for the whole house." },
+    { t: "Moving house", how: "Sleep in another bed and use the board's steward option again (2 emeralds).", want: "The steward moves to the new bed; the old one disappears." },
+  ]},
+  { key: "M", id: "crypts", title: "Barrow crypts", tests: [
+    { t: "Finding a crypt", q: 1, how: "`/locate structure bloodline:crypt` and go there.", want: "A walled graveyard with a dark mausoleum, graves, dead trees and soul lanterns." },
+    { t: "On level ground", q: 1, how: "Look at the crypt from outside, and visit two or three more (`/locate structure bloodline:crypt` from different places).", want: "Each sits on fairly level land: no wall of dirt under one side, not half-buried on the other, not in a lake." },
+    { t: "The stairs", how: "Walk down into the crypt.", want: "The last step meets the floor; no jumping needed." },
+    { t: "Epitaphs", q: 1, how: "Right-click each sarcophagus in the hall.", want: "Each names a child, their emblem and a clue about when they died." },
+    { t: "Wrong order", how: "Light a brazier out of turn with flint and steel.", want: "The flames go out and the dead rise." },
+    { t: "Right order", how: "Light them in the order the children died (`/bloodline debug crypt` shows the answer).", want: "The four flames burn as one; chat hints which way the sigil lies." },
+    { t: "The sigil", how: "Search the catacombs.", want: "\"Sigil of House …\" (a glowing dark shard) in the chest farthest from the hall." },
+    { t: "The catacombs", how: "Explore.", want: "Arrow traps, a spawner hall, an ossuary with graves to brush, a cave-in with a secret room behind a chiseled block." },
+    { t: "Protected stones", how: "In Survival, try to break the seal or dig around the tomb before it opens.", want: "\"An old power holds these stones\"; nothing breaks. (Creative can break them.)" },
+    { t: "The Barrow-Lord", q: 1, how: "Right-click the seal with the sigil.", want: "The seal cracks open and the founder rises with a boss bar." },
+    { t: "Laid to rest", how: "Defeat the Barrow-Lord.", want: "The fallen house's last heirloom (rank 2, their names in its lore), +6 renown, a History entry and a modest treasure chest in the tomb." },
+    { t: "Every crypt differs", how: "Visit a second crypt and run `/bloodline debug crypt`.", want: "Another fallen house with other names and another answer.", tags: ["slow"] },
+  ]},
+  { key: "U", id: "shrines", title: "Wayside shrines", tests: [
+    { t: "Finding a shrine", q: 1, how: "`/locate structure bloodline:shrine_temperate` (also `shrine_cold` in taiga or snow, `shrine_warm` in savanna or desert) and go there.", want: "A small shrine on level ground: a roof over a statue and an altar with unlit candles, a courtyard with benches, lanterns and flowers in front." },
+    { t: "Its name", how: "Step inside.", want: "\"You stand at the Shrine of the …\" above the hotbar; the same name every time you come back." },
+    { t: "A founder's prayer", q: 1, how: "As a founder (no ancestors yet), light the altar candles with flint and steel.", want: "The candles light; \"You pray for the generations still to come: Luck for ten minutes.\"; +1 renown and a History entry for the first visit." },
+    { t: "Once a day", how: "Light another candle at the same or another shrine on the same day.", want: "\"You have already prayed today. Come back tomorrow.\" No effect, no more renown at this shrine." },
+    { t: "An ancestor's blessing", how: "After a death (`/bloodline debug age` first), pray the next day (`/time add 24000`).", want: "\"<ancestor> watches over you: <effect> for ten minutes\", with the effect that matches their epithet (the website's Shrines chapter has the table)." },
+    { t: "Lit candles still count", how: "Use flint and steel on a candle that is already lit.", want: "You can still pray, and no fire appears." },
+    { t: "While mourning", how: "Die and, before choosing an heir, light the candles.", want: "\"The candles won't catch while you mourn.\"" },
+    { t: "Supplies", how: "Open the barrel under the roof.", want: "A few travel supplies: bread, torches, apples, candles and the like." },
+  ]},
+  { key: "N", id: "events", title: "Family events", note: "Start each with `/bloodline debug event <type>`. The rival and the shade come only at night (`/time set 18000`).", tests: [
+    { t: "Sickness", q: 1, how: "`/bloodline debug event sickness`, then eat a golden apple.", want: "Weakness and hunger until cured; then a recovery message and +4 renown." },
+    { t: "A rival house: accept", how: "`/bloodline debug event feud` and click [Accept the challenge].", want: "At night a rival champion with a boss bar and bodyguards comes for you; defeating it gives 8 emeralds, 4 levels and +4 renown." },
+    { t: "A rival house: tribute", how: "Start a feud and pay tribute with 8 emeralds, then again without emeralds.", want: "With emeralds: paid, -3 renown. Without: you are told, and the feud starts anyway." },
+    { t: "A wedding", how: "`/bloodline debug event wedding`, accept (5 emeralds), then `/bloodline debug age` and die.", want: "Every child of that branch has one extra boon." },
+    { t: "A long-lost cousin", how: "`/bloodline debug event cousin` and welcome them.", want: "You receive a named heirloom carried by the cousin." },
+    { t: "The restless dead", how: "After a death in this world, `/bloodline debug event restless` and go to that grave at night.", want: "A shade appears; defeating it gives 5 levels and +4 renown." },
+    { t: "A choice waits", how: "Close a choice scroll, then look in chat and the Chronicle.", want: "The same choice is still there with its buttons." },
+  ]},
+  { key: "O", id: "multi", title: "Playing together", note: "Start both clients. In the first: Esc > Open to LAN. In the second (\"Friend\"): Multiplayer > join the LAN world.", tests: [
+    { t: "Two houses", q: 1, how: "Join with Friend.", want: "Friend founds their own house; both names show in chat and the tab list.", tags: ["2 players"] },
+    { t: "Join with your family", how: "`/bloodline invite Friend`, Friend clicks [Join with your family].", want: "Both are told; the Members page lists both, with a crown on the head.", tags: ["2 players"] },
+    { t: "Join as a newcomer", how: "Friend leaves (`/bloodline leave`), you invite again, Friend clicks [Join as a newcomer].", want: "Friend gets a new character in your house.", tags: ["2 players"] },
+    { t: "Shared progress", how: "Both kill monsters for a shared step.", want: "The count adds up; whoever finishes gets the reward and the other is told.", tags: ["2 players"] },
+    { t: "Only the head decides", how: "As Friend: try renaming the house and swearing the oath.", want: "Refused for Friend.", tags: ["2 players"] },
+    { t: "Leadership", how: "`/bloodline head Friend`, then `/bloodline remove` from the new head.", want: "The crown moves; a removed member founds a house of their own.", tags: ["2 players"] },
+    { t: "A debt between players", how: "Friend, in another house, kills you.", want: "Your heir's debt reads \"Defeat <Friend's character>\"; killing them settles it.", tags: ["2 players"] },
+    { t: "Events for everyone", how: "`/bloodline debug event wedding` while both are in one house.", want: "Both see it; the first answer counts.", tags: ["2 players"] },
+  ]},
+  { key: "P", id: "edge", title: "Peaceful and edge cases", tests: [
+    { t: "Champions on Peaceful", q: 1, how: "`/difficulty peaceful`, then stand where a champion should appear (a bounty, Act III or a feud at night).", want: "A short gray note in the action bar, at most once a minute; no raid horn, no flashing title." },
+    { t: "Crypt on Peaceful", how: "On Peaceful, right-click the crypt's seal with the sigil.", want: "The same note; the seal stays shut and you keep the sigil. Set the difficulty back to normal after." },
+    { t: "Keep inventory", how: "`/gamerule keepInventory true` and die.", want: "Nothing breaks; heirlooms aren't doubled." },
+    { t: "Death in the Nether", how: "Die in the Nether.", want: "The resting place duty names the Nether with its coordinates." },
+    { t: "Saved after a restart", q: 1, how: "Quit to the title screen and open the world again.", want: "Family, duties, renown, oath progress and crypt progress are all still there." },
+  ]},
+  { key: "Q", id: "admin", title: "Settings and admin", tests: [
+    { t: "Changing a setting", how: "Close the world, set `\"heirChoices\": 2` in `run/config/bloodline.json`, open the world and die.", want: "Two children to choose from. Set it back to 3 afterwards." },
+    { t: "A bad value", how: "Put text where a number belongs in the settings file and open the world.", want: "The world opens; that setting falls back to its default." },
+    { t: "Resetting a family", how: "`/bloodline admin reset <your character's player>`", want: "A brand-new house, character, Chronicle and founding goals." },
+  ]},
+  { key: "R", id: "text", title: "Text", tests: [
+    { t: "No raw text keys", q: 1, how: "Watch chat, the Chronicle and tooltips during the whole round.", want: "Normal sentences everywhere; never a key such as \"bloodline.heir.title\"." },
+    { t: "Without the mod installed", how: "Run a dedicated server with the mod and join it with normal Minecraft 26.3.", want: "The Chronicle is a plain written book; choices open as Minecraft's own dialog windows and still work.", tags: ["needs setup"] },
+  ]},
+  { key: "S", id: "install", title: "Installing as a player", note: "Do this before a public release, outside the dev setup.", tests: [
+    { t: "Manual install", how: "Fabric installer for 26.3, then Fabric API and the release jar in `~/Library/Application Support/minecraft/mods`.", want: "The game starts with the fabric-loader profile; a new world starts with the Chronicle.", tags: ["needs setup"] },
+    { t: "Through a launcher app", how: "Install from Modrinth (or CurseForge) with its app once published.", want: "Fabric API comes along automatically; the mod shows its icon in the app.", tags: ["needs setup"] },
+    { t: "Dedicated server", how: "Start a Fabric server with the mod and Fabric API.", want: "It starts; `config/bloodline.json` is created; players can join.", tags: ["needs setup"] },
+  ]},
+  { key: "T", id: "website", title: "Website", note: "After pushing changes to the website.", tests: [
+    { t: "The site is live", q: 1, how: "Open ferzee.github.io/bloodline.", want: "The home page loads with its screenshots and icon." },
+    { t: "Guide and search", how: "Open the guide and search for \"sigil\".", want: "Results link to the right chapter and section." },
+    { t: "On a phone", how: "Open the site on your phone.", want: "Readable, menu works, nothing cut off." },
+    { t: "Up to date", how: "Compare what changed in this update with the guide.", want: "The guide (and the Player Guide document) describe the mod as it is now." },
+  ]},
+];
+
+GROUPS.forEach(g => g.tests.forEach((t, i) => { t.id = g.key + (i + 1); }));
+const ALL = GROUPS.flatMap(g => g.tests);
+
+const KEY = "bloodline-test-script-v1";
+let state = { marks: {}, mode: "full", run: {} };
+try { state = Object.assign(state, JSON.parse(localStorage.getItem(KEY) || "{}") || {}); } catch (e) {}
+state.marks = state.marks || {}; state.run = state.run || {};
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+const groupsEl = document.getElementById("groups");
+const tocEl = document.getElementById("toc");
+
+function inMode(t) { return state.mode === "full" || t.q; }
+function escapeHtml(s) { return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function rich(s) { return escapeHtml(s).replace(/`([^`]+)`/g, "<code>$1</code>"); }
+
+function render() {
+  groupsEl.innerHTML = "";
+  tocEl.innerHTML = "";
+  for (const g of GROUPS) {
+    const tests = g.tests.filter(inMode);
+    if (!tests.length) continue;
+    const li = document.createElement("li");
+    li.innerHTML = `<a href="#${g.id}"><span class="k">${g.key}</span>${escapeHtml(g.title)}<span class="n" data-toc="${g.id}"></span></a>`;
+    tocEl.appendChild(li);
+    const sec = document.createElement("section");
+    sec.className = "group"; sec.id = g.id;
+    sec.setAttribute("aria-labelledby", "h-" + g.id);
+    sec.innerHTML = `<h2 id="h-${g.id}"><span class="key">${g.key}</span>${escapeHtml(g.title)}<span class="tally" data-group="${g.id}"></span></h2>`;
+    if (g.note) { const p = document.createElement("p"); p.className = "group-note"; p.innerHTML = rich(g.note); sec.appendChild(p); }
+    for (const t of tests) sec.appendChild(testEl(t));
+    groupsEl.appendChild(sec);
+  }
+  document.getElementById("modeFull").setAttribute("aria-pressed", String(state.mode === "full"));
+  document.getElementById("modeQuick").setAttribute("aria-pressed", String(state.mode === "quick"));
+  update();
+}
+
+function testEl(t) {
+  const s = state.marks[t.id] || {};
+  const el = document.createElement("article");
+  el.className = "test" + (s.v ? " " + s.v : "");
+  const tags = (t.q ? ['<span class="tag quick">quick</span>'] : []).concat((t.tags || []).map(x => `<span class="tag">${escapeHtml(x)}</span>`)).join("");
+  el.innerHTML = `
+    <div class="head"><span class="id">${t.id}</span><h3>${escapeHtml(t.t)}</h3>${tags}</div>
+    <div class="body">
+      <div><span class="label">Do</span><p>${rich(t.how)}</p></div>
+      <div><span class="label">Expect</span><p>${rich(t.want)}</p></div>
+    </div>
+    <div class="verdict" role="group" aria-label="Result for ${escapeHtml(t.t)}">
+      <button type="button" class="v-ok" aria-pressed="${s.v === "ok"}">Works</button>
+      <button type="button" class="v-bad" aria-pressed="${s.v === "bad"}">Broken</button>
+      <button type="button" class="v-skip" aria-pressed="${s.v === "skip"}">Skip</button>
+    </div>
+    <div class="note" ${s.v === "bad" ? "" : "hidden"}>
+      <label for="note-${t.id}">What happened instead?</label>
+      <textarea id="note-${t.id}"></textarea>
+    </div>`;
+  const note = el.querySelector("textarea");
+  note.value = s.note || "";
+  note.addEventListener("input", () => { state.marks[t.id] = { ...(state.marks[t.id] || {}), note: note.value }; save(); updateReport(); });
+  for (const v of ["ok", "bad", "skip"]) el.querySelector(".v-" + v).addEventListener("click", () => setVerdict(t, el, v));
+  return el;
+}
+
+function setVerdict(t, el, v) {
+  const cur = state.marks[t.id] || {};
+  const next = cur.v === v ? undefined : v;
+  state.marks[t.id] = { ...cur, v: next };
+  save();
+  el.className = "test" + (next ? " " + next : "");
+  for (const x of ["ok", "bad", "skip"]) el.querySelector(".v-" + x).setAttribute("aria-pressed", String(next === x));
+  const note = el.querySelector(".note");
+  note.hidden = next !== "bad";
+  if (next === "bad") note.querySelector("textarea").focus();
+  update();
+}
+
+function update() {
+  const tests = ALL.filter(inMode);
+  const n = v => tests.filter(t => state.marks[t.id]?.v === v).length;
+  const ok = n("ok"), bad = n("bad"), skip = n("skip");
+  const pct = x => (x / tests.length * 100) + "%";
+  document.getElementById("barOk").style.width = pct(ok);
+  document.getElementById("barBad").style.width = pct(bad);
+  document.getElementById("barSkip").style.width = pct(skip);
+  document.getElementById("counts").innerHTML = `<b>${ok + bad + skip}</b> of ${tests.length} · <b>${ok}</b> work · <b>${bad}</b> broken · <b>${skip}</b> skipped`;
+  for (const g of GROUPS) {
+    const gt = g.tests.filter(inMode);
+    const done = gt.filter(t => state.marks[t.id]?.v).length;
+    const label = `${done}/${gt.length}`;
+    const tally = groupsEl.querySelector(`[data-group="${g.id}"]`);
+    if (tally) tally.textContent = label;
+    const toc = tocEl.querySelector(`[data-toc="${g.id}"]`);
+    if (toc) toc.textContent = label;
+  }
+  updateReport();
+}
+
+function updateReport() {
+  const tests = ALL.filter(inMode);
+  const run = state.run;
+  const lines = [
+    `Bloodline Chronicles test report (${state.mode === "full" ? "full test" : "quick check"})`,
+    `Version: ${run.version || "?"} · Tested by: ${run.tester || "?"} · Setup: ${run.setup || "?"} · ${new Date().toISOString().slice(0, 10)}`,
+  ];
+  const count = v => tests.filter(t => state.marks[t.id]?.v === v).length;
+  lines.push(`${count("ok")} work, ${count("bad")} broken, ${count("skip")} skipped, ${tests.length - count("ok") - count("bad") - count("skip")} not tested`, "");
+  const broken = tests.filter(t => state.marks[t.id]?.v === "bad");
+  if (broken.length) {
+    lines.push("BROKEN");
+    for (const t of broken) lines.push(`${t.id} ${t.t}` + (state.marks[t.id].note ? ` — ${state.marks[t.id].note.trim()}` : ""));
+    lines.push("");
+  }
+  for (const g of GROUPS) {
+    const gt = g.tests.filter(inMode);
+    if (!gt.length) continue;
+    lines.push(`${g.key} ${g.title}`);
+    for (const t of gt) {
+      const v = state.marks[t.id]?.v;
+      lines.push(`  ${v === "ok" ? "[works]" : v === "bad" ? "[BROKEN]" : v === "skip" ? "[skipped]" : "[not tested]"} ${t.id} ${t.t}`);
+    }
+  }
+  document.getElementById("reportText").value = lines.join("\n");
+}
+
+function flash(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  setTimeout(() => { if (el.textContent === msg) el.textContent = ""; }, 2500);
+}
+async function copyText(text, fallbackEl) {
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch (e) { if (fallbackEl) { fallbackEl.focus(); fallbackEl.select?.(); } return false; }
+}
+
+for (const [id, field] of [["runVersion", "version"], ["runTester", "tester"], ["runSetup", "setup"]]) {
+  const input = document.getElementById(id);
+  input.value = state.run[field] || "";
+  input.addEventListener("input", () => { state.run[field] = input.value; save(); updateReport(); });
+}
+document.getElementById("modeFull").addEventListener("click", () => { state.mode = "full"; save(); render(); });
+document.getElementById("modeQuick").addEventListener("click", () => { state.mode = "quick"; save(); render(); });
+document.getElementById("copyReport").addEventListener("click", async () => {
+  const ta = document.getElementById("reportText");
+  flash(await copyText(ta.value, ta) ? "Copied" : "Selected: press Cmd+C to copy");
+});
+document.getElementById("jumpReport").addEventListener("click", () => document.getElementById("report").scrollIntoView({ behavior: "smooth" }));
+document.getElementById("reset").addEventListener("click", (e) => {
+  const btn = e.currentTarget;
+  if (btn.dataset.armed) {
+    state.marks = {}; save(); render();
+    btn.textContent = "New round"; delete btn.dataset.armed;
+    flash("Cleared: ready for a new round");
+    return;
+  }
+  btn.dataset.armed = "1"; btn.textContent = "Click again to clear all marks";
+  setTimeout(() => { if (btn.dataset.armed) { delete btn.dataset.armed; btn.textContent = "New round"; } }, 3000);
+});
+document.querySelectorAll("[data-copy]").forEach(btn => btn.addEventListener("click", async () => {
+  const text = btn.parentElement.querySelector("code").textContent.trim();
+  const ok = await copyText(text, null);
+  btn.textContent = ok ? "Copied" : "Copy failed";
+  setTimeout(() => btn.textContent = "Copy", 1500);
+}));
+
+render();
+</script>

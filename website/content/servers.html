@@ -56,7 +56,7 @@
 <p>Put the same two files in the <code>mods</code> folder of a Fabric profile in your launcher, or install from Modrinth or CurseForge with their apps. Every new world starts with your first house.</p>
 
 <h3>Inns and crypts</h3>
-<p>Roadside inns and barrow crypts generate in <strong>newly explored land</strong>, so on an existing world players have to travel to new chunks to find them. Village inns work everywhere: an innkeeper appears at any village bell.</p>
+<p>Roadside inns, barrow crypts and wayside shrines generate in <strong>newly explored land</strong>, so on an existing world players have to travel to new chunks to find them. Village inns work everywhere: an innkeeper appears at any village bell.</p>
 </section>
 
 <section aria-labelledby="settings">
@@ -83,7 +83,7 @@
 <tbody>
 <tr><td class="k">actThresholds</td><td class="num">0, 10, 25, 45</td><td>Renown the house needs to begin each act of the oath.</td></tr>
 <tr><td class="k">perFulfilledOath</td><td class="num">50</td><td>Extra renown every act needs for each oath the house already fulfilled.</td></tr>
-<tr><td class="k">bloodDebt, actCompleted, cryptCleared, familyEvent, reclaimedHeirloom, unfinishedBusiness, innJob, restingPlace, foundingGoal, preparation</td><td class="num">5, 5, 6, 4, 4, 3, 3, 2, 2, 2</td><td>Renown for each kind of deed.</td></tr>
+<tr><td class="k">bloodDebt, actCompleted, cryptCleared, familyEvent, reclaimedHeirloom, unfinishedBusiness, innJob, restingPlace, foundingGoal, preparation, shrineVisited</td><td class="num">5, 5, 6, 4, 4, 3, 3, 2, 2, 2, 1</td><td>Renown for each kind of deed.</td></tr>
 <tr><td class="k">debtInherited<br>debtForgotten</td><td class="num">-2<br>-3</td><td>Renown lost per unpaid blood debt at death, and when an old debt is pushed out.</td></tr>
 <tr><td class="k">maxBloodDebts</td><td class="num">3</td><td>Most unpaid blood debts a house can carry.</td></tr>
 </tbody>
@@ -153,7 +153,8 @@
 
 <span class="c-c"># Find the nearest roadside inn or barrow crypt</span>
 /locate structure <span class="c-s">bloodline:roadside_inn</span>
-/locate structure <span class="c-s">bloodline:crypt</span></pre></div>
+/locate structure <span class="c-s">bloodline:crypt</span>
+/locate structure <span class="c-s">bloodline:shrine_temperate</span>   <span class="c-c"># or shrine_cold, shrine_warm</span></pre></div>
 
 <p>For testing, there are also debug commands:</p>
 <div class="tbl"><table>

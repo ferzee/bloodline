@@ -66,6 +66,7 @@ public class Bloodline implements ModInitializer {
 					Quests.tick(player, lineage);
 					Questlines.tickReclaim(player, lineage);
 					safely("crypt tick", () -> Crypts.tick(player));
+					safely("shrine tick", () -> Shrines.tick(player));
 					if (server.getTickCount() % INN_TICK_INTERVAL == 0) {
 						Inns.tick(player);
 						Stewards.tick(player, lineage);
@@ -88,8 +89,10 @@ public class Bloodline implements ModInitializer {
 			if (killed instanceof ServerPlayer victim) Quests.onPlayerKilled(player, victim);
 			Quests.onKill(player, killed);
 			Identifier type = BuiltInRegistries.ENTITY_TYPE.getKey(killed.getType());
-			if (type.getNamespace().equals("minecraft") && BOSSES.contains(type.getPath())) {
-				Lineages.milestone(player, "killed_" + type.getPath() + "_" + Lineages.get(player).current.generation(), "milestone.killed." + type.getPath());
+			// Fake players from other mods (deployers, turtles) kill things too, but have no family.
+			var lineage = Lineages.get(player);
+			if (lineage != null && type.getNamespace().equals("minecraft") && BOSSES.contains(type.getPath())) {
+				Lineages.milestone(player, "killed_" + type.getPath() + "_" + lineage.current.generation(), "milestone.killed." + type.getPath());
 			}
 		});
 
@@ -117,9 +120,11 @@ public class Bloodline implements ModInitializer {
 		UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
 			if (!(player instanceof ServerPlayer serverPlayer) || hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
 			try {
+				InteractionResult shrine = Shrines.onUseBlock(serverPlayer, level, hit.getBlockPos(), player.getItemInHand(hand));
+				if (shrine != InteractionResult.PASS) return shrine;
 				return Crypts.onUseBlock(serverPlayer, level, hit.getBlockPos());
 			} catch (RuntimeException e) {
-				LOGGER.error("Bloodline: crypt interaction failed", e);
+				LOGGER.error("Bloodline: crypt or shrine interaction failed", e);
 				return InteractionResult.PASS;
 			}
 		});

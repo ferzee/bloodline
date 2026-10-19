@@ -426,6 +426,8 @@ public final class Crypts {
 			player.sendSystemMessage(Text.t("crypt.seal.cold").withStyle(ChatFormatting.GRAY));
 			return;
 		}
+		// On Peaceful the founder would vanish as soon as they rose, taking the reward with them.
+		if (!Champions.canAppear(player)) return;
 		ItemStack sigil = findSigil(player, core.key());
 		if (sigil.isEmpty()) {
 			player.sendSystemMessage(Text.t("crypt.seal.no_sigil", fallen.house()).withStyle(ChatFormatting.GRAY));

@@ -10,7 +10,8 @@
 			"io.github.fersyvanderzee.bloodline.QuestGameTests",
 			"io.github.fersyvanderzee.bloodline.OathGameTests",
 			"io.github.fersyvanderzee.bloodline.PlaceGameTests",
-			"io.github.fersyvanderzee.bloodline.HouseGameTests"
+			"io.github.fersyvanderzee.bloodline.HouseGameTests",
+			"io.github.fersyvanderzee.bloodline.LifeGameTests"
 		]
 	},
 	"depends": {

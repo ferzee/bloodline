@@ -580,7 +580,7 @@ public final class Questlines {
 			weapon = Optional.of(lineage.house.lostHeirlooms.getFirst());
 		}
 		List<String> preparations = isOathStep(quest) ? List.copyOf(lineage.house.preparations) : List.of();
-		Champions.spawn(player, kind, key, weapon, preparations);
+		if (!Champions.spawn(player, kind, key, weapon, preparations)) return;
 		for (String effect : preparations) {
 			player.sendSystemMessage(Text.t("prep.pays_off", describeEffect(effect)).withStyle(ChatFormatting.GREEN));
 		}

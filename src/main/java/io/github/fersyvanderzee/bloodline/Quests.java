@@ -46,7 +46,11 @@ public final class Quests {
 	private static final int MIN_TICKS_BEFORE_VISIT = 600;
 	/** Blood debts are marked with the branch whose ancestor they avenge. */
 	private static final String DEBT_PREFIX = "debt:";
-	private static final float STRONG_KILLER_HEALTH = 100;
+	/** Killers this strong, or this rare, only have to be slain once (or twice) to settle the debt. */
+	private static final float STRONG_KILLER_HEALTH = 80;
+	private static final float TOUGH_KILLER_HEALTH = 40;
+	private static final java.util.Set<String> RARE_KILLERS = java.util.Set.of("minecraft:evoker", "minecraft:illusioner",
+		"minecraft:piglin_brute", "minecraft:breeze");
 
 	/** Text is in the language file as bloodline.unfinished.<key> (the title, with the ancestor's name) and .task. */
 	private record Template(String key, Goal goal, List<String> targets, int required, int displayScale, Reward reward) {
@@ -162,7 +166,8 @@ public final class Quests {
 					List.of(otherPlayer.getUUID().toString()), 1, reward);
 			} else {
 				Identifier type = BuiltInRegistries.ENTITY_TYPE.getKey(killer.getType());
-				int count = killer.getMaxHealth() >= STRONG_KILLER_HEALTH ? 1 : 5;
+				int count = killer.getMaxHealth() >= STRONG_KILLER_HEALTH || RARE_KILLERS.contains(type.toString()) ? 1
+					: killer.getMaxHealth() >= TOUGH_KILLER_HEALTH ? 2 : 5;
 				debt = Quest.of(Type.BLOOD_DEBT, Text.t("debt.title", ancestor.name()),
 					Text.t("debt.slay", killer.getType().getDescription()), Goal.KILL,
 					List.of(type.toString()), count, reward);
@@ -176,9 +181,9 @@ public final class Quests {
 			}
 		}
 
-		GlobalPos place = GlobalPos.of(player.level().dimension(), player.blockPosition());
-		add(player, lineage, Quest.of(Type.RESTING_PLACE, Text.t("resting.title", ancestor.name()),
-			Text.t("resting.task", ancestor.name(), describe(place)), Goal.VISIT, List.of(), 1, Reward.levels(3)).at(place, VISIT_RADIUS));
+		// Someone lost to the void has no resting place to visit.
+		ancestor.place().ifPresent(place -> add(player, lineage, Quest.of(Type.RESTING_PLACE, Text.t("resting.title", ancestor.name()),
+			Text.t("resting.task", ancestor.name(), describe(place)), Goal.VISIT, List.of(), 1, Reward.levels(3)).at(place, VISIT_RADIUS)));
 
 		List<Template> options = BY_EPITHET.getOrDefault(Epithets.id(ancestor.epithet()), GENERAL);
 		add(player, lineage, options.get(player.getRandom().nextInt(options.size())).create(ancestor.name()));
