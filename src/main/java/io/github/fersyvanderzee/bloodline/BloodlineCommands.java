@@ -154,8 +154,35 @@ final class BloodlineCommands {
 							ctx.getSource().sendSuccess(() -> Text.t("command.reset", target.getGameProfile().name()), true);
 							return 1;
 						}))))
+			.then(Commands.literal("manor")
+				.then(Commands.literal("claim").executes(ctx -> Manors.claim(ctx.getSource().getPlayerOrException()) ? 1 : 0)))
 			.then(Commands.literal("debug")
 				.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+				.then(Commands.literal("manor")
+					.executes(ctx -> {
+						var description = Manors.describe(ctx.getSource().getPlayerOrException());
+						if (description.isEmpty()) {
+							ctx.getSource().sendFailure(Text.t("command.manor.none"));
+							return 0;
+						}
+						ctx.getSource().sendSuccess(description::get, false);
+						return 1;
+					})
+					.then(Commands.literal("clear").executes(ctx -> {
+						if (!Manors.debugClear(ctx.getSource().getPlayerOrException())) {
+							ctx.getSource().sendFailure(Text.t("command.manor.none"));
+							return 0;
+						}
+						return 1;
+					}))
+					.then(Commands.literal("reset").executes(ctx -> {
+						if (!Manors.reset(ctx.getSource().getPlayerOrException())) {
+							ctx.getSource().sendFailure(Text.t("command.manor.none"));
+							return 0;
+						}
+						ctx.getSource().sendSuccess(() -> Text.t("command.manor.reset"), true);
+						return 1;
+					})))
 				.then(Commands.literal("crypt")
 					.executes(ctx -> {
 						ServerPlayer player = ctx.getSource().getPlayerOrException();

@@ -75,7 +75,8 @@ public final class Sacrifice {
 		Optional<Component> grave = graveNear(player, lineage).map(name -> Text.t("sacrifice.place.grave", name));
 		// Founders have no graves to kneel at yet, so they may perform the ritual at the steward's home instead.
 		boolean founder = lineage.ancestors.stream().noneMatch(a -> a.place().isPresent());
-		boolean atSeat = grave.isEmpty() && founder && atStewardsHome(player, lineage);
+		// The family seat (a claimed manor) will do for anyone; a founder without one may use the steward's home.
+		boolean atSeat = grave.isEmpty() && (Manors.atSeat(player, lineage) || founder && atStewardsHome(player, lineage));
 		return new Conditions(lineage.fulfilledAct, night, fullMoon, atSeat ? Optional.of(Text.t("sacrifice.place.seat")) : grave, atSeat, founder, nightsUntil);
 	}
 

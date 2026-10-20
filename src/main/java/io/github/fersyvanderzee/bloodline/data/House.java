@@ -37,25 +37,27 @@ public class House {
 		Extras.MAP_CODEC.forGetter(House::extras)
 	).apply(i, (id, name, head, members, chronicle, milestones, quests, oath, oathActs, actPending, legacies, lostHeirlooms, renown,
 				 preparations, extras) -> new House(id, name, head, members, chronicle, milestones, quests, oath, oathActs, actPending, legacies,
-		lostHeirlooms, renown, preparations, extras.sacrifices(), extras.steward(), extras.fulfilledOaths(), extras.nextEventDay(), extras.pendingEvent())));
+		lostHeirlooms, renown, preparations, extras.sacrifices(), extras.steward(), extras.fulfilledOaths(), extras.nextEventDay(), extras.pendingEvent(),
+		extras.seat())));
 
 	/**
 	 * Fields saved alongside the others, grouped only because a codec can hold at most 16 fields.
 	 * They are stored at the same level as the rest, so older saves read the same.
 	 */
 	private record Extras(int sacrifices, Optional<Steward> steward, List<String> fulfilledOaths, int nextEventDay,
-						  Optional<PendingEvent> pendingEvent) {
+						  Optional<PendingEvent> pendingEvent, Optional<Seat> seat) {
 		static final MapCodec<Extras> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
 			Codec.INT.optionalFieldOf("sacrifices", 0).forGetter(Extras::sacrifices),
 			Steward.CODEC.optionalFieldOf("steward").forGetter(Extras::steward),
 			Codec.STRING.listOf().optionalFieldOf("fulfilled_oaths", List.of()).forGetter(Extras::fulfilledOaths),
 			Codec.INT.optionalFieldOf("next_event_day", 0).forGetter(Extras::nextEventDay),
-			PendingEvent.CODEC.optionalFieldOf("pending_event").forGetter(Extras::pendingEvent)
+			PendingEvent.CODEC.optionalFieldOf("pending_event").forGetter(Extras::pendingEvent),
+			Seat.CODEC.optionalFieldOf("seat").forGetter(Extras::seat)
 		).apply(i, Extras::new));
 	}
 
 	private Extras extras() {
-		return new Extras(sacrifices, steward, List.copyOf(fulfilledOaths), nextEventDay, pendingEvent);
+		return new Extras(sacrifices, steward, List.copyOf(fulfilledOaths), nextEventDay, pendingEvent, seat);
 	}
 
 	public final UUID id;
@@ -91,11 +93,13 @@ public class House {
 	/** The day the next family event may happen (0 = not scheduled yet), and one waiting for a choice. */
 	public int nextEventDay;
 	public Optional<PendingEvent> pendingEvent;
+	/** The Fallen Manor the house claimed as its family seat, if any (see Manors). */
+	public Optional<Seat> seat;
 
 	public House(UUID id, String name, UUID head, List<UUID> members, List<ChronicleEntry> chronicle, List<String> milestones,
 				 List<Quest> quests, Optional<String> oath, int oathActs, boolean actPending, List<String> legacies,
 				 List<ItemStack> lostHeirlooms, int renown, List<String> preparations, int sacrifices, Optional<Steward> steward,
-				 List<String> fulfilledOaths, int nextEventDay, Optional<PendingEvent> pendingEvent) {
+				 List<String> fulfilledOaths, int nextEventDay, Optional<PendingEvent> pendingEvent, Optional<Seat> seat) {
 		this.id = id;
 		this.name = name;
 		this.head = head;
@@ -115,11 +119,12 @@ public class House {
 		this.fulfilledOaths = new ArrayList<>(fulfilledOaths);
 		this.nextEventDay = nextEventDay;
 		this.pendingEvent = pendingEvent;
+		this.seat = seat;
 	}
 
 	public static House found(String name, UUID head) {
 		return new House(UUID.randomUUID(), name, head, List.of(head), List.of(), List.of(), List.of(), Optional.empty(), 0, false,
-			List.of(), List.of(), 0, List.of(), 0, Optional.empty(), List.of(), 0, Optional.empty());
+			List.of(), List.of(), 0, List.of(), 0, Optional.empty(), List.of(), 0, Optional.empty(), Optional.empty());
 	}
 
 	/** Whether a quest of this type belongs to the whole house rather than one member. */

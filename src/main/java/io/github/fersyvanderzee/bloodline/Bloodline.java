@@ -67,6 +67,7 @@ public class Bloodline implements ModInitializer {
 					Questlines.tickReclaim(player, lineage);
 					safely("crypt tick", () -> Crypts.tick(player));
 					safely("shrine tick", () -> Shrines.tick(player));
+					safely("manor tick", () -> Manors.tick(player));
 					if (server.getTickCount() % INN_TICK_INTERVAL == 0) {
 						Inns.tick(player);
 						Stewards.tick(player, lineage);
@@ -122,6 +123,8 @@ public class Bloodline implements ModInitializer {
 			try {
 				InteractionResult shrine = Shrines.onUseBlock(serverPlayer, level, hit.getBlockPos(), player.getItemInHand(hand));
 				if (shrine != InteractionResult.PASS) return shrine;
+				InteractionResult manor = Manors.onUseBlock(serverPlayer, level, hit.getBlockPos());
+				if (manor != InteractionResult.PASS) return manor;
 				return Crypts.onUseBlock(serverPlayer, level, hit.getBlockPos());
 			} catch (RuntimeException e) {
 				LOGGER.error("Bloodline: crypt or shrine interaction failed", e);

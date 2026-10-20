@@ -126,6 +126,16 @@ Nothing yet.
 - **An ancestor's blessing.** Light the altar candles with flint and steel and your most recent ancestor watches over you for ten minutes, with a blessing that matches how they lived: Strength for a Slayer, Haste for a Delver, Speed for a Wanderer, and so on. Once a Minecraft day per family member.
 - **Every shrine has its own name** (such as the Shrine of the Last Traveller). A house's first visit to each one earns 1 renown and a line in the Chronicle.
 
+### The Fallen Manor
+
+- **The overgrown country house of a forgotten family,** rare (about one per thousand blocks) in plains, forests and taiga: a walled estate with a gatehouse, a dry fountain, a house with a library, a great hall, a study, bedrooms and a cellar, and a walled garden with an old family graveyard. Each manor belongs to a different lost house (such as Ravensworth Manor).
+- **Drive out the squatters.** When you first set foot on the grounds, the Usurper and their band come out to meet you. They grow stronger as your house's renown grows.
+- **The last will.** With the Usurper gone, the family's will lies torn in four pages, hidden in the library, the study, the cellar and the garden. Bring them to the lectern in the great hall and read the will.
+- **Your family seat.** The will lets your house claim the manor as its seat (+10 renown, a line in the Chronicle, a server-wide announcement). One seat per house.
+  - **The steward moves in** to the great hall (a new one is taken on if the house had none), and the Sacrifice can be performed at the seat.
+  - **The family graveyard:** every ancestor of the house gets a gravestone in the manor's garden, with their name, epithet, generation and the days they lived. Every family member who dies after that gets one too.
+- Innkeepers can sell a rumour that points to a fallen manor.
+
 ### Family events
 
 - Every few days something happens to your house:

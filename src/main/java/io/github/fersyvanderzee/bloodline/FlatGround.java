@@ -31,7 +31,8 @@ public final class FlatGround {
 		"roadside_inn/start", 5,
 		"shrine/temperate", 3,
 		"shrine/cold", 3,
-		"shrine/warm", 3);
+		"shrine/warm", 3,
+		"manor/start", 4);
 	/** Most of the footprint that may be water. */
 	private static final double MAX_WATER = 0.1;
 	private static final int STEP = 4;

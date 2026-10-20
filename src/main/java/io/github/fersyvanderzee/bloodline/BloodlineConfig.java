@@ -56,6 +56,8 @@ public final class BloodlineConfig {
 		public int cryptCleared = 6;
 		/** For the house's first visit to each wayside shrine. */
 		public int shrineVisited = 1;
+		/** For claiming a Fallen Manor as the family seat. */
+		public int manorClaimed = 10;
 		/** Extra renown every act needs for each oath the house has already fulfilled. */
 		public int perFulfilledOath = 50;
 	}

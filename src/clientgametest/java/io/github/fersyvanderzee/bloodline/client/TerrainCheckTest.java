@@ -21,27 +21,39 @@ import java.util.List;
 /**
  * Builds the same normal world twice, first with Minecraft's own placement and then with {@link FlatGround}, and
  * measures how well each crypt and roadside inn sits on the land around it. Writes the numbers to the log and a
- * screenshot of each structure. Slow, so it only runs when asked: ./gradlew runClientGametest -Pterrain=true
+ * screenshot of each structure. Slow, so it only runs when asked: ./gradlew runClientGametest -Pterrain=true, or for some
+ * structures only (in the new world only): -Pterrain=fallen_manor,shrine_cold
  */
 public class TerrainCheckTest implements FabricClientGameTest {
 	private static final String SEED = "bloodline-terrain";
 	private static final BlockPos[] SEARCH_FROM = {new BlockPos(0, 0, 0), new BlockPos(2500, 0, 0), new BlockPos(0, 0, 2500), new BlockPos(-2500, 0, -1500)};
 	/** The level the structure stands on, measured from the bottom of its first piece: the crypt is sunk 16 blocks into the ground. */
 	private static final int CRYPT_GROUND = 16;
+	/** The manor's grounds are 6 above the bottom of its cellar. */
+	private static final int MANOR_GROUND = 6;
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
-		if (!Boolean.getBoolean("bloodline.terrain")) return;
+		String switchedOn = System.getProperty("bloodline.terrain", "false");
+		if (switchedOn.equals("false")) return;
 		List<String> report = new ArrayList<>();
-		for (boolean flat : new boolean[]{false, true}) {
+		// "true" checks everything, before and after; a list of structure ids ("fallen_manor") checks only those, after.
+		String only = System.getProperty("bloodline.terrain");
+		boolean all = only.equals("true");
+		for (boolean flat : all ? new boolean[]{false, true} : new boolean[]{true}) {
 			FlatGround.enabled = flat;
 			String mode = flat ? "new" : "old";
 			try (TestSingleplayerContext world = context.worldBuilder().setUseConsistentSettings(false)
 				.adjustSettings(s -> s.setSeed(SEED)).create()) {
 				// A spectator can hang in the air for the screenshots without falling.
 				world.getServer().runCommand("gamemode spectator @a");
-				// Shrines are new, so only the new placement is worth looking at.
-				List<String> ids = flat ? List.of("crypt", "roadside_inn", "shrine_temperate", "shrine_cold", "shrine_warm") : List.of("crypt", "roadside_inn");
+				// Clean pictures: no interface, and able to see inside dark buildings.
+				world.getServer().runCommand("effect give @a night_vision infinite 0 true");
+				context.getInput().pressKey(options -> options.keyToggleGui);
+				// Shrines and manors are new, so only the new placement is worth looking at.
+				List<String> ids = !all ? List.of(only.split(","))
+					: flat ? List.of("crypt", "roadside_inn", "shrine_temperate", "shrine_cold", "shrine_warm", "fallen_manor")
+					: List.of("crypt", "roadside_inn");
 				for (String id : ids) {
 					for (int i = 0; i < SEARCH_FROM.length; i++) {
 						BlockPos from = SEARCH_FROM[i];
@@ -53,6 +65,14 @@ public class TerrainCheckTest implements FabricClientGameTest {
 						log(report, String.format("%s %-12s #%d at %6d %6d: ground %+d..%+d around it, %d%% of the edge more than 2 blocks off",
 							mode, id, i, m.center.getX(), m.center.getZ(), m.lowest, m.highest, m.offPercent));
 						boolean small = id.startsWith("shrine");
+						if (id.equals("fallen_manor")) {
+							// From beyond the gate, then from inside the great hall, looking at the lectern.
+							shoot(context, world, m.center.relative(m.front, 34).atY(m.base + 10), m.center.atY(m.base + 4),
+								"terrain_" + mode + "_manor_" + i);
+							shoot(context, world, m.center.relative(m.front, 1).atY(m.base + 2),
+								m.center.relative(m.front.getOpposite(), 6).atY(m.base + 1), "terrain_" + mode + "_manor_hall_" + i);
+							continue;
+						}
 						// Shrines are seen from the front, a little to one side, so the altar shows.
 						BlockPos eye = small
 							? m.center.relative(m.front, 10).relative(m.front.getClockWise(), 3).atY(m.base + 4)
@@ -69,6 +89,14 @@ public class TerrainCheckTest implements FabricClientGameTest {
 		FlatGround.enabled = true;
 		Bloodline.LOGGER.info("[terrain] summary:");
 		report.forEach(line -> Bloodline.LOGGER.info("[terrain]   {}", line));
+	}
+
+	private static void shoot(ClientGameTestContext context, TestSingleplayerContext world, BlockPos eye, BlockPos look, String name) {
+		world.getServer().runCommand("tp @a " + eye.getX() + " " + eye.getY() + " " + eye.getZ() + " facing "
+			+ look.getX() + " " + look.getY() + " " + look.getZ());
+		context.waitTicks(40);
+		world.getConnection().waitForChunksRender();
+		context.takeScreenshot(name);
 	}
 
 	private static void log(List<String> report, String line) {
@@ -90,7 +118,7 @@ public class TerrainCheckTest implements FabricClientGameTest {
 		StructureStart start = level.getChunk(found.getX() >> 4, found.getZ() >> 4).getStartForStructure(structure.value());
 		if (start == null || !start.isValid()) return null;
 		BoundingBox box = start.getPieces().getFirst().getBoundingBox();
-		int base = box.minY() + (id.equals("crypt") ? CRYPT_GROUND : 0);
+		int base = box.minY() + (id.equals("crypt") ? CRYPT_GROUND : id.equals("fallen_manor") ? MANOR_GROUND : 0);
 		int lowest = Integer.MAX_VALUE, highest = Integer.MIN_VALUE, off = 0, total = 0;
 		// The ring of columns two blocks outside the footprint, every other block.
 		for (int x = box.minX() - 2; x <= box.maxX() + 2; x += 2) {

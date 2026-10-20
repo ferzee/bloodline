@@ -32,7 +32,7 @@ Running it needs `JAVA_HOME` (the script defaults to Homebrew's `openjdk@25`). I
 | Only text in `en_us.json` | `python3 tools/check_text.py` | Read the new text in context: does it point players to the Chronicle, not to commands? |
 | Game logic in `src/main` | `tools/check.sh --no-client` | Add or adjust a game test (section 4). |
 | Screens in `src/client` (scrolls, Chronicle) or GUI sprites | `tools/check.sh` | Look at every screenshot. Check the text fits and nothing overlaps, in both the mod's screens and the vanilla fallback. |
-| Structures (`tools/generate_*.py`, worldgen JSON, `FlatGround`) | Regenerate, then `tools/check.sh --no-client`, then `./gradlew runClientGametest -Pterrain=true` | `PlaceGameTests` place the inn and the crypt. The terrain check builds a normal world with and without `FlatGround`, finds crypts, inns and shrines, logs how far the land around each is from its ground level (`[terrain]` lines) and takes a screenshot of each (`terrain_*`). For looks, ask the user to `/locate` and look (test-script K, M). |
+| Structures (`tools/generate_*.py`, worldgen JSON, `FlatGround`) | Regenerate, then `tools/check.sh --no-client`, then `./gradlew runClientGametest -Pterrain=true` (everything, before and after; or `-Pterrain=fallen_manor,shrine_cold` for just those structures, after) | `PlaceGameTests` place the inn and the crypt. The terrain check builds a normal world with and without `FlatGround`, finds crypts, inns, shrines and manors, logs how far the land around each is from its ground level (`[terrain]` lines) and takes a screenshot of each (`terrain_*`). For looks, ask the user to `/locate` and look (test-script K, M). |
 | Config (`BloodlineConfig`) | `tools/check.sh --no-client` | Update the server owners' page (`website/content/servers.html`). |
 | The website | `python3 website/build.py`, then preview `website/dist` | Check desktop and phone width (375 px) in the browser pane. Nothing should scroll sideways. |
 | Before a release | `tools/check.sh` | Ask the user for a **Full test** with the test script, plus sections S and T. |
@@ -107,6 +107,7 @@ This table shows which test-script sections are also covered by game tests, and 
 | L Steward | **none yet** | everything: hiring, the vault, moving |
 | M Crypts | `aCryptCanBeSolvedOpenedAndLaidToRest` | wrong order, protection, the looks |
 | U Shrines | `aShrineBlessesOnceADayAndCountsAFirstVisit`, the terrain check (screenshots) | the looks, the welcome message, the barrel |
+| V Manor | `aManorCanBeFreedClaimedAndKeepsTheFamilyGraves`, the terrain check (screenshots) | the looks, the will scroll, the gate sign, another house's visit |
 | N Events | `sicknessIsCuredByAGoldenApple`, `aFeudAcceptedSendsTheRivalChampion`, `aFeudBoughtOffCostsRenown`, `aTributeYouCantPayStartsTheFeud`, `aWeddingBlessesTheNextChildren`, `aCousinBringsAnHeirloom`, `aRestlessSpiritHauntsAnAncestorsGrave` | night timing, expiry |
 | O Multiplayer | `aPlayerCanJoinAnotherHouseAndShareItsDuties`, `joiningFreshStartsANewCharacter`, `leavingAHouseFoundsANewOne` | real two-client play |
 | P Edge cases | `championsWaitWhileTheWorldIsPeaceful`, `aBossKilledByAnotherModsFakePlayerDoesNotCrash` | keepInventory, saving after a restart |

@@ -101,8 +101,13 @@ public final class Champions {
 		Map.of(EquipmentSlot.MAINHAND, Items.IRON_SWORD, EquipmentSlot.HEAD, Items.CHAINMAIL_HELMET, EquipmentSlot.CHEST, Items.IRON_CHESTPLATE),
 		EntityTypes.SKELETON, 2, BossEvent.BossBarColor.PURPLE);
 
+	// The leader of the band that moved into a Fallen Manor.
+	public static final Kind USURPER = new Kind("usurper", EntityTypes.VINDICATOR, 110, 2,
+		Map.of(EquipmentSlot.MAINHAND, Items.IRON_AXE, EquipmentSlot.HEAD, Items.CHAINMAIL_HELMET, EquipmentSlot.CHEST, Items.IRON_CHESTPLATE),
+		EntityTypes.PILLAGER, 3, BossEvent.BossBarColor.RED);
+
 	public static final List<Kind> ALL = List.of(FORTRESS_CAPTAIN, LOST_DELVER, WARLORD, THIEF, ROTGUT, OLD_BONES, BROODMOTHER, DESERTER, RIVAL, SHADE,
-		BARROW_LORD);
+		BARROW_LORD, USURPER);
 	public static final List<Kind> BOUNTIES = List.of(ROTGUT, OLD_BONES, BROODMOTHER, DESERTER);
 
 	private static final Map<LivingEntity, ServerBossEvent> BARS = new IdentityHashMap<>();
@@ -206,7 +211,7 @@ public final class Champions {
 		return true;
 	}
 
-	private static final java.util.Set<String> SCALED = java.util.Set.of("rival", "shade", "rotgut", "old_bones", "broodmother", "deserter", "thief", "barrow_lord");
+	private static final java.util.Set<String> SCALED = java.util.Set.of("rival", "shade", "rotgut", "old_bones", "broodmother", "deserter", "thief", "barrow_lord", "usurper");
 
 	private static boolean scaled(Kind kind) {
 		return SCALED.contains(kind.id());
@@ -272,6 +277,7 @@ public final class Champions {
 			if (tag.startsWith(KEY_TAG)) key = tag.substring(KEY_TAG.length());
 		}
 		if (key != null && key.startsWith(Crypts.KEY_PREFIX)) Crypts.onFounderSlain(server, champion, key.substring(Crypts.KEY_PREFIX.length()));
+		if (key != null && key.startsWith(Manors.KEY_PREFIX)) Manors.onUsurperSlain(server, champion, key.substring(Manors.KEY_PREFIX.length()));
 		if (owner == null || key == null) return;
 		Lineage lineage = BloodlineState.get(server).get(owner);
 		if (lineage == null) return;

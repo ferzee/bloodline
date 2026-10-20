@@ -366,4 +366,86 @@ public class PlaceGameTests {
 		check(helper, result == net.minecraft.world.InteractionResult.SUCCESS, "a lit candle isn't set on fire again");
 		helper.succeed();
 	}
+
+	// --- The Fallen Manor -------------------------------------------------------------------------------
+
+	@GameTest(maxTicks = 600)
+	public void aManorCanBeFreedClaimedAndKeepsTheFamilyGraves(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos at = place(helper, "bloodline:fallen_manor", new BlockPos(-4000, -60, 4000));
+		BlockPos lectern = null;
+		for (BlockPos pos : BlockPos.betweenClosed(at.getX() - 40, -64, at.getZ() - 40, at.getX() + 40, 200, at.getZ() + 40)) {
+			if (level.getBlockState(pos).is(Blocks.LECTERN)) {
+				lectern = pos.immutable();
+				break;
+			}
+		}
+		check(helper, lectern != null, "the manor has a lectern");
+		Manors.Site site = Manors.siteAt(level, lectern).orElse(null);
+		check(helper, site != null && site.world(Manors.LECTERN).equals(lectern), "a placed manor is recognised, with its lectern where expected");
+
+		// A family with one ancestor already, so the graveyard has someone to bury.
+		ServerPlayer player = join(helper);
+		Lineage lineage = lineage(helper, player);
+		QuestGameTests.age(player, lineage);
+		String founder = lineage.current.name();
+		player = QuestGameTests.dieToZombie(helper, player);
+		Heirs.choose(player, 1);
+		int renown = lineage.house.renown;
+
+		// Stepping onto the grounds brings out the Usurper.
+		BlockPos courtyard = site.world(Manors.USURPER);
+		player.snapTo(courtyard.getX() + 0.5, courtyard.getY(), courtyard.getZ() + 2.5);
+		Manors.tick(player);
+		List<Mob> usurpers = level.getEntitiesOfClass(Mob.class, new AABB(courtyard).inflate(16),
+			m -> m.entityTags().contains("bloodline_key=" + Manors.KEY_PREFIX + site.key()));
+		check(helper, usurpers.size() == 1, "the Usurper comes out, got " + usurpers.size());
+		Manors.onUseBlock(player, level, lectern);
+		check(helper, lineage.house.seat.isEmpty(), "the manor can't be claimed while they hold it");
+
+		// Driving them out frees the manor and hides the will's four pages.
+		Champions.onDeath(level.getServer(), usurpers.getFirst());
+		usurpers.getFirst().discard();
+		var manor = io.github.fersyvanderzee.bloodline.data.ManorState.get(level.getServer()).get(site.key());
+		check(helper, manor.cleared && manor.pagesHidden, "the manor is free and the pages are hidden");
+		for (BlockPos spot : Manors.PAGES) {
+			var container = (net.minecraft.world.Container) level.getBlockEntity(site.world(spot));
+			boolean found = false;
+			for (int i = 0; i < container.getContainerSize(); i++) {
+				ItemStack stack = container.getItem(i);
+				if (stack.is(Items.PAPER)) {
+					player.getInventory().add(stack.copy());
+					container.setItem(i, ItemStack.EMPTY);
+					found = true;
+				}
+			}
+			check(helper, found, "a page lies at " + spot);
+		}
+
+		// With the whole will, the house claims the manor.
+		player.snapTo(lectern.getX() + 0.5, lectern.getY(), lectern.getZ() + 1.5);
+		check(helper, Manors.claim(player), "the claim succeeds");
+		check(helper, lineage.house.seat.isPresent() && lineage.house.seat.get().manor.equals(site.key()), "the manor is the house's seat");
+		check(helper, count(player, Items.PAPER) == 0, "the pages are used up");
+		check(helper, lineage.house.renown == renown + BloodlineConfig.get().renown.manorClaimed, "claiming earns renown, got "
+			+ (lineage.house.renown - renown));
+		check(helper, lineage.house.steward.isPresent()
+			&& lineage.house.steward.get().home.pos().equals(site.world(Manors.STEWARD)), "the steward moves into the great hall");
+		check(helper, Manors.atSeat(player, lineage), "the seat counts as a place for the Sacrifice");
+		check(helper, graveName(level, site, 0).contains(founder), "the founder's gravestone stands in the garden, got " + graveName(level, site, 0));
+
+		// The next death adds a gravestone.
+		QuestGameTests.age(player, lineage);
+		String heir = lineage.current.name();
+		player = QuestGameTests.dieToZombie(helper, player);
+		check(helper, graveName(level, site, 1).contains(heir), "a new death adds a gravestone, got " + graveName(level, site, 1));
+		helper.succeed();
+	}
+
+	private static String graveName(ServerLevel level, Manors.Site site, int plot) {
+		if (!(level.getBlockEntity(site.world(Manors.GRAVES.get(plot).south())) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign)) {
+			return "(no sign)";
+		}
+		return sign.getText(net.minecraft.world.level.block.entity.SignTextSlot.FRONT).getMessages(false).getFirst().getString();
+	}
 }

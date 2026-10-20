@@ -68,7 +68,8 @@ public class BloodlineState extends SavedData {
 			boolean actPending = old.oathActs() > 0 && old.oathActGeneration() >= old.current().generation();
 			House house = new House(UUID.randomUUID(), old.house(), player, List.of(player), old.chronicle(), old.milestones(),
 				old.quests().stream().filter(q -> House.isShared(q.type)).toList(), old.oath(), old.oathActs(), actPending,
-				old.legacies(), old.lostHeirlooms(), old.renown(), old.preparations(), 0, Optional.empty(), List.of(), 0, Optional.empty());
+				old.legacies(), old.lostHeirlooms(), old.renown(), old.preparations(), 0, Optional.empty(), List.of(), 0, Optional.empty(),
+				Optional.empty());
 			houses.put(house.id, house);
 			lineages.put(player, new Lineage(house.id, old.current(), old.awaitingHeir(), old.ancestors(),
 				old.quests().stream().filter(q -> !House.isShared(q.type)).toList(), old.completed(), false, List.of(), false, false, false, 0));

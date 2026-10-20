@@ -128,6 +128,7 @@ public final class Lineages {
 		if (sacrificed) Sacrifice.honour(player, lineage, ancestor);
 		Heirs.roll(player, lineage);
 		refreshName(player);
+		Manors.onAncestor(server, lineage.house);
 	}
 
 	/** Called when a player respawns. After a death, their heir takes over. */

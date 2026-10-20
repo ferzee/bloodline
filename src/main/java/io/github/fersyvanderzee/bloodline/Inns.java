@@ -90,6 +90,7 @@ public final class Inns {
 
 	private static final List<Rumour> RUMOURS = List.of(
 		new Rumour(BuiltinStructures.WOODLAND_MANSION, "mansion", 8),
+		new Rumour(Manors.MANOR, "manor", 6),
 		new Rumour(BuiltinStructures.JUNGLE_TEMPLE, "jungle_temple", 4),
 		new Rumour(BuiltinStructures.DESERT_PYRAMID, "desert_pyramid", 4),
 		new Rumour(BuiltinStructures.IGLOO, "igloo", 3),
